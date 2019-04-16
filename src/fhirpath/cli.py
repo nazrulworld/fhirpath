@@ -2,6 +2,7 @@
 
 """Console script for fhirpath."""
 import sys
+
 import click
 
 
