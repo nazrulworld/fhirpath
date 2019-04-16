@@ -11,11 +11,15 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=6.0', ]
+requirements = [
+    'Click>=6.0',
+    'guillotina>=4.7.0',
+    # important! STU3
+    'fhir.resources==3.0.1']
 
 setup_requirements = ['pytest-runner', ]
 
-test_requirements = ['pytest', 'fhirclient']
+test_requirements = ['pytest', "guillotina_elasticsearch"]
 
 setup(
     author="Md Nazrul Islam",

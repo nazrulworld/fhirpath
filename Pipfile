@@ -5,10 +5,15 @@ verify_ssl = true
 
 [dev-packages]
 fhirpath = {path = ".",extras = ["test"],editable = true}
-
-[packages]
+black = "*"
+isort = "*"
 flake8 = "*"
 flake8-isort = "*"
+zc-buildout = "*"
+setuptools = "*"
+
+[packages]
+fhir-resources = {version="==3.0.1"}
 sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-httpdomain = "*"
