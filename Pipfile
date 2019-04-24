@@ -15,6 +15,9 @@ setuptools = "*"
 [packages]
 fhir-resources = {version="==3.0.1"}
 zope-interface = "*"
+zope-component = "*"
+multidict = "*"
+decorator = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-httpdomain = "*"
@@ -24,4 +27,4 @@ certifi = "*"
 zest-releaser = {extras = ["recommended"],version = "*"}
 
 [requires]
-python_version = "3.6"
+python_version = ">=3.4,<=3.8.*"
