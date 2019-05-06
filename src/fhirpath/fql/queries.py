@@ -1,7 +1,13 @@
 # _*_ coding: utf-8 _*_
 import copy
-from fhirpath.utils import fql
+
 from fhirpath.utils import builder
+from fhirpath.utils import fql
+
+from .expressions import and_
+from .interfaces import ITerm
+from .types import Model
+
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
@@ -73,8 +79,6 @@ class QueryBuilder(object):
         self._distinct = False
 
         self._wheres = None
-        self._or_wheres = None
-        self._xor_wheres = None
         self._orderbys = []
         self._limit = None
         self._offset = None
@@ -103,14 +107,26 @@ class QueryBuilder(object):
         return newone
 
     @builder
-    def from_(self, resource):
+    def from_(self, resource_type, alias=None):
         """ """
+        model = Model(resource_type)
+        alias = alias or model.resource_type
+        self._from.append((alias, model))
+
     @builder
     def select(self, *args, **kw):
         """ """
 
+    @builder
     def where(self, *args, **kwargs):
         """ """
+        if len(kwargs) > 0:
+            for path, value in kwargs.items():
+                self._wheres.append(and_(path, value))
+
+        for term in args:
+            assert ITerm.providedBy(term)
+            self._wheres.append(term)
 
     def __fql__(self):
         """ """

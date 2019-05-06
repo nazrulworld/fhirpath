@@ -5,3 +5,4 @@ from .plone_api_validation import MissingParameterError  # noqa: 401
 from .plone_api_validation import at_least_one_of  # noqa: 401
 from .plone_api_validation import mutually_exclusive_parameters  # noqa: 401
 from .plone_api_validation import required_parameters  # noqa: 401
+from .peewee import Proxy  # noqa: 401

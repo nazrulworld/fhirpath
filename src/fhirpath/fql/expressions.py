@@ -2,32 +2,17 @@
 import copy
 import operator
 
-from zope.interface import Interface
 from zope.interface import implementer
 from zope.interface import implementer_only
 
+from .interfaces import IExistsTerm
+from .interfaces import IInTerm
+from .interfaces import IInTermValue
+from .interfaces import ITerm
+from .interfaces import ITermValue
+
 
 __author__ = "Md Nazrul Islam <email2nazrul>"
-
-
-class ITerm(Interface):
-    """ """
-
-
-class ITermValue(Interface):
-    """ """
-
-
-class IInTermValue(ITermValue):
-    """ """
-
-
-class IExistsTerm(Interface):
-    """ """
-
-
-class IInTerm(Interface):
-    """ """
 
 
 @implementer(ITerm)
@@ -60,6 +45,9 @@ class Term(object):
         # Do validation
 
         self.value.finalize(context)
+
+        if self.arithmetic_operator is None:
+            self.arithmetic_operator = operator.and_
 
     def clone(self):
         """ """
