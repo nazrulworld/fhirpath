@@ -5,6 +5,10 @@ from zope.interface import Interface
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+class IModel(Interface):
+    """ """
+
+
 class ITerm(Interface):
     """ """
 

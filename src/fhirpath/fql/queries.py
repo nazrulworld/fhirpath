@@ -1,12 +1,16 @@
 # _*_ coding: utf-8 _*_
 import copy
 
+from fhirpath.utils import FHIR_VERSION
 from fhirpath.utils import builder
 from fhirpath.utils import fql
+from fhirpath.utils import import_string
+from fhirpath.utils import lookup_fhir_class_path
 
 from .expressions import and_
 from .interfaces import ITerm
-from .types import Model
+from .navigator import PathNavigator
+from .types import ModelFactory
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -109,7 +113,7 @@ class QueryBuilder(object):
     @builder
     def from_(self, resource_type, alias=None):
         """ """
-        model = Model(resource_type)
+        model = QueryBuilder.create_model(resource_type)
         alias = alias or model.resource_type
         self._from.append((alias, model))
 
@@ -122,11 +126,27 @@ class QueryBuilder(object):
         """ """
         if len(kwargs) > 0:
             for path, value in kwargs.items():
-                self._wheres.append(and_(path, value))
+
+                term = and_(path, value)
+                term.finalize(self)
+
+                self._wheres.append(term)
 
         for term in args:
-            assert ITerm.providedBy(term)
+            assert ITerm.providedBy(term) is True
+            term.finalize(self)
+
             self._wheres.append(term)
+
+    @staticmethod
+    def create_model(resource_type, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
+        """ """
+        klass = import_string(
+            lookup_fhir_class_path(resource_type, fhir_release=fhir_version)
+        )
+        # xxx: should be cache?
+        model = ModelFactory(f"{klass}Model", bases=(klass, PathNavigator), attrs={})
+        return model
 
     def __fql__(self):
         """ """

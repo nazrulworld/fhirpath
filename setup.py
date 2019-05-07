@@ -19,8 +19,7 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
-    # important! STU3
-    "fhir.resources==3.0.1",
+    "fhir.resources>=5.0.0b1",
 ]
 
 setup_requirements = ["pytest-runner"]
