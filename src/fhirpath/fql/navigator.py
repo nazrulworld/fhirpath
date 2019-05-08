@@ -4,7 +4,9 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
 class PathNavigator:
-    """ """
+    """https://www.devdays.com/amsterdam/wp-content\
+        /uploads/sites/2/2018/11/\
+            Ewout-Kramer-Working-with-FhirPath-DevDays-2018-Amsterdam.pdf"""
 
     def pn_navigate(self, path: str):
         """ """

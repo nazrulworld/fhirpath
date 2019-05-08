@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+from zope.interface import Attribute
 from zope.interface import Interface
 
 
@@ -27,3 +28,39 @@ class ITermValue(Interface):
 
 class IInTermValue(ITermValue):
     """ """
+
+
+class IElementPath(Interface):
+    """ """
+
+
+class ISortTerm(Interface):
+    """ """
+
+    order = Attribute("Sort Order")
+    path = Attribute("Element Path")
+
+
+class IQueryContext(Interface):
+    """ """
+
+    dialect = Attribute("Dialect")
+    engine = Attribute("Engine")
+    fhir_release = Attribute("FHIR Release Name")
+
+
+class ISearchContext(IQueryContext):
+    """ """
+
+
+class IQueryBuilder(Interface):
+    """ """
+
+    context = Attribute("Fhir Query Context")
+    finalized = Attribute("Is Finalized")
+
+    def finalize(context=None):
+        """ """
+
+    def bind(context):
+        """ """

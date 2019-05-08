@@ -1,10 +1,20 @@
 # _*_ coding: utf-8 _*_
+import enum
 from zope.interface import implementer
 
 from .interfaces import IModel
+from .interfaces import IElementPath
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+@enum.unique
+class SortOrderType(enum):
+    """ """
+
+    ASC = "asc"
+    DESC = "desc"
 
 
 class BaseType(object):
@@ -46,3 +56,43 @@ class ModelFactory(type):
     def add_to_class(cls, name, value):
         """ """
         setattr(cls, name, value)
+
+
+@implementer(IElementPath)
+class ElementPath(object):
+    """FHIR Resource path (dotted)
+    1. Normalize any condition, casting, logic check"""
+
+    def __init__(self, dotted_path):
+        """ """
+        self.raw = dotted_path
+        self._where = list()
+
+    @property
+    def star(self):
+        """ """
+        return self.raw == "*"
+
+    @classmethod
+    def from_el_path(cls, el_path):
+        """ """
+        el_path = IElementPath(el_path)
+        raise NotImplementedError
+
+    def __str__(self):
+        """ """
+        # for now raw
+        if isinstance(self.raw, bytes):
+            val = self.raw.decode("utf8", "strict")
+        else:
+            val = self.raw
+
+        return val
+
+    def __bytes__(self):
+        """ """
+        if isinstance(self.raw, str):
+            val = self.raw.encode("utf8", "strict")
+        else:
+            val = self.raw
+        return val

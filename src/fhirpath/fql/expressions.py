@@ -1,15 +1,19 @@
 # _*_ coding: utf-8 _*_
-import copy
+from copy import copy
 import operator
 
 from zope.interface import implementer
 from zope.interface import implementer_only
 
+from .interfaces import IElementPath
 from .interfaces import IExistsTerm
 from .interfaces import IInTerm
 from .interfaces import IInTermValue
+from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .interfaces import ITermValue
+from .types import ElementPath
+from .types import SortOrderType
 
 
 __author__ = "Md Nazrul Islam <email2nazrul>"
@@ -308,6 +312,34 @@ class InTermValue(TermValue):
         return self.clone()
 
 
+@implementer(ISortTerm)
+class SortTerm(object):
+    """ """
+
+    order = None
+    path = None
+
+    def __init__(self, path, order=SortOrderType.ASC):
+        """ """
+        if not IElementPath.providedBy(path):
+            path = ElementPath(path)
+        self.path = path
+        self.order = order
+
+    def __pos__(self):
+        """ """
+        self.order = SortOrderType.ASC
+        return copy(self)
+
+    def __neg__(self):
+        """ """
+        self.order = SortOrderType.DESC
+        return copy(self)
+
+
+# API functions
+
+
 def T_(path, value=None):
     """ """
     term = Term(path=path, value=value)
@@ -362,3 +394,12 @@ def in_(path, values):
     """ """
     term = InTerm(path, values)
     return term
+
+
+def sort_(path, order=None):
+    """ """
+    sort_term = SortTerm(path)
+    if order:
+        sort_term.order = order
+
+    return sort_term
