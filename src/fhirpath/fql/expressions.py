@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
-from copy import copy
 import operator
+from copy import copy
 
 from zope.interface import implementer
 from zope.interface import implementer_only

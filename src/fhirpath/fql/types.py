@@ -1,9 +1,10 @@
 # _*_ coding: utf-8 _*_
 import enum
+
 from zope.interface import implementer
 
-from .interfaces import IModel
 from .interfaces import IElementPath
+from .interfaces import IModel
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
