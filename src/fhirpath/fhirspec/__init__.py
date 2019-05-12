@@ -104,4 +104,7 @@ DEFAULT_SETTINGS = attrdict(
         "FHIRAbstractBase",
         "FHIRAbstractResource",
     ),
+    # Control over file names
+    valuesets_filename="valuesets.min.json",
+    profiles_filenames=("profiles-types.min.json", "profiles-resources.min.json"),
 )

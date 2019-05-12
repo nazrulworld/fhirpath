@@ -71,7 +71,8 @@ class FHIRSpec(object):
 
     # MARK: Managing ValueSets and CodeSystems
     def read_valuesets(self):
-        resources = self.read_bundle_resources("valuesets.json")
+        filename = getattr(self.settings, "valuesets_filename", "valuesets.json")
+        resources = self.read_bundle_resources(filename)
         for resource in resources:
             if "ValueSet" == resource["resourceType"]:
                 assert "url" in resource
@@ -103,7 +104,12 @@ class FHIRSpec(object):
         """ Find all (JSON) profiles and instantiate into FHIRStructureDefinition.
         """
         resources = []
-        for filename in ["profiles-types.min..json", "profiles-resources.min.json"]:
+        filenames = getattr(
+            self.settings,
+            "profiles_filenames",
+            ["profiles-types.json", "profiles-resources.json"],
+        )
+        for filename in filenames:
             bundle_res = self.read_bundle_resources(filename)
             for resource in bundle_res:
                 if "StructureDefinition" == resource["resourceType"]:
