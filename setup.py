@@ -5,6 +5,40 @@
 
 from setuptools import find_packages
 from setuptools import setup
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+
+
+__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def run_post_install(self):
+    """ """
+
+
+def run_post_develop(self):
+    """ """
+    run_post_install(self)
+
+
+class PostIntsall(install):
+    """ """
+
+    def run(self):
+        """ """
+        install.run(self)
+        # Run custom post install
+        run_post_install(self)
+
+
+class PostDevelop(develop):
+    """ """
+
+    def run(self):
+        """ """
+        develop.run(self)
+        # run custom develop
+        run_post_develop(self)
 
 
 with open("README.rst") as readme_file:
@@ -67,4 +101,8 @@ setup(
         "GitHub: repo": "https://github.com/nazrulworld/aiohttp",
     },
     zip_safe=False,
+    cmdclass={
+        "install": PostIntsall,
+        "develop": PostDevelop
+    }
 )

@@ -2,6 +2,9 @@
 import enum
 import inspect
 import pkgutil
+import os
+import re
+import pkg_resources
 import sys
 from importlib import import_module
 from typing import Union
@@ -155,7 +158,7 @@ def lookup_fhir_class_path(
         prime_module.append(fhir_release)
 
     prime_module_level = len(prime_module)
-    prime_module = '.'.join(prime_module)
+    prime_module = ".".join(prime_module)
 
     prime_module = import_module(prime_module)
 
@@ -174,3 +177,39 @@ def lookup_fhir_class_path(
                 return cache_path[resource_type]
 
     return None
+
+
+CONTAINS_PY_PACKAGE = re.compile(r"^\$\{(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE)
+
+
+def expand_path(path_: str):
+    """Path normalizer
+    Supports:
+    1. Home Path expander
+    2. Package path discovery"""
+
+    if path_.startswith("~"):
+        real_path = os.path.expanduser(path_)
+
+    elif CONTAINS_PY_PACKAGE.match(path_):
+        match = CONTAINS_PY_PACKAGE.match(path_)
+        replacement = match.group(0)
+        package_name = match.group("package_name")
+
+        try:
+            real_path = path_.replace(
+                replacement, pkg_resources.get_distribution(package_name).location
+            )
+        except pkg_resources.DistributionNotFound:
+            msg = "Invalid package `{0}`! as provided in {1}".format(
+                package_name, path_
+            )
+            reraise(LookupError, msg)
+
+    else:
+        real_path = path_
+
+    if real_path.endswith(os.sep):
+        real_path = real_path[: -len(os.sep)]
+
+    return real_path
