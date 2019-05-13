@@ -7,3 +7,4 @@ from .plone_api_validation import mutually_exclusive_parameters  # noqa: 401
 from .plone_api_validation import required_parameters  # noqa: 401
 from .peewee import attrdict  # noqa: 401
 from .peewee import Proxy  # noqa: 401
+from .werkzeug import ImmutableDict  # noqa: 401

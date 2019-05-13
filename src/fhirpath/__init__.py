@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """Top-level package for fhirpath."""
 
 __author__ = """Md Nazrul Islam"""

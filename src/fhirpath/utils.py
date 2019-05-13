@@ -17,7 +17,6 @@ NoneType = type(None)
 FHIR_RESOURCE_CLASS_CACHE = dict(STU3=dict(), R4=dict())
 
 
-@enum.unique
 class FHIR_VERSION(enum.Enum):
     """ """
 

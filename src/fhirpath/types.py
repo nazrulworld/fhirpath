@@ -8,6 +8,8 @@ import re
 import isodate
 from zope.interface import implementer
 
+from fhirpath.thirdparty import ImmutableDict
+
 from .interfaces import IFhirPrimitiveType
 
 
@@ -33,6 +35,7 @@ __all__ = [
     "FhirUnsignedInt",
     "FhirPositiveInt",
     "FhirUUID",
+    "PrimitiveDataTypes",
 ]
 
 
@@ -149,9 +152,7 @@ class FhirDecimal(str):
         """ """
         res = re.match(self.__regex__, self)
         if not res:
-            raise ValueError(
-                "Invalid FHIR decimal value!"
-            )
+            raise ValueError("Invalid FHIR decimal value!")
 
     def to_python(self):
         """ """
@@ -463,3 +464,29 @@ class FhirUUID(str):
     def to_python(self):
         """ """
         return str(self)
+
+
+# FHIR Primitive Data Types
+PrimitiveDataTypes = ImmutableDict(
+    [
+        (FhirBoolean.__visit_name__, FhirBoolean),
+        (FhirInteger.__visit_name__, FhirInteger),
+        (FhirString.__visit_name__, FhirString),
+        (FhirDecimal.__visit_name__, FhirDecimal),
+        (FhirURI.__visit_name__, FhirURI),
+        (FhirURL.__visit_name__, FhirURL),
+        (FhirCanonical.__visit_name__, FhirCanonical),
+        (FhirBase64Binary.__visit_name__, FhirBase64Binary),
+        (FhirInstant.__visit_name__, FhirInstant),
+        (FhirDate.__visit_name__, FhirDate),
+        (FhirDateTime.__visit_name__, FhirDateTime),
+        (FhirTime.__visit_name__, FhirTime),
+        (FhirCode.__visit_name__, FhirCode),
+        (FhirOid.__visit_name__, FhirOid),
+        (FhirId.__visit_name__, FhirId),
+        (FhirMarkdown.__visit_name__, FhirMarkdown),
+        (FhirUnsignedInt.__visit_name__, FhirUnsignedInt),
+        (FhirPositiveInt.__visit_name__, FhirPositiveInt),
+        (FhirUUID.__visit_name__, FhirUUID),
+    ]
+)

@@ -1,0 +1,12 @@
+# _*_ coding: utf-8 _*_
+import enum
+
+
+__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+class FHIR_VERSION(enum.Enum):
+    """ """
+    DEFAULT = "R4"
+    STU3 = "STU3"
+    R4 = "R4"
