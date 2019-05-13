@@ -50,7 +50,7 @@ def download_archive(release: FHIR_VERSION, temp_location: str):
     except HTTPError:
         # xxx: handle nicely later
         raise
-
+    logger.info("Archive file has been downloaded from {0}".format(fullurl))
     return write_stream(temp_location, response, release)
 
 
@@ -62,11 +62,19 @@ def extract_spec_files(extract_location, archive_file):
 
 def download_and_extract(release: FHIR_VERSION, output_dir):
     """ """
+    logger.info(
+        "FHIR Resources Specification json files for release '{0}' "
+        "are not found in local disk. "
+        "Going to download...".format(release.value)
+    )
     temp_dir = tempfile.mkdtemp()
 
     zip_file = download_archive(release, temp_dir)
 
     extract_spec_files(output_dir, zip_file)
-
+    logger.info(
+        "Downloaded archive has been extracted successfully, "
+        "now all json files are available at {0}/{1}".format(output_dir, release.value)
+    )
     # clean up
     shutil.rmtree(temp_dir)
