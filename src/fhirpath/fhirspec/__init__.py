@@ -1,14 +1,17 @@
 # _*_ coding: utf-8 _*_
 """FHIR Specification: http://www.hl7.org/fhir/"""
+import os
+import pathlib
+from fhirpath.thirdparty import ImmutableDict
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.thirdparty import attrdict
-
 from .spec import FHIRSpec  # noqa: F401
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
-
-DEFAULT_SETTINGS = attrdict(
+# use default settings copy: settings = attrdict(DEFAULT_SETTINGS.copy())
+DEFAULT_SETTINGS = ImmutableDict(
     base_url="http://hl7.org/fhir",
     classmap={
         "Any": "Resource",
@@ -92,7 +95,8 @@ DEFAULT_SETTINGS = attrdict(
         "positiveInt",
         "uri",
         "url",
-        "canonical" "oid",
+        "canonical",
+        "oid",
         "uuid",
         "date",
         "dateTime",
@@ -108,3 +112,28 @@ DEFAULT_SETTINGS = attrdict(
     valuesets_filename="valuesets.min.json",
     profiles_filenames=("profiles-types.min.json", "profiles-resources.min.json"),
 )
+
+SPEC_JSON_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+
+
+class FhirSpecFactory:
+    """ """
+
+    @staticmethod
+    def from_release(release: str, settings: dict = None):
+        """ """
+        release = FHIR_VERSION[release]
+
+        if not (SPEC_JSON_DIR / release.value).exists():
+            # Need download first
+            from .downloader import download_and_extract
+
+            download_and_extract(release, str(SPEC_JSON_DIR))
+
+        default_settings = attrdict() + DEFAULT_SETTINGS.copy()
+        if settings:
+            default_settings += settings
+
+        spec = FHIRSpec(str(SPEC_JSON_DIR / release.value), default_settings)
+
+        return spec

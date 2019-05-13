@@ -6,14 +6,16 @@ and modified in terms of styling, unnesessary codes cleanup
 import datetime
 import io
 import json
+import logging
 import os
 import pathlib
 import re
 
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import expand_path
-from logger import logger
 
+
+logger = logging.getLogger("fhirpath.fhrspec")
 
 # allow to skip some profiles by matching against their url (used while WiP)
 skip_because_unsupported = [r"SimpleQuantity"]
@@ -25,13 +27,13 @@ class FHIRSpec(object):
     def __init__(self, directory: str, settings: attrdict):
         """ """
         source = pathlib.Path(expand_path(directory))
-        assert source.isdir()
+        assert source.is_dir()
         self.directory = source
 
         assert settings is not None
         self.settings = settings
 
-        self.info = FHIRVersionInfo(self, directory)
+        self.info = FHIRVersionInfo(self, self.directory)
 
         self.valuesets = {}  # system-url: FHIRValueSet()
         self.codesystems = {}  # system-url: FHIRCodeSystem()
@@ -82,8 +84,8 @@ class FHIRSpec(object):
                 if "content" in resource and "concept" in resource:
                     self.codesystems[resource["url"]] = FHIRCodeSystem(self, resource)
                 else:
-                    logger.warn(
-                        "CodeSystem with no concepts: {}".format(resource["url"])
+                    logger.warning(
+                        "CodeSystem with no concepts: {0}".format(resource["url"])
                     )
         logger.info(
             "Found {0} ValueSets and {1} CodeSystems".format(
@@ -151,7 +153,6 @@ class FHIRSpec(object):
 
             profile = FHIRStructureDefinition(self, None)
             profile.is_manual = True
-
             prof_dict = {"name": name, "differential": {"element": [{"path": name}]}}
 
             profile.structure = FHIRStructureDefinitionStructure(profile, prof_dict)
@@ -267,7 +268,7 @@ class FHIRVersionInfo(object):
 
     def read_version(self, filepath: pathlib.Path):
         """ """
-        assert filepath.isfile()
+        assert filepath.is_file()
         with io.open(str(filepath), "r", encoding="utf-8") as fp:
             text = fp.read()
             for line in text.split("\n"):
@@ -443,7 +444,7 @@ class FHIRStructureDefinition(object):
 
         # parse structure
         self.url = profile.get("url")
-        logger.info('Parsing profile "{}"'.format(profile.get("name")))
+        logger.info('Parsing profile "{0}"'.format(profile.get("name")))
         self.structure = FHIRStructureDefinitionStructure(self, profile)
 
     def process_profile(self):
@@ -481,7 +482,7 @@ class FHIRStructureDefinition(object):
                         and not element.is_summary
                     ):
                         logger.error(
-                            "n_min > 0 but not summary: `{}`".format(element.path)
+                            "n_min > 0 but not summary: `{0}`".format(element.path)
                         )
                         element.summary_n_min_conflict = True
 
@@ -490,7 +491,7 @@ class FHIRStructureDefinition(object):
             snap_class, subs = self.main_element.create_class()
             if snap_class is None:
                 raise Exception(
-                    'The main element for "{}" did not create a class'.format(self.url)
+                    'The main element for "{0}" did not create a class'.format(self.url)
                 )
 
             self.found_class(snap_class)
@@ -509,7 +510,6 @@ class FHIRStructureDefinition(object):
         return None
 
     # MARK: Class Handling
-
     def found_class(self, klass):
         self.classes.append(klass)
 
@@ -593,7 +593,6 @@ class FHIRStructureDefinition(object):
     def finalize(self):
         """ Our spec object calls this when all profiles have been parsed.
         """
-
         # assign all super-classes as objects
         for cls in self.classes:
             if cls.superclass is None:
@@ -601,7 +600,7 @@ class FHIRStructureDefinition(object):
                 if super_cls is None and cls.superclass_name is not None:
                     raise Exception(
                         "There is no class implementation for class "
-                        'named "{}" in profile "{}"'.format(
+                        'named "{0}" in profile "{1}"'.format(
                             cls.superclass_name, self.url
                         )
                     )
@@ -734,7 +733,7 @@ class FHIRStructureDefinitionElement(object):
         subs = []
         cls, did_create = FHIRClass.for_element(self)
         if did_create:
-            logger.debug('Created class "{}"'.format(cls.name))
+            logger.debug('Created class "{0}"'.format(cls.name))
             if module is None and self.is_main_profile_element:
                 module = self.profile.spec.as_module_name(cls.name)
             cls.module = module
@@ -1181,17 +1180,18 @@ class FHIRClassProperty(object):
         spec = element.profile.spec
 
         self.path = element.path
-        self.one_of_many = (
-            None
-        )  # assign if this property has been expanded from "property[x]"
+        # assign if this property has been expanded from "property[x]"
+        self.one_of_many = None
         if not type_name:
             type_name = type_obj.code
+        # original type name
+        self.type_name = type_name
 
         name = element.definition.prop_name
         if "[x]" in name:
             self.one_of_many = name.replace("[x]", "")
             name = name.replace(
-                "[x]", "{}{}".format(type_name[:1].upper(), type_name[1:])
+                "[x]", "{0}{1}".format(type_name[:1].upper(), type_name[1:])
             )
 
         self.orig_name = name
@@ -1199,9 +1199,8 @@ class FHIRClassProperty(object):
         self.parent_name = element.parent_name
         self.class_name = spec.class_name_for_type_if_property(type_name)
         self.enum = element.enum if "code" == type_name else None
-        self.module_name = (
-            None
-        )  # should only be set if it's an external module (think Python)
+        # should only be set if it's an external module (think Python)
+        self.module_name = None
         self.json_class = spec.json_class_for_class_name(self.class_name)
         self.is_native = (
             False if self.enum else spec.class_name_is_native(self.class_name)
