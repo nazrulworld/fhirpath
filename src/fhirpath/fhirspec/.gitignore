@@ -1,0 +1,5 @@
+*
+!.gitignore
+!./__init__.py
+!./downloader.py
+!./spec.py
