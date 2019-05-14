@@ -60,7 +60,7 @@ def extract_spec_files(extract_location, archive_file):
         zip_ref.extractall(extract_location)
 
 
-def download_and_extract(release: FHIR_VERSION, output_dir):
+def download_and_extract(release: FHIR_VERSION, output_dir: str):
     """ """
     logger.info(
         "FHIR Resources Specification json files for release '{0}' "
