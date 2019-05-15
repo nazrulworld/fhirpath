@@ -7,6 +7,16 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 class FHIR_VERSION(enum.Enum):
     """ """
+
     DEFAULT = "R4"
     STU3 = "STU3"
     R4 = "R4"
+    DSTU2 = "DSTU2"
+
+
+@enum.unique
+class SortOrderType(enum):
+    """ """
+
+    ASC = "asc"
+    DESC = "desc"

@@ -15,8 +15,8 @@ from .expressions import and_
 from .expressions import sort_
 from .interfaces import IElementPath
 from .interfaces import IQueryBuilder
-from .interfaces import ITerm
 from .interfaces import ISortTerm
+from .interfaces import ITerm
 from .navigator import PathNavigator
 from .types import ElementPath
 from .types import ModelFactory
@@ -30,42 +30,6 @@ class CopyBehaviour(enum.Enum):
 
     FULL = enum.auto()
     BASE = enum.auto()
-
-
-class DateQuery(object):
-    """ """
-
-
-class DateTimeQuery(object):
-    """ """
-
-
-class TokenQuery(object):
-    """ """
-
-
-class NumberQuery(object):
-    """ """
-
-
-class QuantityQuery(object):
-    """ """
-
-
-class URIQuery(object):
-    """ """
-
-
-class ReferenceQuery(object):
-    """ """
-
-
-class ExistsQuery(object):
-    """ """
-
-
-class BooleanQuery(object):
-    """ """
 
 
 class Query(object):

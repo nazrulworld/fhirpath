@@ -22,5 +22,18 @@ class IFhirPrimitiveType(Interface):
 
     def to_python():
         """ """
+
     def to_json():
         """ """
+
+
+class IPathInfoContext(Interface):
+    """ """
+
+    fhir_release = Attribute("FHIR Release")
+    prop_name = Attribute("Property Name")
+    prop_original = Attribute("Original propety name")
+    type_name = Attribute("Type Name")
+    type_class = Attribute("Type Class")
+    optional = Attribute("Optional")
+    multiple = Attribute("Multiple")

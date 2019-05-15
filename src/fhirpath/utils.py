@@ -1,28 +1,35 @@
 # _*_ coding: utf-8 _*_
-import enum
 import inspect
-import pkgutil
 import os
+import pkgutil
 import re
-import pkg_resources
 import sys
+from collections import defaultdict
 from importlib import import_module
 from typing import Union
+
+import pkg_resources
+from zope.interface import implementer
+
+from fhirpath.thirdparty import Proxy
+
+from .enums import FHIR_VERSION
+from .interfaces import IPathInfoContext
+from .types import PrimitiveDataTypes
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 NoneType = type(None)
 
-FHIR_RESOURCE_CLASS_CACHE = dict(STU3=dict(), R4=dict())
+FHIR_RESOURCE_CLASS_CACHE = defaultdict()
+PATH_INFO_CACHE = defaultdict()
 
-
-class FHIR_VERSION(enum.Enum):
-    """ """
-
-    DEFAULT = "R4"
-    STU3 = "STU3"
-    R4 = "R4"
+releases = set([member.value for member in FHIR_VERSION])
+for release in releases:
+    if release not in PATH_INFO_CACHE:
+        PATH_INFO_CACHE[release] = defaultdict()
+        FHIR_RESOURCE_CLASS_CACHE[release] = defaultdict()
 
 
 def _reraise(tp, value, tb=None):
@@ -78,22 +85,6 @@ def import_string(dotted_path: str) -> type:
             del t, v, tb
 
 
-def fql(obj):
-    """ """
-    try:
-        func = getattr(obj, "__fql__")
-        try:
-            getattr(func, "__self__")
-        except AttributeError:
-            reraise(
-                ValueError, "__fql__ is not bound method, make sure class initialized!"
-            )
-
-        return func()
-    except AttributeError:
-        raise AttributeError("Object must have __fql__ method available")
-
-
 def builder(func):
     """
     Decorator for wrapper "builder" functions.  These are functions on the
@@ -146,7 +137,7 @@ def lookup_fhir_class_path(
         >>> dotted_path is None
         True
     """
-    cache_path = FHIR_RESOURCE_CLASS_CACHE[fhir_release]
+    cache_path = FHIR_RESOURCE_CLASS_CACHE[fhir_release.value]
 
     if resource_type in cache_path and cache:
         return cache_path[resource_type]
@@ -154,7 +145,7 @@ def lookup_fhir_class_path(
     # Trying to get from entire modules
     prime_module = ["fhir", "resources"]
     if FHIR_VERSION.DEFAULT != fhir_release:
-        prime_module.append(fhir_release)
+        prime_module.append(fhir_release.value)
 
     prime_module_level = len(prime_module)
     prime_module = ".".join(prime_module)
@@ -212,3 +203,113 @@ def expand_path(path_: str):
         real_path = real_path[: -len(os.sep)]
 
     return real_path
+
+
+def proxy(obj):
+    """Making proxy of any object"""
+    try:
+        return getattr(obj, "__proxy__")()
+    except AttributeError:
+        # trying to make ourself
+        p_obj = Proxy()
+        p_obj.initialize(obj)
+        return p_obj
+
+
+@implementer(IPathInfoContext)
+class PathInfoContext:
+    """ """
+
+    def __init__(
+        self,
+        fhir_release,
+        prop_name,
+        prop_original,
+        type_name,
+        type_class,
+        optional,
+        multiple,
+    ):
+        """ """
+        self.fhir_release = None
+        self.prop_name = None
+        self.prop_original = None
+        self.type_name = None
+        self.type_class = None
+        self.optional = None
+        self.multiple = None
+
+    @classmethod
+    def context_from_path(cls, pathname: str, fhir_release: FHIR_VERSION):
+        """ """
+        if pathname in PATH_INFO_CACHE[fhir_release.value]:
+            # trying from cache!
+            return PATH_INFO_CACHE[fhir_release.value][pathname]
+
+        parts = pathname.split(".")
+        model = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
+        new_path = parts[0]
+        context = None
+
+        for index, part in enumerate(parts[1:], 1):
+
+            new_path = "{0}.{1}".format(new_path, part)
+            if new_path in PATH_INFO_CACHE[fhir_release.value]:
+                context = PATH_INFO_CACHE[fhir_release.value][new_path]
+                if context.type_name in PrimitiveDataTypes:
+                    if (index + 1) < len(parts):
+                        raise ValueError("Invalid path {0}".format(pathname))
+                    break
+                else:
+                    model = context.type_class
+                    continue
+
+            for (
+                name,
+                jsname,
+                typ,
+                typ_name,
+                is_list,
+                of_many,
+                not_optional,
+            ) in model().elementProperties():
+
+                if part != jsname:
+                    continue
+                if typ_name in PrimitiveDataTypes:
+                    type_class = PrimitiveDataTypes.get(typ_name)
+                    is_primitive = True
+                else:
+                    type_class = typ
+                    is_primitive = False
+
+                context = cls(
+                    fhir_release=fhir_release,
+                    prop_name=name,
+                    prop_original=jsname,
+                    type_name=typ_name,
+                    type_class=type_class,
+                    optional=(not not_optional),
+                    multiple=is_list,
+                )
+                PATH_INFO_CACHE[fhir_release][new_path] = context
+                if not is_primitive:
+                    model = type_class
+                else:
+                    if (index + 1) < len(parts):
+                        raise ValueError("Invalid path {0}".format(pathname))
+                    break
+        return context
+
+    def __proxy__(self):
+        """ """
+        return PathInfoContextProxy(self)
+
+
+class PathInfoContextProxy(Proxy):
+    """ """
+
+    def __init__(self, context: PathInfoContext):
+        """ """
+        super(PathInfoContextProxy, self).__init__()
+        self.initialize(context)
