@@ -37,3 +37,30 @@ class IPathInfoContext(Interface):
     type_class = Attribute("Type Class")
     optional = Attribute("Optional")
     multiple = Attribute("Multiple")
+
+
+class IEngine(Interface):
+    """ """
+
+    fhir_release = Attribute("FHIR Release")
+    connection = Attribute("DB Connection")
+    dialect = Attribute("Dialect")
+
+    def create_query():
+        """Return QueryBuilder"""
+
+    def connect(**kw):
+        """Return a new Connection object."""
+
+
+class IConnection(Interface):
+    """ """
+
+    raw = Attribute("Raw connection underlaying DBAPI")
+
+    def execute(query, **kwargs):
+        """ """
+
+
+class IEngineFactory(Interface):
+    """ """

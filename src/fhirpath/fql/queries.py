@@ -1,20 +1,22 @@
 # _*_ coding: utf-8 _*_
 import copy
 import enum
+import math
 
 from zope.interface import implementer
 
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
 from fhirpath.utils import builder
-from fhirpath.utils import fql
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
 
 from .expressions import and_
+from .expressions import fql
 from .expressions import sort_
 from .interfaces import IElementPath
 from .interfaces import IQueryBuilder
+from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .navigator import PathNavigator
@@ -47,18 +49,18 @@ class Query(object):
         return cls._builder(context).from_(resource)
 
     @classmethod
-    def with_context(cls, context):
+    def with_engine(cls, engine):
         """ """
-        return cls._builder(context)
+        return cls._builder(engine)
 
 
 @implementer(IQueryBuilder)
 class QueryBuilder(object):
     """ """
 
-    def __init__(self, context=None):
+    def __init__(self, engine=None):
         """ """
-        self.context = context
+        self.engine = engine
         self.finalized = False
         self._limit = None
         self._offset = None
@@ -68,10 +70,10 @@ class QueryBuilder(object):
         self._wheres = []
         self._sorts = []
 
-    def bind(self, context):
+    def bind(self, engine):
         """ """
         # might be clone
-        self.context = context
+        self.engine = engine
 
     def clone(self):
         """ """
@@ -93,7 +95,7 @@ class QueryBuilder(object):
     def __copy__(self):
         """ """
         newone = self._copy_base()
-        newone.context = self.context
+        newone.engine = self.engine
         return newone
 
     def __proxy__(self, behavior: CopyBehaviour = CopyBehaviour.BASE):
@@ -185,7 +187,115 @@ class QueryBuilder(object):
         """ """
         return self.__fql__()
 
-    def __iter__(self):
+    def __call__(self, engine=None, **kw):
         """ """
-        for res in self.context.engine.query(self):
-            yield res
+        raise NotImplementedError
+
+
+@implementer(IQueryResult)
+class QueryResult(object):
+    """ """
+    def fetchall(self):
+        """ """
+
+    def single(self):
+        """Will return the single item in the input if there is just one item.
+        If the input collection is empty ({ }), the result is empty.
+        If there are multiple items, an error is signaled to the evaluation environment.
+        This operation is useful for ensuring that an error is returned
+        if an assumption about cardinality is violated at run-time."""
+
+    def first(self):
+        """Returns a collection containing only the first item in the input collection.
+        This function is equivalent to item(0), so it will return an empty collection
+        if the input collection has no items."""
+
+    def last(self):
+        """Returns a collection containing only the last item in the input collection.
+        Will return an empty collection if the input collection has no items."""
+
+    def tail(self):
+        """Returns a collection containing all but the first item in the input
+        collection. Will return an empty collection
+        if the input collection has no items, or only one item."""
+
+    def skip(self, num: int):
+        """Returns a collection containing all but the first num items
+        in the input collection. Will return an empty collection
+        if there are no items remaining after the indicated number of items have
+        been skipped, or if the input collection is empty.
+        If num is less than or equal to zero, the input collection
+        is simply returned."""
+
+    def take(self, num: int):
+        """Returns a collection containing the first num items in the input collection,
+        or less if there are less than num items. If num is less than or equal to 0, or
+        if the input collection is empty ({ }), take returns an empty collection."""
+
+    def count(self):
+        """Returns a collection with a single value which is the integer count of
+        the number of items in the input collection.
+        Returns 0 when the input collection is empty."""
+
+    def empty(self):
+        """Returns true if the input collection is empty ({ }) and false otherwise."""
+        return self.count() == 0
+
+    def __len__(self):
+        """ """
+        return self.count()
+
+    def __getitem__(self, key):
+        """
+        Lazy loading es results with negative index support.
+        We store the results in buckets of what the bulk size is.
+        This is so you can skip around in the indexes without needing
+        to load all the data.
+        Example(all zero based indexing here remember):
+            (525 results with bulk size 50)
+            - self[0]: 0 bucket, 0 item
+            - self[10]: 0 bucket, 10 item
+            - self[50]: 50 bucket: 0 item
+            - self[55]: 50 bucket: 5 item
+            - self[352]: 350 bucket: 2 item
+            - self[-1]: 500 bucket: 24 item
+            - self[-2]: 500 bucket: 23 item
+            - self[-55]: 450 bucket: 19 item
+        """
+        if isinstance(key, slice):
+            return [self[i] for i in range(key.start, key.end)]
+        else:
+            if key + 1 > self.count:
+                raise IndexError
+            elif key < 0 and abs(key) > self.count:
+                raise IndexError
+
+            if key >= 0:
+                result_key = (key / self.bulk_size) * self.bulk_size
+                start = result_key
+                result_index = key % self.bulk_size
+            elif key < 0:
+                last_key = (
+                    int(math.floor(float(self.count) / float(self.bulk_size)))
+                    * self.bulk_size
+                )
+                start = result_key = last_key - (
+                    (abs(key) / self.bulk_size) * self.bulk_size
+                )
+                if last_key == result_key:
+                    result_index = key
+                else:
+                    result_index = (key % self.bulk_size) - (
+                        self.bulk_size - (self.count % last_key)
+                    )
+
+            if result_key not in self.results:
+                self.results[result_key] = self.es._search(
+                    self.query, sort=self.sort, start=start, **self.query_params
+                )["hits"]["hits"]
+
+            return self.results[result_key][result_index]
+
+        def __iter__(self):
+            """ """
+            pass

@@ -15,7 +15,7 @@ class FHIR_VERSION(enum.Enum):
 
 
 @enum.unique
-class SortOrderType(enum):
+class SortOrderType(enum.Enum):
     """ """
 
     ASC = "asc"

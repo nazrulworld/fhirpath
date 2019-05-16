@@ -6,6 +6,7 @@ from zope.interface import implementer
 from zope.interface import implementer_only
 
 from fhirpath.enums import SortOrderType
+from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
 
@@ -20,22 +21,6 @@ from .interfaces import ITermValue
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-class BaseType(object):
-    """ """
-
-    def __init__(self, max_=None, min_=None, type_code=None, type_=None):
-        """ """
-        self._max = max_
-        self._min = min_
-        self.__visit_name__ = type_code
-        self._type = type_
-
-    @property
-    def is_array(self):
-        """ """
-        return self._max == "*"
 
 
 @implementer(ITerm)
@@ -76,17 +61,20 @@ class Term(object):
         if self.arithmetic_operator is None:
             self.arithmetic_operator = operator.and_
 
+        self.finalized = True
+
     def clone(self):
         """ """
         return self.__copy__()
 
     def validate(self):
         """ """
+        pass
 
     @staticmethod
     def ensure_term_value(value):
         """ """
-        if value is None or ITermValue.provideBy(value):
+        if value is None or ITermValue.providedBy(value):
             return value
 
         if isinstance(value, list):
@@ -250,7 +238,7 @@ class InTerm(Term):
 class ExistsTerm(Term):
     """ """
 
-    def __init__(self, path):
+    def __init_(se_lf, path):
         """Only Takes Path"""
         super(ExistsTerm, self).__init__(path)
 
@@ -261,12 +249,11 @@ class TermValue(object):
 
     def __init__(self, value):
         """ """
-        self.value = value
+        self.finalized = False
+        self.value = None
+        self.raw = value
         # +,- (negetive, positive)
         self.unary_operator = None
-
-    def clone(self):
-        """ """
 
     def __pos__(self):
         """+self Unary plus sign"""
@@ -285,18 +272,30 @@ class TermValue(object):
         newone.__dict__.update(self.__dict__)
 
         newone.value = copy(self.value)
-        newone.type = copy(self.type)
+        newone.raw = copy(self.raw)
+        newone.finalized = self.finalized
         # +,- (negetive, positive)
         newone.unary_operator = self.unary_operator
 
         return newone
 
-    def finalize(self, term):
+    def finalize(self, context):
+        """context: PathInfoContext """
+        value = context.type_class(self.raw)
+
+        if IFhirPrimitiveType.providedBy(value):
+            self.value = value.to_python()
+        else:
+            # xxx: support for other value type
+            raise NotImplementedError
+
+        self.finalized = True
+
+    def __call__(self):
         """ """
-        # xxx: find type using Context
-        # https://github.com/nazrulworld/fhir-parser\
-        # /blob/d8c8871147031882011d5e497f3e99fc19863f27/fhirspec.py#L98
-        # from there it is possible to calculate ValueType
+        if not self.finalized:
+            raise ValueError("Objectis not TermValue::finalize() yet!")
+        return self.value
 
 
 @implementer(IInTermValue)

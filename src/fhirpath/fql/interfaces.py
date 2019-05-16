@@ -64,3 +64,32 @@ class IQueryBuilder(Interface):
 
     def bind(context):
         """ """
+
+
+class IQueryResult(Interface):
+    """ """
+
+    def fetchall():
+        """ """
+
+    def single():
+        """ """
+
+    def first():
+        """ """
+
+    def last():
+        """ """
+
+    def tail():
+        """ """
+
+    def skip():
+        """ """
+
+    def take():
+        """ """
+    def count():
+        """ """
+    def empty():
+        """ """

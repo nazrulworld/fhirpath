@@ -231,13 +231,13 @@ class PathInfoContext:
         multiple,
     ):
         """ """
-        self.fhir_release = None
-        self.prop_name = None
-        self.prop_original = None
-        self.type_name = None
-        self.type_class = None
-        self.optional = None
-        self.multiple = None
+        self.fhir_release = fhir_release
+        self.prop_name = prop_name
+        self.prop_original = prop_original
+        self.type_name = type_name
+        self.type_class = type_class
+        self.optional = optional
+        self.multiple = multiple
 
     @classmethod
     def context_from_path(cls, pathname: str, fhir_release: FHIR_VERSION):
@@ -248,6 +248,7 @@ class PathInfoContext:
 
         parts = pathname.split(".")
         model = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
+        model = import_string(model)
         new_path = parts[0]
         context = None
 
@@ -292,7 +293,7 @@ class PathInfoContext:
                     optional=(not not_optional),
                     multiple=is_list,
                 )
-                PATH_INFO_CACHE[fhir_release][new_path] = context
+                PATH_INFO_CACHE[fhir_release.value][new_path] = context
                 if not is_primitive:
                     model = type_class
                 else:

@@ -3,8 +3,10 @@ import subprocess
 
 import pytest
 
+from fhirpath.engine import create_engine
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
+from fhirpath.utils import proxy
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -26,6 +28,13 @@ def fhir_spec_settings():
     settings = attrdict(DEFAULT_SETTINGS.copy())
 
     yield settings
+
+
+@pytest.fixture
+def engine():
+    """ """
+    engine = create_engine()
+    yield proxy(engine)
 
 
 def has_internet_connection():
