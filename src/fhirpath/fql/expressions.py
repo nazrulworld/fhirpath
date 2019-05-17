@@ -1,8 +1,12 @@
 # _*_ coding: utf-8 _*_
 import operator
 
+from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import reraise
 
+from .interfaces import IGroupTerm
+from .interfaces import ITerm
+from .types import GroupTerm
 from .types import InTerm
 from .types import SortTerm
 from .types import Term
@@ -11,9 +15,23 @@ from .types import TermValue
 
 __author__ = "Md Nazrul Islam <email2nazrul>"
 
+__all__ = [
+    "T_",
+    "V_",
+    "G_",
+    "exists_",
+    "not_exists_",
+    "and_",
+    "or_",
+    "xor_",
+    "not_",
+    "in_",
+    "sort_",
+    "fql",
+]
 
 # API functions
-def T_(path, value=None):
+def T_(path, value=EMPTY_VALUE):  # noqa: E302
     """ """
     term = Term(path=path, value=value)
     return term
@@ -23,6 +41,12 @@ def V_(value):
     """ """
     val = TermValue(value)
     return val
+
+
+def G_(*terms):
+    """ """
+    group_term = GroupTerm(*terms)
+    return group_term
 
 
 def exists_(path):
@@ -39,28 +63,52 @@ def not_exists_(path):
     return term
 
 
-def and_(path, value=None):
+def _prepare_term_or_group(path, value=EMPTY_VALUE):
     """ """
-    term = T_(path, value)
-    term.arithmetic_operator = operator.and_
+    term_or_group = EMPTY_VALUE
+    if IGroupTerm.providedBy(path):
+        term_or_group = path
+    elif ITerm.providedBy(path):
+        term_or_group = path
+        if value is not EMPTY_VALUE:
+            term_or_group == value
 
-    return term
+    elif isinstance(path, str):
+        term_or_group = T_(path, value)
+
+    return term_or_group
 
 
-def or_(path, value=None):
+def and_(path, value=EMPTY_VALUE):
     """ """
-    term = T_(path, value)
-    term.arithmetic_operator = operator.or_
+    term_or_group = _prepare_term_or_group(path, value=value)
+    term_or_group.arithmetic_operator = operator.and_
 
-    return term
+    return term_or_group
 
 
-def not_(path, value=None):
+def or_(path, value=EMPTY_VALUE):
     """ """
-    term = T_(path, value)
-    term.comparison_operator = operator.not_
+    term_or_group = _prepare_term_or_group(path, value=value)
+    term_or_group.arithmetic_operator = operator.or_
 
-    return term
+    return term_or_group
+
+
+def xor_(path, value=EMPTY_VALUE):
+    """ """
+    term_or_group = _prepare_term_or_group(path, value=value)
+    term_or_group.arithmetic_operator = operator.xor
+
+    return term_or_group
+
+
+def not_(path, value=EMPTY_VALUE):
+    """ """
+    term_or_group = _prepare_term_or_group(path, value=value)
+    term_or_group.unary_operator = operator.neg
+
+    return term_or_group
 
 
 def in_(path, values):
@@ -69,7 +117,7 @@ def in_(path, values):
     return term
 
 
-def sort_(path, order=None):
+def sort_(path, order=EMPTY_VALUE):
     """ """
     sort_term = SortTerm(path)
     if order:

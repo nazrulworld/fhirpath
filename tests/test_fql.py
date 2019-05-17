@@ -6,6 +6,11 @@ from datetime import datetime
 
 import pytest
 
+from fhirpath.fql.expressions import G_
+from fhirpath.fql.expressions import T_
+from fhirpath.fql.expressions import and_
+from fhirpath.fql.interfaces import IGroupTerm
+from fhirpath.fql.interfaces import ITerm
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
 from fhirpath.utils import PATH_INFO_CACHE
@@ -46,5 +51,27 @@ def test_term_complex_operator(engine):
     """ """
     term = Term("Patient.meta.lastUpdated")
     value = TermValue(datetime.now().isoformat())
-    term = (term >= value)
+    term = term >= value
     term.finalize(engine)
+
+    assert term.comparison_operator == operator.ge
+    assert isinstance(term.value(), datetime)
+
+
+def test_expression_add(engine):
+    """ """
+    term = and_("Patient.name.given", "Krog")
+    term.finalize(engine)
+    assert ITerm.providedBy(term)
+    assert term.arithmetic_operator == operator.and_
+    assert term.path_context.multiple is True
+
+    term = T_("Patient.name.period.start")
+    term = and_(-term, datetime.now().isoformat())
+
+    assert term.unary_operator == operator.neg
+
+    group = G_(term <= datetime.now().isoformat())
+    group = and_(group)
+
+

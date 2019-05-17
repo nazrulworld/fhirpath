@@ -6,12 +6,15 @@ from zope.interface import implementer
 from zope.interface import implementer_only
 
 from fhirpath.enums import SortOrderType
+from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.interfaces import IFhirPrimitiveType
+from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
 
 from .interfaces import IElementPath
 from .interfaces import IExistsTerm
+from .interfaces import IGroupTerm
 from .interfaces import IInTerm
 from .interfaces import IInTermValue
 from .interfaces import IModel
@@ -23,15 +26,37 @@ from .interfaces import ITermValue
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+def _constraint_value_assigned(obj):
+    """ """
+    _constraint_finalized(obj)
+
+    if obj._value_assigned is True:
+        raise ConstraintNotSatisfied(
+            "Value already assigned to {0!r}".format(obj.__class__)
+        )
+
+
+def _constraint_finalized(obj):
+    """ """
+    if obj._finalized:
+        raise ConnectionResetError(
+            "Object from {0!r} is already in final state, "
+            "means any modification been locked".format(obj.__class__)
+        )
+
+
 @implementer(ITerm)
 class Term(object):
     """ """
 
-    def __init__(self, path, value=None):
+    def __init__(self, path, value=EMPTY_VALUE):
         """ """
         # flag
-        self.finalized = False
+        self._finalized = False
+        self._value_assigned = False
 
+        # Path Context
+        self.path_context = None
         # eq, ne, lt, le, gt, ge
         self.comparison_operator = None
         # +,- (negetive, positive)
@@ -45,10 +70,14 @@ class Term(object):
             self.__merge__(path)
         else:
             self.path = path
-        self.path_context = None
+
+        if self.value is not EMPTY_VALUE:
+            self._value_assigned = True
 
     def finalize(self, context):
         """ """
+        _constraint_finalized(self)
+
         # xxx: find type using Context
         # May path as Resource Attribute
         # Do validation
@@ -61,7 +90,7 @@ class Term(object):
         if self.arithmetic_operator is None:
             self.arithmetic_operator = operator.and_
 
-        self.finalized = True
+        self._finalized = True
 
     def clone(self):
         """ """
@@ -74,7 +103,7 @@ class Term(object):
     @staticmethod
     def ensure_term_value(value):
         """ """
-        if value is None or ITermValue.providedBy(value):
+        if value is EMPTY_VALUE or ITermValue.providedBy(value):
             return value
 
         if isinstance(value, list):
@@ -90,7 +119,9 @@ class Term(object):
         newone.__dict__.update(self.__dict__)
 
         # static properties
-        newone.finalized = self.finalized
+        newone._finalized = self._finalized
+        newone._value_assigned = self._value_assigned
+
         newone.comparison_operator = self.comparison_operator
         newone.unary_operator = self.unary_operator
         newone.arithmetic_operator = self.arithmetic_operator
@@ -103,11 +134,15 @@ class Term(object):
 
     def __pos__(self):
         """+self Unary plus sign"""
+        _constraint_finalized(self)
+
         self.unary_operator = operator.pos
         return self.clone()
 
     def __neg__(self):
         """-self Unary minus sign"""
+        _constraint_finalized(self)
+
         self.unary_operator = operator.neg
 
         return self.clone()
@@ -158,39 +193,20 @@ class Term(object):
 
         return self.clone()
 
-    def __and__(self, other):
-        """ Implements bitwise and using the & operator."""
-        self.__compare__(other)
-        self.comparison_operator = operator.eq
-        self.arithmetic_operator = operator.and_
-
-        return self.clone()
-
-    def __or__(self, other):
-        """Implements bitwise or using the | operator."""
-        self.__compare__(other)
-        self.comparison_operator = operator.eq
-        self.arithmetic_operator = operator.or_
-
-        return self.clone()
-
-    def __xor__(self, other):
-        """Implements bitwise xor using the ^ operator."""
-        self.__compare__(other)
-        self.comparison_operator = operator.eq
-        self.arithmetic_operator = operator.xor
-
-        return self.clone()
-
     # Non standard
     def __merge__(self, other):
         """ """
+        _constraint_value_assigned(self)
+
         raise NotImplementedError
 
     def __compare__(self, other):
         """ """
+        _constraint_value_assigned(self)
+
         other = Term.ensure_term_value(other)
         self.value = other
+        self._value_assigned = True
         if other.unary_operator is not None:
             self.unary_operator = operator.unary_operator
 
@@ -199,14 +215,14 @@ class Term(object):
 class InTerm(Term):
     """The InTerm never influences by TermValue unary_operator!"""
 
-    def __init__(self, path, value=None):
+    def __init__(self, path, value=EMPTY_VALUE):
         """ """
         if isinstance(value, (list, tuple, set)):
             if isinstance(value, (tuple, set)):
                 value = list(value)
         elif IInTermValue.providedBy(value):
             value = value.value
-        elif value is not None:
+        elif value is not EMPTY_VALUE:
             value = [value]
         else:
             value = list()
@@ -249,7 +265,7 @@ class TermValue(object):
 
     def __init__(self, value):
         """ """
-        self.finalized = False
+        self._finalized = False
         self.value = None
         self.raw = value
         # +,- (negetive, positive)
@@ -257,11 +273,15 @@ class TermValue(object):
 
     def __pos__(self):
         """+self Unary plus sign"""
+        _constraint_finalized(self)
+
         self.unary_operator = operator.pos
         return self.clone()
 
     def __neg__(self):
         """-self Unary minus sign"""
+        _constraint_finalized(self)
+
         self.unary_operator = operator.neg
 
         return self.clone()
@@ -273,7 +293,7 @@ class TermValue(object):
 
         newone.value = copy(self.value)
         newone.raw = copy(self.raw)
-        newone.finalized = self.finalized
+        newone._finalized = self._finalized
         # +,- (negetive, positive)
         newone.unary_operator = self.unary_operator
 
@@ -281,6 +301,8 @@ class TermValue(object):
 
     def finalize(self, context):
         """context: PathInfoContext """
+        _constraint_finalized(self)
+
         value = context.type_class(self.raw)
 
         if IFhirPrimitiveType.providedBy(value):
@@ -289,11 +311,11 @@ class TermValue(object):
             # xxx: support for other value type
             raise NotImplementedError
 
-        self.finalized = True
+        self._finalized = True
 
     def __call__(self):
         """ """
-        if not self.finalized:
+        if not self._finalized:
             raise ValueError("Objectis not TermValue::finalize() yet!")
         return self.value
 
@@ -331,6 +353,60 @@ class InTermValue(TermValue):
             self.value.append(Term.ensure_term_value(other))
 
         return self.clone()
+
+
+@implementer(IGroupTerm)
+class GroupTerm(object):
+    """ """
+
+    def __init__(self, *terms):
+        """ """
+        # flag
+        self._finalized = False
+
+        # +,- (negetive, positive)
+        self.unary_operator = None
+        # and, or, xor
+        self.arithmetic_operator = None
+        # any|all|one
+        self.match_operator = None
+
+        self.terms = list()
+
+        for term in terms:
+            self.terms.append(ITerm(term))
+
+    def __add__(self, other):
+        """ """
+        self._add(other)
+
+    def __iadd__(self, other):
+        """ """
+        self._add(other)
+
+    def _add(self, other):
+        """ """
+        _constraint_finalized(self)
+        if ITerm.providedBy(other):
+            self.terms.append(other)
+
+        elif IGroupTerm.providedBy(other):
+
+            if self.unary_operator is None and other.unary_operator:
+                self.unary_operator = other.unary_operator
+            if self.arithmetic_operator is None and other.arithmetic_operator:
+                self.arithmetic_operator = other.arithmetic_operator
+            if self.match_operator is None and other.match_operator:
+                self.match_operator = other.match_operator
+
+            self.terms.extend(other.terms)
+
+    def finalize(self, engine):
+        """ """
+        for term in self.terms:
+            term.finalize(engine)
+
+        self._finalized = True
 
 
 @implementer(ISortTerm)

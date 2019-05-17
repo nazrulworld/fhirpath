@@ -14,6 +14,10 @@ class ITerm(Interface):
     """ """
 
 
+class IGroupTerm(Interface):
+    """ """
+
+
 class IInTerm(ITerm):
     """ """
 
@@ -89,7 +93,9 @@ class IQueryResult(Interface):
 
     def take():
         """ """
+
     def count():
         """ """
+
     def empty():
         """ """

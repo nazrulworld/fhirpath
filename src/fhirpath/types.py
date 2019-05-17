@@ -16,6 +16,7 @@ from .interfaces import IFhirPrimitiveType
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 __all__ = [
+    "EMPTY_VALUE",
     "FhirBoolean",
     "FhirInteger",
     "FhirString",
@@ -490,3 +491,12 @@ PrimitiveDataTypes = ImmutableDict(
         (FhirUUID.__visit_name__, FhirUUID),
     ]
 )
+
+
+class Empty:
+    """Empty Class: specially designed for fhirpath to identify empty value"""
+
+    __slots__ = ()
+
+
+EMPTY_VALUE = Empty()
