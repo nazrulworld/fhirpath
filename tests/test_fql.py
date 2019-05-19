@@ -8,7 +8,9 @@ import pytest
 
 from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
+from fhirpath.fql.expressions import V_
 from fhirpath.fql.expressions import and_
+from fhirpath.fql.expressions import or_
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
 from fhirpath.fql.types import Term
@@ -68,10 +70,48 @@ def test_expression_add(engine):
 
     term = T_("Patient.name.period.start")
     term = and_(-term, datetime.now().isoformat())
-
+    term.finalize(engine)
     assert term.unary_operator == operator.neg
 
+    term = T_("Patient.name.period.start")
     group = G_(term <= datetime.now().isoformat())
     group = and_(group)
 
+    group.finalize(engine)
 
+    assert IGroupTerm.providedBy(group) is True
+    assert len(group.terms) == 1
+    assert group.terms[0]._finalized is True
+
+
+def test_expression_or(engine):
+    """ """
+    term = or_("Task.for.reference", "Patient/PAT-001")
+    term.finalize(engine)
+    assert ITerm.providedBy(term)
+    assert term.arithmetic_operator == operator.or_
+    assert term.path_context.parent.prop_name == "for_fhir"
+
+    term = T_("Patient.name.period.start")
+    term = or_(-term, datetime.now().isoformat())
+    term.finalize(engine)
+    assert term.unary_operator == operator.neg
+
+    term = T_("Patient.name.period.start")
+    group = G_(term <= datetime.now().isoformat())
+    group = or_(group)
+
+    group.finalize(engine)
+
+    assert len(group.terms) == 1
+    assert group.terms[0]._finalized is True
+
+
+def test_complex_expression(engine):
+    """ """
+    term = T_("Organization.telecom.rank")
+    value = V_("26")
+    term = (term >= (-value))
+    term.finalize(engine)
+
+    assert term.unary_operator == operator.neg

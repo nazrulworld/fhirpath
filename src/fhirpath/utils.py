@@ -222,6 +222,7 @@ class PathInfoContext:
 
     def __init__(
         self,
+        path,
         fhir_release,
         prop_name,
         prop_original,
@@ -231,6 +232,10 @@ class PathInfoContext:
         multiple,
     ):
         """ """
+        self._parent = None
+        self._children = list()
+        self._path = path
+
         self.fhir_release = fhir_release
         self.prop_name = prop_name
         self.prop_original = prop_original
@@ -285,6 +290,7 @@ class PathInfoContext:
                     is_primitive = False
 
                 context = cls(
+                    new_path,
                     fhir_release=fhir_release,
                     prop_name=name,
                     prop_original=jsname,
@@ -293,6 +299,13 @@ class PathInfoContext:
                     optional=(not not_optional),
                     multiple=is_list,
                 )
+                if index > 1:
+                    context.parent = ".".join(new_path.split(".")[:-1])
+                    # Get Property: should return parent Context obj instead
+                    # of just string
+                    parent_context = context.parent
+                    parent_context.add_child(new_path)
+
                 PATH_INFO_CACHE[fhir_release.value][new_path] = context
                 if not is_primitive:
                     model = type_class
@@ -305,6 +318,46 @@ class PathInfoContext:
     def __proxy__(self):
         """ """
         return PathInfoContextProxy(self)
+
+    def _set_parent(self, dotted_path: str):
+        """ """
+        self._parent = dotted_path
+
+    def _get_parent(self):
+        """ """
+        return PathInfoContext.context_from_path(self._parent, self.fhir_release)
+
+    parent = property(_get_parent, _set_parent)
+
+    def _get_children(self):
+        """ """
+        return [
+            PathInfoContext.context_from_path(child, self.fhir_release)
+            for child in self._children
+        ]
+
+    def _set_children(self, paths):
+        """ """
+        if isinstance(paths, str):
+            paths = [paths]
+        self._children = paths
+
+    children = property(_get_children, _set_children)
+
+    def add_child(self, path):
+        """ """
+        if path not in self._children:
+            self._children.append(path)
+
+    def __repr__(self):
+        """ """
+        return "<{0}.{1}('{2}')>".format(
+            self.__class__.__module__, self.__class__.__name__, self._path
+        )
+
+    def __str__(self):
+        """ """
+        return str(self._path)
 
 
 class PathInfoContextProxy(Proxy):

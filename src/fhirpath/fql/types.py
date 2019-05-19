@@ -7,6 +7,7 @@ from zope.interface import implementer_only
 
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import ConstraintNotSatisfied
+from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import PathInfoContext
@@ -87,8 +88,17 @@ class Term(object):
             PathInfoContext.context_from_path(pathname, context.fhir_release)
         )
         self.value.finalize(self.path_context)
+
         if self.arithmetic_operator is None:
             self.arithmetic_operator = operator.and_
+
+        if self.unary_operator is None:
+            self.unary_operator = operator.pos
+
+        if self.comparison_operator is None:
+            self.comparison_operator = operator.eq
+
+        self.validate()
 
         self._finalized = True
 
@@ -98,7 +108,32 @@ class Term(object):
 
     def validate(self):
         """ """
-        pass
+        # xxx: required validate ```comparison_operator```
+        # lt,le,gt,ge only for Date,DateTime, Interger, Float
+        if IFhirPrimitiveType.implementedBy(self.path_context.type_class):
+            if self.path_context.type_name not in (
+                "integer",
+                "decimal",
+                "instant",
+                "date",
+                "dateTime",
+                "time",
+                "unsignedInt",
+                "positiveInt",
+            ) and self.comparison_operator in (
+                operator.lt,
+                operator.le,
+                operator.gt,
+                operator.ge,
+            ):
+                raise ValidationError(
+                    "Operator '{0!s}' is allowed for value type '{1!s}'".format(
+                        self.comparison_operator.__name__, self.path_context.type_name
+                    )
+                )
+        else:
+            # don't have usecase yet!
+            raise NotImplementedError
 
     @staticmethod
     def ensure_term_value(value):
@@ -208,7 +243,7 @@ class Term(object):
         self.value = other
         self._value_assigned = True
         if other.unary_operator is not None:
-            self.unary_operator = operator.unary_operator
+            self.unary_operator = other.unary_operator
 
 
 @implementer(IInTerm)
@@ -298,6 +333,10 @@ class TermValue(object):
         newone.unary_operator = self.unary_operator
 
         return newone
+
+    def clone(self):
+        """ """
+        return self.__copy__()
 
     def finalize(self, context):
         """context: PathInfoContext """

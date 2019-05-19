@@ -7,3 +7,7 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 class ConstraintNotSatisfied(Invalid):
     """ """
+
+
+class ValidationError(ConstraintNotSatisfied):
+    """ """
