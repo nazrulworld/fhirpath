@@ -17,7 +17,6 @@ from .interfaces import IElementPath
 from .interfaces import IExistsTerm
 from .interfaces import IGroupTerm
 from .interfaces import IInTerm
-from .interfaces import IInTermValue
 from .interfaces import IModel
 from .interfaces import ISortTerm
 from .interfaces import ITerm
@@ -75,7 +74,7 @@ class Term(object):
         if self.value is not EMPTY_VALUE:
             self._value_assigned = True
 
-    def finalize(self, context):
+    def _finalize(self, context):
         """ """
         _constraint_finalized(self)
 
@@ -87,7 +86,6 @@ class Term(object):
         self.path_context = proxy(
             PathInfoContext.context_from_path(pathname, context.fhir_release)
         )
-        self.value.finalize(self.path_context)
 
         if self.arithmetic_operator is None:
             self.arithmetic_operator = operator.and_
@@ -99,6 +97,12 @@ class Term(object):
             self.comparison_operator = operator.eq
 
         self.validate()
+
+    def finalize(self, context):
+        """ """
+        self._finalize(context)
+
+        self.value.finalize(self.path_context)
 
         self._finalized = True
 
@@ -255,8 +259,6 @@ class InTerm(Term):
         if isinstance(value, (list, tuple, set)):
             if isinstance(value, (tuple, set)):
                 value = list(value)
-        elif IInTermValue.providedBy(value):
-            value = value.value
         elif value is not EMPTY_VALUE:
             value = [value]
         else:
@@ -266,10 +268,7 @@ class InTerm(Term):
 
     def __add__(self, other):
         """ """
-        if IInTermValue.providedBy(other):
-            self.value.extend(other.value)
-
-        elif isinstance(other, (list, tuple, set)):
+        if isinstance(other, (list, tuple, set)):
             if isinstance(other, (tuple, set)):
                 other = list(other)
 
@@ -281,17 +280,83 @@ class InTerm(Term):
 
     def finalize(self, context):
         """ """
-        self.value = InTermValue(self.value)
-        super(InTerm, self).finalize(context)
+        self._finalize(context)
+
+        [val.finalize(self.path_context) for val in self.value]
+
+        self._finalized = True
 
 
 @implementer_only(IExistsTerm)
-class ExistsTerm(Term):
+class ExistsTerm(object):
     """ """
 
-    def __init_(se_lf, path):
+    def __init__(self, path):
         """Only Takes Path"""
-        super(ExistsTerm, self).__init__(path)
+
+        # flag
+        self._finalized = False
+
+        # Path Context
+        self.path_context = None
+        # +,- (negetive, positive)
+        self.unary_operator = None
+
+        if ITerm.providedBy(path):
+            self.path = path.path
+        else:
+            self.path = path
+
+    def finalize(self, context):
+        """ """
+        _constraint_finalized(self)
+
+        # xxx: find type using Context
+        # May path as Resource Attribute
+        # Do validation
+        self.fhir_release = context.fhir_release
+        pathname = str(self.path)
+        self.path_context = proxy(
+            PathInfoContext.context_from_path(pathname, context.fhir_release)
+        )
+
+        if self.unary_operator is None:
+            self.unary_operator = operator.pos
+
+        self._finalized = True
+
+    def __copy__(self):
+        """ """
+        newone = type(self).__new__(type(self))
+        newone.__dict__.update(self.__dict__)
+
+        # static properties
+        newone._finalized = self._finalized
+        newone.unary_operator = self.unary_operator
+
+        # !important to copy
+        newone.path = copy(self.path)
+
+        return newone
+
+    def __pos__(self):
+        """+self Unary plus sign"""
+        _constraint_finalized(self)
+
+        self.unary_operator = operator.pos
+        return self.clone()
+
+    def __neg__(self):
+        """-self Unary minus sign"""
+        _constraint_finalized(self)
+
+        self.unary_operator = operator.neg
+
+        return self.clone()
+
+    def clone(self):
+        """ """
+        return self.__copy__()
 
 
 @implementer(ITermValue)
@@ -359,41 +424,6 @@ class TermValue(object):
         return self.value
 
 
-@implementer(IInTermValue)
-class InTermValue(TermValue):
-    """ """
-
-    def __init__(self, value):
-        """ """
-        if isinstance(value, (tuple, list, set)):
-            if isinstance(value, (tuple, set)):
-                value = list(value)
-
-        elif value is not None:
-            value = [value]
-        else:
-            value = list()
-
-        value = Term.ensure_term_value(value)
-
-        super(InTermValue, self).__init__(value)
-
-    def __add__(self, other):
-        """ """
-        if IInTermValue.providedBy(other):
-            self.value.extend(other.value)
-
-        elif isinstance(other, (list, tuple, set)):
-            if isinstance(other, (tuple, set)):
-                other = list(other)
-
-            self.value.extend(Term.ensure_term_value(other))
-        else:
-            self.value.append(Term.ensure_term_value(other))
-
-        return self.clone()
-
-
 @implementer(IGroupTerm)
 class GroupTerm(object):
     """ """
@@ -403,8 +433,6 @@ class GroupTerm(object):
         # flag
         self._finalized = False
 
-        # +,- (negetive, positive)
-        self.unary_operator = None
         # and, or, xor
         self.arithmetic_operator = None
         # any|all|one
@@ -417,11 +445,11 @@ class GroupTerm(object):
 
     def __add__(self, other):
         """ """
-        self._add(other)
+        return self._add(other)
 
     def __iadd__(self, other):
         """ """
-        self._add(other)
+        return self._add(other)
 
     def _add(self, other):
         """ """
@@ -431,8 +459,6 @@ class GroupTerm(object):
 
         elif IGroupTerm.providedBy(other):
 
-            if self.unary_operator is None and other.unary_operator:
-                self.unary_operator = other.unary_operator
             if self.arithmetic_operator is None and other.arithmetic_operator:
                 self.arithmetic_operator = other.arithmetic_operator
             if self.match_operator is None and other.match_operator:
@@ -440,12 +466,32 @@ class GroupTerm(object):
 
             self.terms.extend(other.terms)
 
-    def finalize(self, engine):
+        return self.clone()
+
+    def clone(self):
+        """ """
+        return self.__copy__()
+
+    def finalize(self, context):
         """ """
         for term in self.terms:
-            term.finalize(engine)
+            term.finalize(context)
 
         self._finalized = True
+
+    def __copy__(self):
+        """ """
+        newone = type(self).__new__(type(self))
+        newone.__dict__.update(self.__dict__)
+
+        newone.terms = copy(self.terms)
+        newone._finalized = self._finalized
+        # and, or, xor
+        newone.arithmetic_operator = self.arithmetic_operator
+        # any|all|one
+        newone.match_operator = self.match_operator
+
+        return newone
 
 
 @implementer(ISortTerm)

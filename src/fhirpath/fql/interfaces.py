@@ -30,10 +30,6 @@ class ITermValue(Interface):
     """ """
 
 
-class IInTermValue(ITermValue):
-    """ """
-
-
 class IElementPath(Interface):
     """ """
 

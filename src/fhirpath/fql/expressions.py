@@ -6,6 +6,7 @@ from fhirpath.utils import reraise
 
 from .interfaces import IGroupTerm
 from .interfaces import ITerm
+from .types import ExistsTerm
 from .types import GroupTerm
 from .types import InTerm
 from .types import SortTerm
@@ -51,16 +52,14 @@ def G_(*terms):
 
 def exists_(path):
     """ """
-    term = T_(path=path)
+    term = ExistsTerm(path)
     term.unary_operator = operator.pos
     return term
 
 
 def not_exists_(path):
     """ """
-    term = T_(path=path)
-    term.unary_operator = operator.neg
-    return term
+    return not_(exists_(path))
 
 
 def _prepare_term_or_group(path, value=EMPTY_VALUE):
@@ -117,10 +116,15 @@ def in_(path, values):
     return term
 
 
+def not_in_(path, values):
+
+    return not_(in_(path, values))
+
+
 def sort_(path, order=EMPTY_VALUE):
     """ """
     sort_term = SortTerm(path)
-    if order:
+    if order is not EMPTY_VALUE:
         sort_term.order = order
 
     return sort_term

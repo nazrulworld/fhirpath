@@ -10,9 +10,14 @@ from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
 from fhirpath.fql.expressions import V_
 from fhirpath.fql.expressions import and_
+from fhirpath.fql.expressions import exists_
+from fhirpath.fql.expressions import in_
+from fhirpath.fql.expressions import not_exists_
+from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
+from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
 from fhirpath.utils import PATH_INFO_CACHE
@@ -107,11 +112,32 @@ def test_expression_or(engine):
     assert group.terms[0]._finalized is True
 
 
+def test_expression_existence(engine):
+    """ """
+    term = exists_("Patient.name.period.start")
+    term.finalize(engine)
+
+    assert IExistsTerm.providedBy(term) is True
+    assert term.unary_operator == operator.pos
+
+    # test not exists
+    term = not_exists_("Task.for.reference")
+    term.finalize(engine)
+    assert term.unary_operator == operator.neg
+
+    # Test from Term
+    term = T_("Task.for.reference", "Patient/PAT-001")
+    term = exists_(term)
+    term.finalize(engine)
+
+    assert IExistsTerm.providedBy(term) is True
+
+
 def test_complex_expression(engine):
     """ """
     term = T_("Organization.telecom.rank")
     value = V_("26")
-    term = (term >= (-value))
+    term = term >= (-value)
     term.finalize(engine)
 
     assert term.unary_operator == operator.neg
