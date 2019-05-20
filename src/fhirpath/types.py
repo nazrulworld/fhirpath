@@ -41,7 +41,30 @@ __all__ = [
 
 
 @implementer(IFhirPrimitiveType)
-class FhirBoolean(str):
+class FhirPrimitiveType(str):
+    """In FHIR, the data types are divided into ‘primitive’ and ‘complex’ data types.
+    The primitive data types are types like string, integer, boolean, etc.
+    that can take a single value. The complex types consist of multiple values
+    grouped together.
+    For each of the fields that take a primitive data type, the API provides you with
+    two fields in the class. One of the fields has the same name as the element it
+    corresponds with in the FHIR resource,
+    e.g. Active in the Patient class. This field is of the standard .Net data type."""
+
+    __visit_name__ = None
+    __regex__ = None
+
+    def _validate(self):
+        """ """
+        if self.__regex__ is not None:
+            res = re.match(self.__regex__, self)
+            if not res:
+                raise ValueError(
+                    "Invalid FHIR '{0}' value!".format(self.__visit_name__)
+                )
+
+
+class FhirBoolean(FhirPrimitiveType):
     """XML Representation: xs:boolean, except that 0 and 1 are not valid values
     JSON representation: JSON boolean (true or false)
     """
@@ -62,8 +85,7 @@ class FhirBoolean(str):
         return str(self) == "true"
 
 
-@implementer(IFhirPrimitiveType)
-class FhirInteger(str):
+class FhirInteger(FhirPrimitiveType):
     """A signed integer in the range −2,147,483,648..2,147,483,647
     (32-bit; for larger values, use decimal)
 
@@ -90,8 +112,7 @@ class FhirInteger(str):
         return int(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirString(str):
+class FhirString(FhirPrimitiveType):
     """A sequence of Unicode characters
     Note that strings SHALL NOT exceed 1MB (1024*1024 characters) in size.
     Strings SHOULD not contain Unicode character points below 32, except for u0009
@@ -123,8 +144,7 @@ class FhirString(str):
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirDecimal(str):
+class FhirDecimal(FhirPrimitiveType):
     """Rational numbers that have a decimal representation.
     The precision of the decimal value has significance:
 
@@ -162,8 +182,7 @@ class FhirDecimal(str):
         return float(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirURI(str):
+class FhirURI(FhirPrimitiveType):
     """A Uniform Resource Identifier Reference (RFC 3986 ).
     Note: URIs are case sensitive.
     For UUID (urn:uuid:53fefa32-fcbb-4ff8-8a92-55ee120877b7) use all lowercase
@@ -180,8 +199,7 @@ class FhirURI(str):
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirURL(str):
+class FhirURL(FhirPrimitiveType):
     """A Uniform Resource Locator (RFC 1738 ).
     Note URLs are accessed directly using the specified protocol.
     Common URL protocols are ``http{s}:``, ``ftp:``, ``mailto``: and ``mllp:``,
@@ -200,8 +218,7 @@ class FhirURL(str):
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirCanonical(str):
+class FhirCanonical(FhirPrimitiveType):
     """A URI that refers to a resource by its canonical URL (resources with a url property).
     The canonical type differs from a uri in that it has special meaning in this
     specification, and in that it may have a version appended, separated by
@@ -240,11 +257,12 @@ class FhirBase64Binary(bytes):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return base64.b64decode(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirInstant(str):
+class FhirInstant(FhirPrimitiveType):
     """An instant in time in the format YYYY-MM-DDThh:mm:ss.sss+zz:zz
     (e.g. 2015-02-07T13:28:17.239+02:00 or 2017-01-01T00:00:00Z).
     The time SHALL specified at least to the second and SHALL include a time zone.
@@ -262,14 +280,15 @@ class FhirInstant(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         if "T" in self:
             return isodate.parse_datetime(self)
         else:
             return isodate.parse_date(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirDate(str):
+class FhirDate(FhirPrimitiveType):
     """A date, or partial date (e.g. just year or year + month) as
     used in human communication. The format is YYYY, YYYY-MM, or YYYY-MM-DD,
     e.g. 2018, 1973-06, or 1905-08-23. There SHALL be no time zone.
@@ -284,11 +303,12 @@ class FhirDate(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return isodate.parse_date(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirDateTime(str):
+class FhirDateTime(FhirPrimitiveType):
     """	A date, date-time or partial date (e.g. just year or year + month) as used in
     human communication. The format is YYYY, YYYY-MM, YYYY-MM-DD or
     YYYY-MM-DDThh:mm:ss+zz:zz, e.g. 2018, 1973-06, 1905-08-23,
@@ -308,11 +328,12 @@ class FhirDateTime(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return isodate.parse_datetime(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirTime(str):
+class FhirTime(FhirPrimitiveType):
     """A time during the day, in the format hh:mm:ss.
     There is no date specified.
     Seconds must be provided due to schema type constraints but may be zero-filled and
@@ -329,11 +350,12 @@ class FhirTime(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return isodate.parse_time(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirCode(str):
+class FhirCode(FhirPrimitiveType):
     """Indicates that the value is taken from a set of controlled
     strings defined elsewhere (see Using codes for further discussion).
     Technically, a code is restricted to a string which has at least one
@@ -349,11 +371,12 @@ class FhirCode(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirOid(str):
+class FhirOid(FhirPrimitiveType):
     """An OID represented as a URI (RFC 3001 ); e.g. urn:oid:1.2.3.4.5
 
     XML Representation: xs:anyURI
@@ -365,11 +388,12 @@ class FhirOid(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirId(str):
+class FhirId(FhirPrimitiveType):
     """Any combination of upper- or lower-case ASCII letters
     ('A'..'Z', and 'a'..'z', numerals ('0'..'9'), '-' and '.', with a length limit
     of 64 characters. (This might be an integer, an un-prefixed OID, UUID or any other
@@ -384,11 +408,12 @@ class FhirId(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirMarkdown(str):
+class FhirMarkdown(FhirPrimitiveType):
     """A FHIR string (see above) that may contain markdown syntax
     for optional processing by a markdown presentation engine,
     in the GFM extension of CommonMark format (see below)
@@ -418,8 +443,7 @@ class FhirMarkdown(str):
         return str(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirUnsignedInt(str):
+class FhirUnsignedInt(FhirPrimitiveType):
     """Any non-negative integer in the range 0..2,147,483,647
 
     XML Representation: xs:nonNegativeInteger
@@ -431,11 +455,12 @@ class FhirUnsignedInt(str):
 
     def to_python(self):
         """ """
+        self._validate()
+
         return int(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirPositiveInt(str):
+class FhirPositiveInt(FhirPrimitiveType):
     """Any positive integer in the range 1..2,147,483,647
 
     XML Representation: xs:positiveInteger
@@ -443,15 +468,16 @@ class FhirPositiveInt(str):
     """
 
     __visit_name__ = "positiveInt"
-    __regex__ = r"+?[1-9][0-9]*"
+    __regex__ = r"\+?[1-9][0-9]*"
 
     def to_python(self):
         """ """
+        self._validate()
+
         return int(self)
 
 
-@implementer(IFhirPrimitiveType)
-class FhirUUID(str):
+class FhirUUID(FhirPrimitiveType):
     """A UUID (aka GUID) represented as a URI (RFC 4122 );
     e.g. urn:uuid:c757873d-ec9a-4326-a141-556f43239520
 

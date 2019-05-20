@@ -5,6 +5,7 @@ import operator
 from datetime import datetime
 
 import pytest
+import pytz
 
 from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
@@ -15,9 +16,9 @@ from fhirpath.fql.expressions import in_
 from fhirpath.fql.expressions import not_exists_
 from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
+from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
-from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
 from fhirpath.utils import PATH_INFO_CACHE
@@ -57,7 +58,9 @@ def test_term_normal(engine):
 def test_term_complex_operator(engine):
     """ """
     term = Term("Patient.meta.lastUpdated")
-    value = TermValue(datetime.now().isoformat())
+    value = TermValue(
+        datetime.now().replace(tzinfo=pytz.UTC).isoformat()
+    )
     term = term >= value
     term.finalize(engine)
 
@@ -74,12 +77,12 @@ def test_expression_add(engine):
     assert term.path_context.multiple is True
 
     term = T_("Patient.name.period.start")
-    term = and_(-term, datetime.now().isoformat())
+    term = and_(-term, datetime.now().isoformat(timespec="seconds"))
     term.finalize(engine)
     assert term.unary_operator == operator.neg
 
     term = T_("Patient.name.period.start")
-    group = G_(term <= datetime.now().isoformat())
+    group = G_(term <= datetime.now().isoformat(timespec="seconds"))
     group = and_(group)
 
     group.finalize(engine)
@@ -98,12 +101,12 @@ def test_expression_or(engine):
     assert term.path_context.parent.prop_name == "for_fhir"
 
     term = T_("Patient.name.period.start")
-    term = or_(-term, datetime.now().isoformat())
+    term = or_(-term, datetime.now().isoformat(timespec="seconds"))
     term.finalize(engine)
     assert term.unary_operator == operator.neg
 
     term = T_("Patient.name.period.start")
-    group = G_(term <= datetime.now().isoformat())
+    group = G_(term <= datetime.now().isoformat(timespec="seconds"))
     group = or_(group)
 
     group.finalize(engine)
@@ -131,6 +134,35 @@ def test_expression_existence(engine):
     term.finalize(engine)
 
     assert IExistsTerm.providedBy(term) is True
+
+
+def test_expression_in(engine):
+    """ """
+    term = in_("Organization.telecom.rank", 67)
+    term += 78
+    term += (54, 89)
+    term.finalize(engine)
+    assert len(term.value) == 4
+
+    # test not in
+    term = not_in_("Task.for.reference", "Patient/PAT-002")
+    term = term + "Patient/PAT-001"
+    term.finalize(engine)
+
+    assert term.unary_operator == operator.neg
+    assert len(term.value) == 2
+
+
+def test_expression_in_exception(engine):
+    """ """
+    # Test not same type value
+    term = in_(
+        "Patient.name.period.start", datetime.now().replace(microsecond=0).isoformat()
+    )
+    term += "NON_DATE_VALUE"
+
+    with pytest.raises(ValueError):
+        assert term.finalize(engine)
 
 
 def test_complex_expression(engine):

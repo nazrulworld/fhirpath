@@ -278,6 +278,10 @@ class InTerm(Term):
 
         return self.clone()
 
+    def __iadd__(self, other):
+        """ """
+        return self.__add__(other)
+
     def finalize(self, context):
         """ """
         self._finalize(context)
