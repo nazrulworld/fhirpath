@@ -19,6 +19,9 @@ from fhirpath.fql.expressions import or_
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
+from fhirpath.fql.interfaces import IQuery
+from fhirpath.fql.interfaces import IQueryResult
+from fhirpath.fql.queries import QueryBuilder
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
 from fhirpath.utils import PATH_INFO_CACHE
@@ -58,9 +61,7 @@ def test_term_normal(engine):
 def test_term_complex_operator(engine):
     """ """
     term = Term("Patient.meta.lastUpdated")
-    value = TermValue(
-        datetime.now().replace(tzinfo=pytz.UTC).isoformat()
-    )
+    value = TermValue(datetime.now().replace(tzinfo=pytz.UTC).isoformat())
     term = term >= value
     term.finalize(engine)
 
@@ -173,3 +174,22 @@ def test_complex_expression(engine):
     term.finalize(engine)
 
     assert term.unary_operator == operator.neg
+
+
+def test_query_builder(engine):
+    """ """
+    builder = (
+        QueryBuilder(engine)
+        .from_("Patient")
+        .select("*")
+        .where(**{"Patient.managingOrganization.reference": "Organization/ORG-011"})
+        .sort("Patient.id")
+        .limit(0, 100)
+    )
+    builder.finalize(engine)
+
+    assert IQueryResult.providedBy(builder())
+    query = builder.get_query()
+    assert IQuery.providedBy(query)
+
+    assert query.get_limit().empty is False

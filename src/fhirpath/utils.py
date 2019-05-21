@@ -313,6 +313,9 @@ class PathInfoContext:
                     if (index + 1) < len(parts):
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
+            # important! even context is None, that means not valid path (part)
+            if context is None:
+                break
         return context
 
     def __proxy__(self):

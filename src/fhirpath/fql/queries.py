@@ -1,10 +1,11 @@
 # _*_ coding: utf-8 _*_
-import copy
-import enum
 import math
+from copy import copy
 
 from zope.interface import implementer
 
+from fhirpath.exceptions import ConstraintNotSatisfied
+from fhirpath.exceptions import ValidationError
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
 from fhirpath.utils import builder
@@ -15,43 +16,115 @@ from .expressions import and_
 from .expressions import fql
 from .expressions import sort_
 from .interfaces import IElementPath
+from .interfaces import IGroupTerm
+from .interfaces import IQuery
 from .interfaces import IQueryBuilder
 from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .navigator import PathNavigator
 from .types import ElementPath
+from .types import FromClause
+from .types import LimitClause
 from .types import ModelFactory
+from .types import SelectClause
+from .types import SortClause
+from .types import WhereClause
+from .types import _constraint_finalized
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
-@enum.unique
-class CopyBehaviour(enum.Enum):
+def _constraint_from_resource_required(obj):
+    """ """
+    if len(obj._from) == 0:
+        raise ConstraintNotSatisfied(
+            "`_from` (resource must be provided first!) {0!r}".format(obj.__class__)
+        )
 
-    FULL = enum.auto()
-    BASE = enum.auto()
+
+def _constraint_required_finalized(obj):
+    """ """
+    if not obj._finalized:
+        raise ConnectionResetError(
+            "Object from {0!r} must be in final state, ".format(obj.__class__)
+        )
 
 
+@implementer(IQuery)
 class Query(object):
     """ """
 
-    @classmethod
-    def _builder(cls, context=None):
-        return QueryBuilder()
-
-    @classmethod
-    def from_(cls, resource, context=None):
-        """
-        """
-        # xxx: return resource class
-        return cls._builder(context).from_(resource)
-
-    @classmethod
-    def with_engine(cls, engine):
+    def __init__(
+        self,
+        fhir_relase: FHIR_VERSION,
+        from_: FromClause,
+        select: SelectClause,
+        where: WhereClause,
+        sort: SortClause,
+        limit: LimitClause,
+    ):
         """ """
-        return cls._builder(engine)
+
+        self.fhir_relase = fhir_relase
+        self._from = from_
+        self._select = select
+        self._where = where
+        self._sort = sort
+        self._limit = limit
+
+    @classmethod
+    def _builder(cls, engine=None):
+        return QueryBuilder(engine)
+
+    @classmethod
+    def _from(cls, resource, engine=None):
+        """ """
+        return Query._builder(engine)._from(resource)
+
+    @classmethod
+    def from_builder(cls, builder):
+        """Create Query object from QueryBuilder.
+        Kind of reverse process"""
+        if not IQueryBuilder(builder)._finalized:
+            raise ConstraintNotSatisfied(
+                "QueryBuilder object must be in finalized state"
+            )
+        query = cls(
+            builder._engine.fhir_release,
+            builder._from,
+            builder._select,
+            builder._where,
+            builder._sort,
+            builder._limit,
+        )
+        return query
+
+    def get_where(self):
+        """ """
+        return self._where
+
+    def get_from(self):
+        """ """
+        return self._from
+
+    def get_select(self):
+        """ """
+        return self._select
+
+    def get_sort(self):
+        """ """
+        return self._sort
+
+    def get_limit(self):
+        """ """
+        return self._limit
+
+    def __proxy__(self):
+        """ """
+        proxied = Proxy().initialize(self)
+        return proxied
 
 
 @implementer(IQueryBuilder)
@@ -60,69 +133,80 @@ class QueryBuilder(object):
 
     def __init__(self, engine=None):
         """ """
-        self.engine = engine
-        self.finalized = False
-        self._limit = None
-        self._offset = None
+        self._engine = engine
+        self._finalized = False
 
-        self._from = []
-        self._selects = []
-        self._wheres = []
-        self._sorts = []
+        self._from = FromClause()
+        self._select = SelectClause()
+        self._where = WhereClause()
+        self._sort = SortClause()
+        self._limit = LimitClause()
 
     def bind(self, engine):
         """ """
         # might be clone
-        self.engine = engine
+        self._engine = engine
 
     def clone(self):
         """ """
         return self.__copy__()
 
-    def shadow_clone(self, behavior=CopyBehaviour.FULL):
-        """Return proxy"""
-        return self.__proxy__(behavior)
-
-    def shadow_clone_base(self):
+    def finalize(self, engine=None):
         """ """
-        return self.shadow_clone(CopyBehaviour.BASE)
+        self._pre_check()
 
-    def finalize(self, context=None):
-        """ """
-        if context:
-            self.bind(context)
+        if engine:
+            self.bind(engine)
+
+        if self._engine is None:
+            raise ConstraintNotSatisfied(
+                "Object from '{0!s}' must be binded with engine".format(
+                    self.__class__.__name__
+                )
+            )
+        # xxx: do any validation?
+        if len(self._selects) == 0:
+            el_path = ElementPath("*")
+            self._selects.append(el_path)
+
+        # Finalize path elements
+        [se.finalize(engine) for se in self._selects]
+
+        # Finalize where terms on demand
+        [wr.finalize(self._engine) for wr in self._wheres]
+
+        # Finalize sorts ondemand
+        [sr.finalize(self._engine) for sr in self._sorts]
+
+        self._validate()
+
+        self._finalized = True
 
     def __copy__(self):
-        """ """
-        newone = self._copy_base()
-        newone.engine = self.engine
-        return newone
-
-    def __proxy__(self, behavior: CopyBehaviour = CopyBehaviour.BASE):
-        """ """
-        newobj = CopyBehaviour.BASE and self._copy_base() or self.__copy__()
-        proxied = Proxy().initialize(newobj)
-        return proxied
-
-    def _copy_base(self):
         """ """
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
 
-        newone.finalized = self.finalized
-        newone._limit = self._limit
-        newone._offset = self._offset
+        newone._finalized = self._finalized
+        newone._engine = self._engine
 
+        newone._limit = copy(self._limit)
         newone._from = copy(self._from)
-        newone._selects = copy(self._selects)
-        newone._wheres = copy(self._wheres)
-        newone._sorts = copy(self._sorts)
+        newone._selects = copy(self._select)
+        newone._wheres = copy(self._where)
+        newone._sorts = copy(self._sort)
 
         return newone
 
     @builder
     def from_(self, resource_type, alias=None):
         """ """
+        _constraint_finalized(self)
+
+        if len(self._from) > 0:
+            # info: we are allowing single resource only
+            raise ValidationError("from_ value already assigned!")
+
         model = QueryBuilder.create_model(resource_type)
         alias = alias or model.resource_type
         self._from.append((alias, model))
@@ -130,44 +214,53 @@ class QueryBuilder(object):
     @builder
     def select(self, *args):
         """ """
+        self._pre_check()
+
         for el_path in args:
-            if IElementPath.providedBy(el_path):
+            if not IElementPath.providedBy(el_path):
                 el_path = ElementPath(el_path)
-            self._selects.append(el_path)
+            # Make sure correct root path
+            if not el_path.star:
+                self._validate_root_path(str(el_path))
+            self._select.append(el_path)
 
     @builder
     def where(self, *args, **kwargs):
         """ """
+        self._pre_check()
+
         if len(kwargs) > 0:
             for path, value in kwargs.items():
-
                 term = and_(path, value)
-                term.finalize(self)
 
-                self._wheres.append(term)
+                self._validate_term_path(term)
+                self._where.append(term)
 
         for term in args:
             assert ITerm.providedBy(term) is True
-            term.finalize(self)
 
-            self._wheres.append(term)
+            self._validate_term_path(term)
+            self._where.append(term)
 
     @builder
     def limit(self, limit: int, offset: int = 0):
         """ """
-        self._limit = limit
-        self._offset = offset
+        self._pre_check()
+        self._limit.limit = limit
+        self._limit.offset = offset
 
     @builder
     def sort(self, *args):
         """ """
+        self._pre_check()
+
         for sort_path in args:
             if not ISortTerm.providedBy(sort_path):
                 if isinstance(sort_path, (tuple, list)):
                     sort_path = sort_(*sort_path)
                 else:
                     sort_path = sort_(sort_path)
-            self._sorts.sppend(sort_path)
+            self._sort.append(sort_path)
 
     @staticmethod
     def create_model(resource_type, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
@@ -176,25 +269,80 @@ class QueryBuilder(object):
             lookup_fhir_class_path(resource_type, fhir_release=fhir_version)
         )
         # xxx: should be cache?
-        model = ModelFactory(f"{klass}Model", bases=(klass, PathNavigator), attrs={})
+        model = ModelFactory(f"{klass.__name__}Model", (klass, PathNavigator), {})
+
         return model
+
+    def get_query(self):
+        """ """
+        _constraint_required_finalized(self)
+
+        return Query.from_builder(self)
 
     def __fql__(self):
         """ """
+        _constraint_required_finalized(self)
+
         return fql(self.context.dialect.bind(self))
 
     def __str__(self):
         """ """
+        _constraint_required_finalized(self)
+
         return self.__fql__()
 
-    def __call__(self, engine=None, **kw):
+    def __call__(self, engine=None):
         """ """
-        raise NotImplementedError
+        if not self._finalized:
+            self.finalized(engine)
+
+        query = self.get_query()
+        result = QueryResult(query=query, engine=self._engine)
+        return result
+
+    def _pre_check(self):
+        """ """
+        _constraint_from_resource_required(self)
+        _constraint_finalized(self)
+
+    def _validate(self):
+        """ """
+        # validate select elements
+        if any([el.star for el in self._select]) and len(self._select) > 1:
+            raise ValidationError("select(*) cannot co-exists other select element!")
+
+    def _validate_root_path(self, path_string):
+        """ """
+        match = False
+        for alias, model in self._from:
+            if path_string.split(".")[0] == alias:
+                match = True
+                break
+        if match is False:
+            raise ValidationError(
+                "Root path '{0!s}' must be matched with from models".format(
+                    path_string.split(".")[0]
+                )
+            )
+
+    def _validate_term_path(self, term):
+        """ """
+        if IGroupTerm.providedBy(term):
+            for trm in term.terms:
+                self._validate_term_path(trm)
+        else:
+            self._validate_root_path(str(term.path))
 
 
 @implementer(IQueryResult)
 class QueryResult(object):
     """ """
+
+    def __init__(self, query: Query, engine):
+        """ """
+        self._query = query
+        self._engine = engine
+
     def fetchall(self):
         """ """
 

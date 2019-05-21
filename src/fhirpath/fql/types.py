@@ -1,6 +1,7 @@
 # _*_ coding: utf-8 _*_
 import operator
 from copy import copy
+from collections import deque
 
 from zope.interface import implementer
 from zope.interface import implementer_only
@@ -21,6 +22,7 @@ from .interfaces import IModel
 from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .interfaces import ITermValue
+from .interfaces import IFqlClause
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -43,6 +45,63 @@ def _constraint_finalized(obj):
             "Object from {0!r} is already in final state, "
             "means any modification been locked".format(obj.__class__)
         )
+
+
+@implementer(IFqlClause)
+class FqlClause(deque):
+    """ """
+
+    @property
+    def empty(self):
+        """ """
+        return len(self) == 0
+
+
+class WhereClause(FqlClause):
+    """ """
+
+
+class SelectClause(FqlClause):
+    """ """
+
+
+class FromClause(FqlClause):
+    """ """
+
+
+class SortClause(FqlClause):
+    """ """
+
+
+@implementer(IFqlClause)
+class LimitClause(object):
+    """ """
+    __slots__ = ("_limit", "_offset")
+
+    def _get_limit(self):
+        """ """
+        return self._limit
+
+    def _set_limit(self, value):
+        """ """
+        self._limit = int(value)
+
+    limit = property(_get_limit, _set_limit)
+
+    def _get_offset(self):
+        """ """
+        return self._offset
+
+    def _set_offset(self, value):
+        """ """
+        self._offset = int(value)
+
+    offset = property(_get_offset, _set_offset)
+
+    @property
+    def empty(self):
+        """ """
+        return self._limit is None
 
 
 @implementer(ITerm)
@@ -507,6 +566,8 @@ class SortTerm(object):
 
     def __init__(self, path, order=SortOrderType.ASC):
         """ """
+        self._finalized = False
+
         if not IElementPath.providedBy(path):
             path = ElementPath(path)
         self.path = path
@@ -522,6 +583,15 @@ class SortTerm(object):
         self.order = SortOrderType.DESC
         return copy(self)
 
+    def finalize(self, context):
+        """ """
+        _constraint_finalized(self)
+
+        if self.order is None:
+            SortOrderType.ASC
+
+        self._finalized = True
+
 
 class ModelFactory(type):
     """FHIR Model factory"""
@@ -530,7 +600,7 @@ class ModelFactory(type):
         super_new = super().__new__
 
         # xxx: customize module path?
-        module = attrs.pop("__module__")
+        module = attrs.pop("__module__", cls.__module__)
         new_attrs = {"__module__": module}
         classcell = attrs.pop("__classcell__", None)
         if classcell is not None:
@@ -555,14 +625,17 @@ class ElementPath(object):
 
     def __init__(self, dotted_path):
         """ """
-        self.raw = dotted_path
-        self.parts = dotted_path.split(".")
-        self._where = list()
+        self._finalized = False
+        self._path = None
+        self._where = None
+        self._is = None
+        self._as = None
+        self._raw = dotted_path
 
     @property
     def star(self):
         """ """
-        return self.raw == "*"
+        return self._raw == "*"
 
     @classmethod
     def from_el_path(cls, el_path):
@@ -573,17 +646,49 @@ class ElementPath(object):
     def __str__(self):
         """ """
         # for now raw
-        if isinstance(self.raw, bytes):
-            val = self.raw.decode("utf8", "strict")
+        if isinstance(self._path, bytes):
+            val = self._path.decode("utf8", "strict")
         else:
-            val = self.raw
+            val = self._path
 
         return val
 
     def __bytes__(self):
         """ """
-        if isinstance(self.raw, str):
-            val = self.raw.encode("utf8", "strict")
+        if isinstance(self._path, str):
+            val = self._path.encode("utf8", "strict")
         else:
-            val = self.raw
+            val = self._path
         return val
+
+    def __call__(self, context):
+        """ """
+        if self._finalized is False:
+            self.finalize(context)
+        return str(self)
+
+    def parse(self):
+        """ """
+        # xxx: more things soon
+        self._path = self.raw
+
+    def validate(self, fhir_release):
+        """ """
+        if self.star:
+            # no validation START
+            return
+        context = PathInfoContext.context_from_path(self._path, fhir_release)
+        if context is None:
+            raise ValidationError(
+                "'{0}' is valid path for FHIR Release ''".format(
+                    self._raw, fhir_release.value
+                )
+            )
+
+    def finalize(self, context):
+        """ """
+        _constraint_finalized(self)
+
+        self.validate(context.fhir_release)
+        # xxx: more things to do
+        self._finalized = True

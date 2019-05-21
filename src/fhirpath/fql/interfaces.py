@@ -6,6 +6,11 @@ from zope.interface import Interface
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+class IFqlClause(Interface):
+    """ """
+    empty = Attribute("Empty Flag")
+
+
 class IModel(Interface):
     """ """
 
@@ -14,7 +19,7 @@ class ITerm(Interface):
     """ """
 
 
-class IGroupTerm(Interface):
+class IGroupTerm(ITerm):
     """ """
 
 
@@ -41,15 +46,12 @@ class ISortTerm(Interface):
     path = Attribute("Element Path")
 
 
-class IQueryContext(Interface):
+class IQuery(Interface):
     """ """
-
-    dialect = Attribute("Dialect")
-    engine = Attribute("Engine")
     fhir_release = Attribute("FHIR Release Name")
 
 
-class ISearchContext(IQueryContext):
+class ISearchContext(Interface):
     """ """
 
 
