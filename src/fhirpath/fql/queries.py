@@ -79,11 +79,6 @@ class Query(object):
         return QueryBuilder(engine)
 
     @classmethod
-    def _from(cls, resource, engine=None):
-        """ """
-        return Query._builder(engine)._from(resource)
-
-    @classmethod
     def from_builder(cls, builder):
         """Create Query object from QueryBuilder.
         Kind of reverse process"""
@@ -447,3 +442,11 @@ class QueryResult(object):
         def __iter__(self):
             """ """
             pass
+
+
+def Q(resource=None, engine=None):
+    """ """
+    builder = Query._builder(engine)
+    if resource is not None:
+        builder = builder._from(resource)
+    return builder

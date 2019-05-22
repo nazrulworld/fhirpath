@@ -4,6 +4,7 @@ import shutil
 
 import pytest
 
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.fhirspec import FHIRSpec
 from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.fhirspec.downloader import download_and_extract
@@ -25,7 +26,7 @@ def ensure_spec_jsons(release):
     directory = pathlib.Path(expand_path("${fhirpath}/fhirpath/fhirspec"))
     if not (directory / release).exists():
         if has_internet_connection():
-            download_and_extract(release, str(directory))
+            download_and_extract(FHIR_VERSION[release], str(directory))
         else:
             return False
     return True

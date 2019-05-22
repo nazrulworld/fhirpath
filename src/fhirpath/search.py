@@ -15,13 +15,17 @@ from fhirpath.thirdparty import mutually_exclusive_parameters
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
-class SearchResult:
-    pass
+@implementer(ISearchContext)
+class SearchContext(object):
+    """ """
+
+    __slots__ = ("resource_name", "engine", )
 
 
 @implementer(ISearch)
 class Search(object):
     """ """
+
     @at_least_one_of("query_string", "params")
     @mutually_exclusive_parameters("query_string", "params")
     def __init__(self, context, query_string=None, params=None):
