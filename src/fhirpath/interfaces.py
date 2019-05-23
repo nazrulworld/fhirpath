@@ -6,6 +6,37 @@ from zope.interface import Interface
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+class IStorage(Interface):
+    """ """
+
+    _last_updated = Attribute("Last Updated")
+    _write_locked = Attribute("Write Locked")
+    _read_locaked = Attribute("Read Locked")
+
+    def get(item):
+        """ """
+
+    def set(item, value):
+        """ """
+
+    def insert(item, value):
+        """ """
+
+    def delete(item):
+        """ """
+
+    def clear():
+        """ """
+
+    def exists(item):
+        """ """
+
+    def empty():
+        """ """
+    def total():
+        """ """
+
+
 class ISearch(Interface):
     """ """
 

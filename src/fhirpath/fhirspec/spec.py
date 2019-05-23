@@ -1219,3 +1219,100 @@ class FHIRClassProperty(object):
         self.short = element.definition.short
         self.formal = element.definition.formal
         self.representation = element.definition.representation
+
+
+class FHIRSearchSpec(object):
+    """https://www.hl7.org/fhir/searchparameter-registry.html
+    """
+
+    def __init__(self, source, fhir_release, settings=None):
+        """ """
+        self._finalized = False
+        self.source = source
+        self.settings = settings
+        self.fhir_release = fhir_release
+        self.parameters_def = list()
+
+    def prepare(self):
+        """ """
+        with io.open(str(self.source / self.jsonfilename), "r", encoding="utf-8") as fp:
+            string_val = fp.read()
+            spec_dict = json.loads(string_val)
+
+        for entry in spec_dict["entry"]:
+
+            self.parameters_def.append(
+                SearchParameterDefinition.from_dict(entry["resource"])
+            )
+
+    @property
+    def jsonfilename(self):
+        """ """
+        return "search-parameters.json"
+
+
+class SearchParameterDefinition(object):
+    """ """
+
+    __slots__ = (
+        "spec",
+        "name",
+        "code",
+        "expression_map",
+        "type",
+        "modifier",
+        "comparator",
+        "target",
+        "xpath",
+        "multiple_or",
+        "multiple_and",
+    )
+
+    @classmethod
+    def from_dict(cls, spec, dict_value):
+        """ """
+        self = cls()
+        self.spec = spec
+        self.name = dict_value["name"]
+        self.code = dict_value["code"]
+        self.type = dict_value["type"]
+        self.xpath = dict_value["xpath"]
+        # Add conditional None
+        self.modifier = dict_value.get("modifier", None)
+        self.comparator = dict_value.get("comparator", None)
+        self.target = dict_value.get("target", None)
+        self.multiple_or = dict_value.get("multipleOr", None)
+        self.multiple_and = dict_value.get("multipleAnd", None)
+
+        # Make expression map combined with base and expression
+        self.expression_map = dict()
+        if dict_value.get("expression", None) is None:
+            for base in dict_value["base"]:
+                self.expression_map[base] = None
+
+            return self
+
+        for expression in dict_value["expression"].split("|"):
+            exp = expression.strip()
+            base = exp.split(".")[0]
+            assert base in dict_value["base"]
+            self.expression_map[base] = exp
+
+        return self
+
+
+class SearchParameter(object):
+    """ """
+    __slots__ = (
+        "name",
+        "code",
+        "expression",
+        "type",
+        "modifier",
+        "comparator",
+        "target",
+        "xpath",
+        "multiple_or",
+        "multiple_and",
+    )
+

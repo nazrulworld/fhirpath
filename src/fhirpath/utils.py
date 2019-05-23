@@ -4,7 +4,6 @@ import os
 import pkgutil
 import re
 import sys
-from collections import defaultdict
 from importlib import import_module
 from typing import Union
 
@@ -15,6 +14,9 @@ from fhirpath.thirdparty import Proxy
 
 from .enums import FHIR_VERSION
 from .interfaces import IPathInfoContext
+from .storage import FHIR_RESOURCE_CLASS_STORAGE
+from .storage import PATH_INFO_STORAGE
+from .storage import MemoryStorage
 from .types import PrimitiveDataTypes
 
 
@@ -22,14 +24,12 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 NoneType = type(None)
 
-FHIR_RESOURCE_CLASS_CACHE = defaultdict()
-PATH_INFO_CACHE = defaultdict()
 
 releases = set([member.value for member in FHIR_VERSION])
 for release in releases:
-    if release not in PATH_INFO_CACHE:
-        PATH_INFO_CACHE[release] = defaultdict()
-        FHIR_RESOURCE_CLASS_CACHE[release] = defaultdict()
+    if not PATH_INFO_STORAGE.exists(release):
+        PATH_INFO_STORAGE.insert(release, MemoryStorage())
+        FHIR_RESOURCE_CLASS_STORAGE.insert(release, MemoryStorage())
 
 
 def _reraise(tp, value, tb=None):
@@ -137,10 +137,10 @@ def lookup_fhir_class_path(
         >>> dotted_path is None
         True
     """
-    cache_path = FHIR_RESOURCE_CLASS_CACHE[fhir_release.value]
+    storage = FHIR_RESOURCE_CLASS_STORAGE.get(fhir_release.value)
 
-    if resource_type in cache_path and cache:
-        return cache_path[resource_type]
+    if storage.exists(resource_type) and cache:
+        return storage.get(resource_type)
 
     # Trying to get from entire modules
     prime_module = ["fhir", "resources"]
@@ -163,8 +163,8 @@ def lookup_fhir_class_path(
         for klass_name, klass in inspect.getmembers(module_obj, inspect.isclass):
 
             if klass_name == resource_type:
-                cache_path[resource_type] = f"{module_name}.{resource_type}"
-                return cache_path[resource_type]
+                storage.insert(resource_type, f"{module_name}.{resource_type}")
+                return storage.get(resource_type)
 
     return None
 
@@ -247,9 +247,11 @@ class PathInfoContext:
     @classmethod
     def context_from_path(cls, pathname: str, fhir_release: FHIR_VERSION):
         """ """
-        if pathname in PATH_INFO_CACHE[fhir_release.value]:
+        storage = PATH_INFO_STORAGE.get(fhir_release.value)
+
+        if storage.exists(pathname):
             # trying from cache!
-            return PATH_INFO_CACHE[fhir_release.value][pathname]
+            return storage.get(pathname)
 
         parts = pathname.split(".")
         model = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
@@ -260,8 +262,8 @@ class PathInfoContext:
         for index, part in enumerate(parts[1:], 1):
 
             new_path = "{0}.{1}".format(new_path, part)
-            if new_path in PATH_INFO_CACHE[fhir_release.value]:
-                context = PATH_INFO_CACHE[fhir_release.value][new_path]
+            if storage.exists(new_path):
+                context = storage.get(new_path)
                 if context.type_name in PrimitiveDataTypes:
                     if (index + 1) < len(parts):
                         raise ValueError("Invalid path {0}".format(pathname))
@@ -306,7 +308,7 @@ class PathInfoContext:
                     parent_context = context.parent
                     parent_context.add_child(new_path)
 
-                PATH_INFO_CACHE[fhir_release.value][new_path] = context
+                storage.insert(new_path, context)
                 if not is_primitive:
                     model = type_class
                 else:

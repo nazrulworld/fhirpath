@@ -2,9 +2,11 @@
 """FHIR Specification: http://www.hl7.org/fhir/"""
 import os
 import pathlib
-from fhirpath.thirdparty import ImmutableDict
+
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.thirdparty import ImmutableDict
 from fhirpath.thirdparty import attrdict
+
 from .spec import FHIRSpec  # noqa: F401
 
 

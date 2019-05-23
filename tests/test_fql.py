@@ -18,13 +18,13 @@ from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
-from fhirpath.fql.interfaces import ITerm
 from fhirpath.fql.interfaces import IQuery
 from fhirpath.fql.interfaces import IQueryResult
+from fhirpath.fql.interfaces import ITerm
 from fhirpath.fql.queries import QueryBuilder
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
-from fhirpath.utils import PATH_INFO_CACHE
+from fhirpath.storage import PATH_INFO_STORAGE
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
 
@@ -46,7 +46,7 @@ def test_term_normal(engine):
     # test parent path (Patient.address) context also created.
     pathname = "Patient.address"
     try:
-        context = PATH_INFO_CACHE[engine.fhir_release.value][pathname]
+        context = PATH_INFO_STORAGE.get(engine.fhir_release.value).get(pathname)
     except KeyError:
         pytest.fail("Code should not come here! as cache should be already created")
 
