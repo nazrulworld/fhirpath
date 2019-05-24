@@ -16,20 +16,12 @@ from .enums import FHIR_VERSION
 from .interfaces import IPathInfoContext
 from .storage import FHIR_RESOURCE_CLASS_STORAGE
 from .storage import PATH_INFO_STORAGE
-from .storage import MemoryStorage
 from .types import PrimitiveDataTypes
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 NoneType = type(None)
-
-
-releases = set([member.value for member in FHIR_VERSION])
-for release in releases:
-    if not PATH_INFO_STORAGE.exists(release):
-        PATH_INFO_STORAGE.insert(release, MemoryStorage())
-        FHIR_RESOURCE_CLASS_STORAGE.insert(release, MemoryStorage())
 
 
 def _reraise(tp, value, tb=None):

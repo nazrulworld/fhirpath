@@ -7,9 +7,11 @@ import pytest
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.fhirspec import FHIRSpec
 from fhirpath.fhirspec import FhirSpecFactory
+from fhirpath.fhirspec import FHIRSearchSpecFactory
 from fhirpath.fhirspec.downloader import download_and_extract
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import expand_path
+from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 
 from .fixtures import has_internet_connection
 
@@ -65,3 +67,23 @@ def test_fhir_spec_download_and_load():
     spec = FhirSpecFactory.from_release(release)
 
     assert spec.info.version == "3.0.1.11917"
+
+
+def test_fhir_search_spec():
+    """ """
+    release = "R4"
+    if not ensure_spec_jsons(release):
+        pytest.skip("Internet Connection is required")
+
+    spec = FHIRSearchSpecFactory.from_release(release)
+    spec.write()
+
+    storage = SEARCH_PARAMETERS_STORAGE.get(release)
+
+    resource_search_params = storage.get("Resource")
+    assert resource_search_params._id.expression == "Resource.id"
+
+    patient_params = storage.get("Patient")
+
+    for param in resource_search_params:
+        assert param in patient_params

@@ -4,9 +4,11 @@ import os
 import pathlib
 
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 from fhirpath.thirdparty import ImmutableDict
 from fhirpath.thirdparty import attrdict
 
+from .spec import FHIRSearchSpec  # noqa: F401
 from .spec import FHIRSpec  # noqa: F401
 
 
@@ -118,6 +120,15 @@ DEFAULT_SETTINGS = ImmutableDict(
 SPEC_JSON_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
 
 
+def ensure_spec_jsons(release: FHIR_VERSION):
+    """ """
+    if not (SPEC_JSON_DIR / release.value).exists():
+        # Need download first
+        from .downloader import download_and_extract
+
+        download_and_extract(release, str(SPEC_JSON_DIR))
+
+
 class FhirSpecFactory:
     """ """
 
@@ -126,11 +137,7 @@ class FhirSpecFactory:
         """ """
         release = FHIR_VERSION[release]
 
-        if not (SPEC_JSON_DIR / release.value).exists():
-            # Need download first
-            from .downloader import download_and_extract
-
-            download_and_extract(release, str(SPEC_JSON_DIR))
+        ensure_spec_jsons(release)
 
         default_settings = attrdict() + DEFAULT_SETTINGS.copy()
         if settings:
@@ -138,4 +145,19 @@ class FhirSpecFactory:
 
         spec = FHIRSpec(str(SPEC_JSON_DIR / release.value), default_settings)
 
+        return spec
+
+
+class FHIRSearchSpecFactory:
+    """ """
+    @staticmethod
+    def from_release(release: str):
+        """ """
+        release = FHIR_VERSION[release]
+
+        ensure_spec_jsons(release)
+
+        spec = FHIRSearchSpec(
+            (SPEC_JSON_DIR / release.value), release, SEARCH_PARAMETERS_STORAGE
+        )
         return spec
