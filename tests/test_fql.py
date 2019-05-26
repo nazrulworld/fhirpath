@@ -40,7 +40,7 @@ def test_term_normal(engine):
     term = Term("Patient.address.line", "Lane 1")
     term.finalize(engine)
 
-    assert term.path_context.multiple is True
+    assert term.path.context.multiple is True
     assert isinstance(term.value(), str)
 
     # test parent path (Patient.address) context also created.
@@ -75,7 +75,7 @@ def test_expression_add(engine):
     term.finalize(engine)
     assert ITerm.providedBy(term)
     assert term.arithmetic_operator == operator.and_
-    assert term.path_context.multiple is True
+    assert term.path.context.multiple is True
 
     term = T_("Patient.name.period.start")
     term = and_(-term, datetime.now().isoformat(timespec="seconds"))
@@ -99,7 +99,7 @@ def test_expression_or(engine):
     term.finalize(engine)
     assert ITerm.providedBy(term)
     assert term.arithmetic_operator == operator.or_
-    assert term.path_context.parent.prop_name == "for_fhir"
+    assert term.path.context.parent.prop_name == "for_fhir"
 
     term = T_("Patient.name.period.start")
     term = or_(-term, datetime.now().isoformat(timespec="seconds"))

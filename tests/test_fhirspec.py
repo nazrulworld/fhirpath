@@ -75,10 +75,12 @@ def test_fhir_search_spec():
     if not ensure_spec_jsons(release):
         pytest.skip("Internet Connection is required")
 
+    storage = SEARCH_PARAMETERS_STORAGE.get(release)
+
+    assert storage.empty()
+
     spec = FHIRSearchSpecFactory.from_release(release)
     spec.write()
-
-    storage = SEARCH_PARAMETERS_STORAGE.get(release)
 
     resource_search_params = storage.get("Resource")
     assert resource_search_params._id.expression == "Resource.id"

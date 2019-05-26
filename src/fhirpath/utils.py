@@ -208,6 +208,27 @@ def proxy(obj):
         return p_obj
 
 
+class EmptyPathInfoContext:
+    """Empty PathInfoContext for start(*) path!"""
+
+    def __init__(self):
+        """ """
+        self._parent = None
+        self._children = None
+        self._path = "*"
+
+        self.fhir_release = None
+        self.prop_name = None
+        self.prop_original = None
+        self.type_name = None
+        self.type_class = None
+        self.optional = None
+        self.multiple = None
+
+
+EMPTY_PATH_INFO_CONTEXT = EmptyPathInfoContext()
+
+
 @implementer(IPathInfoContext)
 class PathInfoContext:
     """ """
@@ -239,6 +260,9 @@ class PathInfoContext:
     @classmethod
     def context_from_path(cls, pathname: str, fhir_release: FHIR_VERSION):
         """ """
+        if pathname == "*":
+            return EMPTY_PATH_INFO_CONTEXT
+
         storage = PATH_INFO_STORAGE.get(fhir_release.value)
 
         if storage.exists(pathname):

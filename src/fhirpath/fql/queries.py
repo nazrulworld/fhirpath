@@ -12,6 +12,9 @@ from fhirpath.utils import builder
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
 
+from .constraints import required_finalized
+from .constraints import required_from_resource
+from .constraints import required_not_finalized
 from .expressions import and_
 from .expressions import fql
 from .expressions import sort_
@@ -30,26 +33,9 @@ from .types import ModelFactory
 from .types import SelectClause
 from .types import SortClause
 from .types import WhereClause
-from .types import _constraint_finalized
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-def _constraint_from_resource_required(obj):
-    """ """
-    if len(obj._from) == 0:
-        raise ConstraintNotSatisfied(
-            "`_from` (resource must be provided first!) {0!r}".format(obj.__class__)
-        )
-
-
-def _constraint_required_finalized(obj):
-    """ """
-    if not obj._finalized:
-        raise ConnectionResetError(
-            "Object from {0!r} must be in final state, ".format(obj.__class__)
-        )
 
 
 @implementer(IQuery)
@@ -196,7 +182,7 @@ class QueryBuilder(object):
     @builder
     def from_(self, resource_type, alias=None):
         """ """
-        _constraint_finalized(self)
+        required_not_finalized(self)
 
         if len(self._from) > 0:
             # info: we are allowing single resource only
@@ -270,19 +256,19 @@ class QueryBuilder(object):
 
     def get_query(self):
         """ """
-        _constraint_required_finalized(self)
+        required_finalized(self)
 
         return Query.from_builder(self)
 
     def __fql__(self):
         """ """
-        _constraint_required_finalized(self)
+        required_finalized(self)
 
         return fql(self.context.dialect.bind(self))
 
     def __str__(self):
         """ """
-        _constraint_required_finalized(self)
+        required_finalized(self)
 
         return self.__fql__()
 
@@ -297,8 +283,8 @@ class QueryBuilder(object):
 
     def _pre_check(self):
         """ """
-        _constraint_from_resource_required(self)
-        _constraint_finalized(self)
+        required_from_resource(self)
+        required_not_finalized(self)
 
     def _validate(self):
         """ """
@@ -444,7 +430,7 @@ class QueryResult(object):
             pass
 
 
-def Q(resource=None, engine=None):
+def Q_(resource=None, engine=None):
     """ """
     builder = Query._builder(engine)
     if resource is not None:

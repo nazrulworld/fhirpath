@@ -10,7 +10,7 @@ from .expressions import not_exists_
 from .expressions import not_in_
 from .expressions import or_
 from .expressions import sort_
-from .queries import Q
+from .queries import Q_
 
 
 __author__ = "Md Nazrul Islam"
@@ -26,5 +26,5 @@ __all__ = [
     "not_in_",
     "or_",
     "sort_",
-    "Q",
+    "Q_",
 ]

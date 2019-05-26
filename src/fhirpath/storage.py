@@ -5,6 +5,7 @@ from zope.interface import implementer
 
 from .enums import FHIR_VERSION
 from .interfaces import IStorage
+from .types import EMPTY_VALUE
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -17,6 +18,15 @@ class MemoryStorage(defaultdict):
     _last_updated = None
     _write_locked = None
     _read_locaked = None
+
+    def get(self, item, default=EMPTY_VALUE):
+        """ """
+        try:
+            return self[item]
+        except KeyError:
+            if default is EMPTY_VALUE:
+                raise
+            return default
 
     def insert(self, item, value):
         """ """
