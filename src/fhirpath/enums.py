@@ -20,3 +20,12 @@ class SortOrderType(enum.Enum):
 
     ASC = "asc"
     DESC = "desc"
+
+
+@enum.unique
+class MatchType(enum.Enum):
+    """ """
+
+    ANY = "ANY"
+    ALL = "ALL"
+    ONE = "ONE"

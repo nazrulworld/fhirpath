@@ -7,6 +7,7 @@ from copy import copy
 from zope.interface import implementer
 from zope.interface import implementer_only
 
+from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IFhirPrimitiveType
@@ -492,6 +493,7 @@ class GroupTerm(object):
         self.terms = list()
 
         for term in terms:
+            # could be GroupTerm | Term
             self.terms.append(ITerm(term))
 
     def __add__(self, other):
@@ -505,17 +507,7 @@ class GroupTerm(object):
     def _add(self, other):
         """ """
         required_not_finalized(self)
-        if ITerm.providedBy(other):
-            self.terms.append(other)
-
-        elif IGroupTerm.providedBy(other):
-
-            if self.arithmetic_operator is None and other.arithmetic_operator:
-                self.arithmetic_operator = other.arithmetic_operator
-            if self.match_operator is None and other.match_operator:
-                self.match_operator = other.match_operator
-
-            self.terms.extend(other.terms)
+        self.terms.append(ITerm(other))
 
         return self.clone()
 
@@ -527,6 +519,9 @@ class GroupTerm(object):
         """ """
         for term in self.terms:
             term.finalize(context)
+
+        if self.match_operator is None:
+            self.match_operator = MatchType.ANY
 
         self._finalized = True
 
@@ -543,6 +538,21 @@ class GroupTerm(object):
         newone.match_operator = self.match_operator
 
         return newone
+
+    def match_all(self):
+        """ """
+        self.match_operator = MatchType.ALL
+        return self.clone()
+
+    def match_one(self):
+        """ """
+        self.match_operator = MatchType.ONE
+        return self.clone()
+
+    def match_any(self):
+        """ """
+        self.match_operator = MatchType.ANY
+        return self.clone()
 
 
 @implementer(ISortTerm)
@@ -611,9 +621,8 @@ class ElementPath(object):
     """FHIR Resource path (dotted)
     1. Normalize any condition, casting, logic check"""
 
-    def __init__(self, dotted_path: str, fhir_release=None):
+    def __init__(self, dotted_path: str):
         """ """
-        self.fhir_release = fhir_release
         self.context = None
 
         self._finalized = False
@@ -631,9 +640,9 @@ class ElementPath(object):
         return self._raw == "*"
 
     @classmethod
-    def from_el_path(cls, el_path, fhir_release=None):
+    def from_el_path(cls, el_path):
         """ """
-        el_path = ElementPath(el_path, fhir_release)
+        el_path = ElementPath(el_path)
         # xxx: more things to do
         return el_path
 
@@ -701,9 +710,9 @@ class ElementPath(object):
 
         self.validate(context.fhir_release)
         # # xxx: more things to do
-        self.context = proxy(PathInfoContext.context_from_path(
-            self._path, context.fhir_release
-        ))
+        self.context = proxy(
+            PathInfoContext.context_from_path(self._path, context.fhir_release)
+        )
         self._finalized = True
 
     def __copy__(self):
@@ -711,7 +720,6 @@ class ElementPath(object):
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
 
-        newone.fhir_release = self.fhir_release
         newone._finalized = self._finalized
         newone._path = self._path
         newone._raw = self._raw
@@ -719,6 +727,8 @@ class ElementPath(object):
         newone._where = copy(self._where)
         newone._is = copy(self._is)
         newone._as = copy(self._as)
+
+        newone.context = copy(self.context)
 
         return newone
 
@@ -731,5 +741,5 @@ class ElementPath(object):
         assert isinstance(other, str)
         required_finalized(self)
 
-        obj = ElementPath.el_path("{0!s}.{1}".format(self, other), self.fhir_release)
+        obj = ElementPath.el_path("{0!s}.{1}".format(self, other))
         return obj
