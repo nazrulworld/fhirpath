@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-fhirpath = {path = ".",extras = ["test"],editable = true}
+fhirpath = {editable = true,extras = ["test"],path = "."}
 black = "*"
 isort = "*"
 flake8 = "*"
@@ -13,7 +13,7 @@ zc-buildout = "*"
 setuptools = "*"
 
 [packages]
-fhir-resources = {version=">=5.0.0b2"}
+fhir-resources = {version = ">=5.0.0b2"}
 zope-interface = "*"
 zope-component = "*"
 multidict = "*"
@@ -27,4 +27,7 @@ certifi = "*"
 zest-releaser = {extras = ["recommended"],version = "*"}
 
 [requires]
-python_version = ">=3.4,<=3.8.*"
+python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true

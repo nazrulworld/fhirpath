@@ -31,7 +31,7 @@ uri_scheme = re.compile(r"^https?://", re.I)
 value_prefixes = {"eq" "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
-has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)]+)", re.I ^ re.U)
+has_dot_where = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
 
 
 def has_escape_comma(val):
@@ -43,6 +43,11 @@ class SearchContext(object):
     """ """
 
     __slots__ = ("resource_name", "engine")
+
+    def __init__(self, engine, resource_type):
+        """ """
+        object.__setattr__(self, "engine", engine)
+        object.__setattr__(self, "resource_name", resource_type)
 
 
 @implementer(ISearch)
@@ -128,7 +133,7 @@ class Search(object):
         if _contained:
             self.result_params["_contained"] = _contained
 
-        _containedType = self.all_params.popone("_containedType", None)
+        _containedType = all_params.popone("_containedType", None)
         if _containedType:
             self.result_params["_containedType"] = _containedType
 
