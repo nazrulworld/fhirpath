@@ -208,6 +208,12 @@ def proxy(obj):
         return p_obj
 
 
+def unwrap_proxy(proxy_obj):
+    """ """
+    assert isinstance(proxy_obj, Proxy)
+    return proxy_obj.obj
+
+
 class EmptyPathInfoContext:
     """Empty PathInfoContext for start(*) path!"""
 

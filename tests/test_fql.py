@@ -22,6 +22,7 @@ from fhirpath.fql.interfaces import IQuery
 from fhirpath.fql.interfaces import IQueryResult
 from fhirpath.fql.interfaces import ITerm
 from fhirpath.fql.queries import QueryBuilder
+from fhirpath.fql.types import ElementPath
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
 from fhirpath.storage import PATH_INFO_STORAGE
@@ -193,3 +194,12 @@ def test_query_builder(engine):
     assert IQuery.providedBy(query)
 
     assert query.get_limit().empty is False
+
+
+def test_type_path_element(engine):
+    """ """
+    path_ = ElementPath("Patient.name")
+    path_.finalize(engine)
+    path_ = path_ / "firstname"
+
+    assert path_.path == "Patient.name.firstname"

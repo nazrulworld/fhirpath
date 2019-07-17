@@ -14,6 +14,7 @@ from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
+from fhirpath.utils import unwrap_proxy
 
 from .constraints import required_finalized
 from .constraints import required_not_finalized
@@ -746,8 +747,16 @@ class ElementPath(object):
         assert isinstance(other, str)
         required_finalized(self)
 
-        obj = ElementPath.el_path("{0!s}.{1}".format(self, other))
+        obj = ElementPath.from_el_path("{0!s}.{1}".format(self, other))
+        if self.is_finalized():
+            # unwrap
+            obj.finalize(unwrap_proxy(self.context))
+
         return obj
+
+    def __truediv__(self, other):
+        # https://stackoverflow.com/questions/21692065/python-class-div-issue
+        return self.__div__(other)
 
     def is_finalized(self):
         """ """

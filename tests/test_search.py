@@ -140,3 +140,18 @@ def test_create_term(engine):
     assert len(term.terms) == 2
     assert term.match_operator == MatchType.ANY
     assert term.arithmetic_operator is None
+
+
+def test_create_codeableconcept_term(engine):
+    """ """
+    context = SearchContext(engine, "Task")
+    params = (
+        ("code", "http://acme.org/conditions/codes|ha125"),
+        ("code:not", "http://loinc.org|1\\,234-5&subject.name=peter")
+    )
+
+    fhir_search = Search(context, params=params)
+
+    field_name, value_pack, modifier = fhir_search.normalize_param("code")
+    term = fhir_search.create_codeableconcept_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)

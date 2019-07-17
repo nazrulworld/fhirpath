@@ -316,7 +316,7 @@ class Search(object):
                 path_ = path_ / "code"
                 new_value = (value[0], original_value[1:])
                 return self.create_term(path_, new_value, modifier)
-            elif value.endswith("|"):
+            elif original_value.endswith("|"):
                 path_ = path_ / "system"
                 new_value = (value[0], original_value[:-1])
                 return self.create_term(path_, new_value, modifier)
@@ -348,8 +348,6 @@ class Search(object):
 
     def create_codeableconcept_term(self, param_name, param_value, modifier):
         """ """
-
-        search_param = getattr(self.definition, param_name)
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
@@ -360,11 +358,7 @@ class Search(object):
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = ElementPath.from_el_path(
-                search_param.expression, self.context.engine.fhir_release
-            )
-            path_.finalize(self.context.engine)
-
+            path_ = self.resolve_path_context(param_name)
             return self.single_valued_codeableconcept_term(path_, param_value, modifier)
 
         raise NotImplementedError
