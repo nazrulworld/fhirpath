@@ -132,7 +132,8 @@ class Term(object):
         # May path as Resource Attribute
         # Do validation
         self.fhir_release = context.fhir_release
-        self.path.finalize(context)
+        if not self.path.is_finalized():
+            self.path.finalize(context)
 
         if self.arithmetic_operator is None:
             self.arithmetic_operator = operator.and_
@@ -148,8 +149,8 @@ class Term(object):
     def finalize(self, context):
         """ """
         self._finalize(context)
-
-        self.value.finalize(self.path)
+        if not self.value.is_finalized():
+            self.value.finalize(self.path)
 
         self._finalized = True
 
@@ -475,6 +476,10 @@ class TermValue(object):
             raise ValueError("Objectis not TermValue::finalize() yet!")
         return self.value
 
+    def is_finalized(self):
+        """ """
+        return self._finalized
+
 
 @implementer(IGroupTerm)
 class GroupTerm(object):
@@ -727,8 +732,8 @@ class ElementPath(object):
         newone._where = copy(self._where)
         newone._is = copy(self._is)
         newone._as = copy(self._as)
-
-        newone.context = copy(self.context)
+        # already proxied, no need copy
+        newone.context = self.context
 
         return newone
 
@@ -743,3 +748,7 @@ class ElementPath(object):
 
         obj = ElementPath.el_path("{0!s}.{1}".format(self, other))
         return obj
+
+    def is_finalized(self):
+        """ """
+        return self._finalized

@@ -28,7 +28,7 @@ __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 escape_comma_replacer = "_ESCAPE_COMMA_"
 uri_scheme = re.compile(r"^https?://", re.I)
-value_prefixes = {"eq" "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
+value_prefixes = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
@@ -191,15 +191,7 @@ class Search(object):
     def add_term(self, builder, normalized_data):
         """ """
         param_name, param_value, modifier = normalized_data
-        search_param = getattr(self.definition, param_name)
-
-        if search_param.expression is None:
-            raise NotImplementedError
-
-        path_ = ElementPath.from_el_path(
-            search_param.expression, self.context.engine.fhir_release
-        )
-        path_.finalize(self.context.engine)
+        path_ = self.resolve_path_context(param_name)
 
         if path_._where is not None:
             raise NotImplementedError
@@ -461,6 +453,9 @@ class Search(object):
             if len(value_parts) == 1:
                 if escape_:
                     value = value_parts[0].replace(escape_comma_replacer, "\\,")
+                else:
+                    value = value_parts[0]
+
                 for prefix in value_prefixes:
                     if value.startswith(prefix):
                         comparison_operator = prefix
@@ -531,3 +526,12 @@ class Search(object):
     def resolve_path_context(self, param_name):
         """ """
         search_param = getattr(self.definition, param_name)
+
+        if search_param.expression is None:
+            raise NotImplementedError
+        path_ = ElementPath.from_el_path(
+            search_param.expression
+        )
+        path_.finalize(self.context.engine)
+
+        return path_
