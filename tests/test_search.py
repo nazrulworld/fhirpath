@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from fhirpath.enums import MatchType
 from fhirpath.fql.interfaces import IGroupTerm
+from fhirpath.fql.interfaces import ITerm
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
 
@@ -147,7 +148,10 @@ def test_create_codeableconcept_term(engine):
     context = SearchContext(engine, "Task")
     params = (
         ("code", "http://acme.org/conditions/codes|ha125"),
-        ("code:not", "http://loinc.org|1\\,234-5&subject.name=peter")
+        ("code", "http://terminology.hl7.org/CodeSystem/task-performer-type|"),
+        ("code", "|performer"),
+        ("code:text", "Performer"),
+        ("code:not", "http://loinc.org|1\\,234-5&subject.name=peter"),
     )
 
     fhir_search = Search(context, params=params)
@@ -155,3 +159,20 @@ def test_create_codeableconcept_term(engine):
     field_name, value_pack, modifier = fhir_search.normalize_param("code")
     term = fhir_search.create_codeableconcept_term(field_name, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
+
+    assert IGroupTerm.providedBy(term.terms[0]) is True
+    code1_group = term.terms[0]
+    assert code1_group.terms[0].path.path == "Task.code.coding.system"
+    assert code1_group.terms[1].path.path == "Task.code.coding.code"
+
+    assert ITerm.providedBy(term.terms[1]) is True
+    assert ITerm.providedBy(term.terms[2]) is True
+
+    assert term.terms[1].path.path == "Task.code.coding.system"
+    assert term.terms[2].path.path == "Task.code.coding.code"
+
+    field_name, value_pack, modifier = fhir_search.normalize_param("code:text")
+    term = fhir_search.create_codeableconcept_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+    assert term.path.path == "Task.code.text"
+
