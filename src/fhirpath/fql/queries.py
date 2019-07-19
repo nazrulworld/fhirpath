@@ -434,5 +434,5 @@ def Q_(resource=None, engine=None):
     """ """
     builder = Query._builder(engine)
     if resource is not None:
-        builder = builder._from(resource)
+        builder = builder.from_(resource)
     return builder

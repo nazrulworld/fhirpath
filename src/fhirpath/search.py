@@ -81,8 +81,6 @@ class Search(object):
             self.context.engine.fhir_release, self.context.resource_name
         )
 
-        self.builder = None
-
     def prepare_params(self, all_params):
         """makeing search, sort, limit, params
         Result Parameters
@@ -597,7 +595,7 @@ class Search(object):
         if search_param is None:
             raise ValidationError(
                 "No search definition is available for search parameter "
-                "``{param_name}`` on Resource ``{self.context.resource_name}``."
+                f"``{param_name}`` on Resource ``{self.context.resource_name}``."
             )
 
         if search_param.expression is None:

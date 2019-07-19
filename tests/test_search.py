@@ -1,7 +1,8 @@
 # _*_ coding: utf-8 _*_
 import operator
 from urllib.parse import urlencode
-
+from fhirpath.fql import Q_
+from fhirpath.enums import SortOrderType
 from fhirpath.enums import MatchType
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
@@ -226,7 +227,7 @@ def test_create_quantity_term(engine):
         ("quantity", "5.4|http://unitsofmeasure.org|mg"),
         ("quantity", "lt5.4||mg"),
         ("quantity", "5.40e-3"),
-        ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg")
+        ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg"),
     )
     fhir_search = Search(context, params=params)
     field_name, value_pack, modifier = fhir_search.normalize_param("quantity")
@@ -242,3 +243,39 @@ def test_create_quantity_term(engine):
 
     assert term.terms[1].terms[1].path.path == "ChargeItem.quantity.unit"
     assert term.terms[2].value.value == float("5.40e-3")
+
+
+def test_sort_attachment(engine):
+    """ """
+    context = SearchContext(engine, "Task")
+    params = (("status", "active"), ("_sort", "status,-modified"), ("_count", "100"))
+    fhir_search = Search(context, params=params)
+    builder = Q_(context.resource_name, context.engine)
+    builder = fhir_search.attach_sort_terms(builder)
+
+    assert len(builder._sort) == 2
+    assert builder._sort[1].order == SortOrderType.DESC
+
+
+def test_limit_attachment(engine):
+    """ """
+    context = SearchContext(engine, "Task")
+    params = (("status", "active"), ("_sort", "status,-modified"), ("_count", "100"))
+    fhir_search = Search(context, params=params)
+    builder = Q_(context.resource_name, context.engine)
+    builder = fhir_search.attach_limit_terms(builder)
+
+    assert builder._limit.limit == 100
+    assert builder._limit.offset == 0
+
+    params = (
+        ("status", "active"),
+        ("_sort", "status,-modified"),
+        ("_count", "100"),
+        ("page", "4"),
+    )
+    fhir_search = Search(context, params=params)
+    builder = Q_(context.resource_name, context.engine)
+    builder = fhir_search.attach_limit_terms(builder)
+
+    assert builder._limit.offset == 300
