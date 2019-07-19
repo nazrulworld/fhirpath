@@ -8,6 +8,7 @@ from zope.interface import Invalid
 from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
 from fhirpath.fql import Q_
@@ -15,6 +16,7 @@ from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import in_
 from fhirpath.fql import not_
+from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.interfaces import ISearch
@@ -104,7 +106,13 @@ class Search(object):
         if len(_count) > 0:
             if len(_count) > 1:
                 raise ValidationError("'_count' cannot be multiple!")
-            self.result_params["_count"] = _count[0]
+            self.result_params["_count"] = int(_count[0])
+
+        page = all_params.popall("page", [])
+        if len(page) > 0:
+            if len(page) > 1:
+                raise ValidationError("'page' cannot be multiple!")
+            self.result_params["page"] = int(page[0])
 
         _total = all_params.popall("_total", [])
 
@@ -182,13 +190,18 @@ class Search(object):
     def build(self):
         """Create QueryBuilder from search query string"""
         builder = Q_(self.context.resource_name, self.context.engine)
-
+        terms_container = list()
         for param_name in self.search_params:
             """ """
-            normalized = self.normalize_param(param_name)
-            self.add_term(self, builder, normalized)
+            normalized_data = self.normalize_param(param_name)
+            self.add_term(self, normalized_data, terms_container)
 
-    def add_term(self, builder, normalized_data):
+        result = self.attach_limit_terms(
+            self.attach_sort_terms(builder.where(*terms_container))
+        )()
+        return result
+
+    def add_term(self, normalized_data, terms_container):
         """ """
         param_name, param_value, modifier = normalized_data
         path_ = self.resolve_path_context(param_name)
@@ -203,24 +216,38 @@ class Search(object):
         if not IFhirPrimitiveType.implementedBy(path_.context.type_class):
             # we need normalization
             klass_name = path_.context.type_class.__class__.__name__
-
             if klass_name == "Reference":
                 path_ = path_ / "reference"
                 path_.finalize(self.context.engine)
+                term_factory = self.create_term
+            elif klass_name == "Identifier":
+                term_factory = self.create_identifier_term
+            elif klass_name == "Quantity":
+                term_factory = self.create_identifier_term
+            elif klass_name == "CodeableConcept":
+                term_factory = self.create_codeableconcept_term
+            elif klass_name == "Coding":
+                term_factory = self.create_coding_term
+            else:
+                raise NotImplementedError
+            term = term_factory(path_, param_value, modifier)
+        else:
+            term = self.create_term(path_, param_value, modifier)
 
-    def create_identifier_term(self, param_name, param_value, modifier):
+        terms_container.append(term)
+
+    def create_identifier_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
                 # Term or Group
-                term = self.create_identifier_term(param_name, value, modifier)
+                term = self.create_identifier_term(path_, value, modifier)
                 terms.append(term)
             group = G_(*terms)
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = self.resolve_path_context(param_name)
             return self.single_valued_identifier_term(path_, param_value, modifier)
 
         raise NotImplementedError
@@ -271,19 +298,18 @@ class Search(object):
             path_1 = path_ / "value"
             return self.create_term(path_1, value, modifier)
 
-    def create_quantity_term(self, param_name, param_value, modifier):
+    def create_quantity_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
                 # Term or Group
-                term = self.create_quantity_term(param_name, value, modifier)
+                term = self.create_quantity_term(path_, value, modifier)
                 terms.append(term)
             group = G_(*terms)
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = self.resolve_path_context(param_name)
             return self.single_valued_quantity_term(path_, param_value, modifier)
 
         raise NotImplementedError
@@ -333,25 +359,18 @@ class Search(object):
             path_1 = path_ / "value"
             return self.create_term(path_1, value, modifier)
 
-    def create_coding_term(self, param_name, param_value, modifier):
+    def create_coding_term(self, path_, param_value, modifier):
         """ """
-
-        search_param = getattr(self.definition, param_name)
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
                 # Term or Group
-                term = self.create_coding_term(param_name, value, modifier)
+                term = self.create_coding_term(path_, value, modifier)
                 terms.append(term)
             group = G_(*terms)
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = ElementPath.from_el_path(
-                search_param.expression, self.context.engine.fhir_release
-            )
-            path_.finalize(self.context.engine)
-
             return self.single_valued_coding_term(path_, param_value, modifier)
 
         raise NotImplementedError
@@ -402,19 +421,18 @@ class Search(object):
             path_1 = path_ / "code"
             return self.create_term(path_1, value, modifier)
 
-    def create_codeableconcept_term(self, param_name, param_value, modifier):
+    def create_codeableconcept_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
                 # Term or Group
-                term = self.create_codeableconcept_term(param_name, value, modifier)
+                term = self.create_codeableconcept_term(path_, value, modifier)
                 terms.append(term)
             group = G_(*terms)
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = self.resolve_path_context(param_name)
             return self.single_valued_codeableconcept_term(path_, param_value, modifier)
 
         raise NotImplementedError
@@ -588,3 +606,32 @@ class Search(object):
         path_.finalize(self.context.engine)
 
         return path_
+
+    def attach_sort_terms(self, builder):
+        """ """
+        terms = list()
+        if "_sort" in self.result_params:
+            for sort_field in self.result_params["_sort"].split(","):
+                order_ = SortOrderType.ASC
+                if sort_field.startswith("-"):
+                    order_ = SortOrderType.DESC
+                    sort_field = sort_field[1:]
+
+                path_ = self.resolve_path_context(sort_field)
+
+                terms.append(sort_(path_, order_))
+        if len(terms) > 0:
+            return builder.sort(*terms)
+        return builder
+
+    def attach_limit_terms(self, builder):
+        """ """
+        if "_count" not in self.result_params:
+            return builder
+
+        offset = 0
+        if "page" in self.result_params:
+            current_page = self.result_params["page"]
+            if current_page > 1:
+                offset = (current_page - 1) * self.result_params["_count"]
+        return builder.limit(self.result_params["_count"], offset)

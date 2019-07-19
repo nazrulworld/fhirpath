@@ -157,7 +157,8 @@ def test_create_codeableconcept_term(engine):
     fhir_search = Search(context, params=params)
 
     field_name, value_pack, modifier = fhir_search.normalize_param("code")
-    term = fhir_search.create_codeableconcept_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert IGroupTerm.providedBy(term.terms[0]) is True
@@ -172,7 +173,8 @@ def test_create_codeableconcept_term(engine):
     assert term.terms[2].path.path == "Task.code.coding.code"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("code:text")
-    term = fhir_search.create_codeableconcept_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
     assert term.path.path == "Task.code.text"
 
@@ -190,7 +192,8 @@ def test_create_identifier_term(engine):
 
     fhir_search = Search(context, params=params)
     field_name, value_pack, modifier = fhir_search.normalize_param("identifier")
-    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert IGroupTerm.providedBy(term.terms[0]) is True
@@ -202,13 +205,15 @@ def test_create_identifier_term(engine):
     assert term.terms[2].path.path == "Task.identifier.value"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("identifier:text")
-    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert term.path.path == "Task.identifier.type.text"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("identifier:not")
-    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert term.terms[0].unary_operator == operator.neg
@@ -225,7 +230,8 @@ def test_create_quantity_term(engine):
     )
     fhir_search = Search(context, params=params)
     field_name, value_pack, modifier = fhir_search.normalize_param("quantity")
-    term = fhir_search.create_quantity_term(field_name, value_pack, modifier)
+    path_ = fhir_search.resolve_path_context(field_name)
+    term = fhir_search.create_quantity_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert IGroupTerm.providedBy(term.terms[0]) is True
