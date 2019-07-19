@@ -277,7 +277,7 @@ class Search(object):
             terms = list()
             for value in param_value:
                 # Term or Group
-                term = self.single_valued_quantity_term(param_name, value, modifier)
+                term = self.create_quantity_term(param_name, value, modifier)
                 terms.append(term)
             group = G_(*terms)
             return group
@@ -291,6 +291,7 @@ class Search(object):
     def single_valued_quantity_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
+        operator_eq = "eq"
         has_pipe = "|" in original_value
         # modifier = text, no impact
         if has_pipe:
@@ -306,17 +307,17 @@ class Search(object):
                 if parts[1]:
                     # check if val||unit or codeß
                     path_2 = path_ / "system"
-                    new_value = (operator_, parts[1])
+                    new_value = (operator_eq, parts[1])
                     term = self.create_term(path_2, new_value, modifier)
                     terms.append(term)
 
                     path_3 = path_ / "code"
-                    new_value = (operator_, parts[2])
+                    new_value = (operator_eq, parts[2])
                     term = self.create_term(path_3, new_value, modifier)
                     terms.append(term)
                 else:
                     path_2 = path_ / "unit"
-                    new_value = (operator_, parts[2])
+                    new_value = (operator_eq, parts[2])
                     term = self.create_term(path_2, new_value, modifier)
                     terms.append(term)
 
@@ -574,13 +575,16 @@ class Search(object):
 
     def resolve_path_context(self, param_name):
         """ """
-        search_param = getattr(self.definition, param_name)
+        search_param = getattr(self.definition, param_name, None)
+        if search_param is None:
+            raise ValidationError(
+                "No search definition is available for search parameter "
+                "``{param_name}`` on Resource ``{self.context.resource_name}``."
+            )
 
         if search_param.expression is None:
             raise NotImplementedError
-        path_ = ElementPath.from_el_path(
-            search_param.expression
-        )
+        path_ = ElementPath.from_el_path(search_param.expression)
         path_.finalize(self.context.engine)
 
         return path_

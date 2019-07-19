@@ -212,3 +212,27 @@ def test_create_identifier_term(engine):
     term.finalize(fhir_search.context.engine)
 
     assert term.terms[0].unary_operator == operator.neg
+
+
+def test_create_quantity_term(engine):
+    """ """
+    context = SearchContext(engine, "ChargeItem")
+    params = (
+        ("quantity", "5.4|http://unitsofmeasure.org|mg"),
+        ("quantity", "lt5.4||mg"),
+        ("quantity", "5.40e-3"),
+        ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg")
+    )
+    fhir_search = Search(context, params=params)
+    field_name, value_pack, modifier = fhir_search.normalize_param("quantity")
+    term = fhir_search.create_quantity_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+
+    assert IGroupTerm.providedBy(term.terms[0]) is True
+    quantity_group = term.terms[0]
+    assert quantity_group.terms[0].path.path == "ChargeItem.quantity.value"
+    assert quantity_group.terms[1].path.path == "ChargeItem.quantity.system"
+    assert quantity_group.terms[2].path.path == "ChargeItem.quantity.code"
+
+    assert term.terms[1].terms[1].path.path == "ChargeItem.quantity.unit"
+    assert term.terms[2].value.value == float("5.40e-3")
