@@ -176,3 +176,39 @@ def test_create_codeableconcept_term(engine):
     term.finalize(fhir_search.context.engine)
     assert term.path.path == "Task.code.text"
 
+
+def test_create_identifier_term(engine):
+    """ """
+    context = SearchContext(engine, "Task")
+    params = (
+        ("identifier", "http://example.com/fhir/identifier/mrn|123456"),
+        ("identifier", "http://terminology.hl7.org/CodeSystem/task-performer-type|"),
+        ("identifier", "|performer"),
+        ("identifier:text", "Performer"),
+        ("identifier:not", "http://example.com/fhir/identifier/mrn|123456"),
+    )
+
+    fhir_search = Search(context, params=params)
+    field_name, value_pack, modifier = fhir_search.normalize_param("identifier")
+    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+
+    assert IGroupTerm.providedBy(term.terms[0]) is True
+    identifier_group = term.terms[0]
+    assert identifier_group.terms[0].path.path == "Task.identifier.value"
+    assert identifier_group.terms[1].path.path == "Task.identifier.system"
+
+    assert term.terms[1].path.path == "Task.identifier.system"
+    assert term.terms[2].path.path == "Task.identifier.value"
+
+    field_name, value_pack, modifier = fhir_search.normalize_param("identifier:text")
+    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+
+    assert term.path.path == "Task.identifier.type.text"
+
+    field_name, value_pack, modifier = fhir_search.normalize_param("identifier:not")
+    term = fhir_search.create_identifier_term(field_name, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+
+    assert term.terms[0].unary_operator == operator.neg

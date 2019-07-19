@@ -210,7 +210,6 @@ class Search(object):
 
     def create_identifier_term(self, param_name, param_value, modifier):
         """ """
-        search_param = getattr(self.definition, param_name)
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
@@ -221,18 +220,14 @@ class Search(object):
             return group
 
         elif isinstance(param_value, tuple):
-            path_ = ElementPath.from_el_path(
-                search_param.expression, self.context.engine.fhir_release
-            )
-            path_.finalize(self.context.engine)
-
+            path_ = self.resolve_path_context(param_name)
             return self.single_valued_identifier_term(path_, param_value, modifier)
 
         raise NotImplementedError
 
     def single_valued_identifier_term(self, path_, value, modifier):
         """ """
-        operator, original_value = value
+        operator_, original_value = value
         has_pipe = "|" in original_value
 
         if modifier == "text" and not has_pipe:
@@ -244,9 +239,9 @@ class Search(object):
         elif has_pipe:
             if original_value.startswith("|"):
                 path_ = path_ / "value"
-                new_value = (value[0], original_value[1:])
+                new_value = (operator_, original_value[1:])
                 return self.create_term(path_, new_value, modifier)
-            elif value.endswith("|"):
+            elif original_value.endswith("|"):
                 path_ = path_ / "system"
                 new_value = (value[0], original_value[:-1])
                 return self.create_term(path_, new_value, modifier)
@@ -256,12 +251,12 @@ class Search(object):
                 terms = list()
                 try:
                     path_1 = path_ / "value"
-                    new_value = (value[0], parts[0])
+                    new_value = (operator_, parts[0])
                     term = self.create_term(path_1, new_value, modifier)
                     terms.append(term)
 
                     path_2 = path_ / "system"
-                    new_value = (value[0], parts[1])
+                    new_value = (operator_, parts[1])
                     term = self.create_term(path_2, new_value, modifier)
                     terms.append(term)
 
@@ -274,8 +269,68 @@ class Search(object):
                     return terms[0]
         else:
             path_1 = path_ / "value"
-            new_value = (value[0], parts[0])
-            return self.create_term(path_1, new_value, modifier)
+            return self.create_term(path_1, value, modifier)
+
+    def create_quantity_term(self, param_name, param_value, modifier):
+        """ """
+        if isinstance(param_value, list):
+            terms = list()
+            for value in param_value:
+                # Term or Group
+                term = self.single_valued_quantity_term(param_name, value, modifier)
+                terms.append(term)
+            group = G_(*terms)
+            return group
+
+        elif isinstance(param_value, tuple):
+            path_ = self.resolve_path_context(param_name)
+            return self.single_valued_quantity_term(path_, param_value, modifier)
+
+        raise NotImplementedError
+
+    def single_valued_quantity_term(self, path_, value, modifier):
+        """ """
+        operator_, original_value = value
+        has_pipe = "|" in original_value
+        # modifier = text, no impact
+        if has_pipe:
+            terms = list()
+            parts = original_value.split("|")
+
+            if len(parts) == 3:
+                path_1 = path_ / "value"
+                new_value = (operator_, parts[0])
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
+
+                if parts[1]:
+                    # check if val||unit or codeß
+                    path_2 = path_ / "system"
+                    new_value = (operator_, parts[1])
+                    term = self.create_term(path_2, new_value, modifier)
+                    terms.append(term)
+
+                    path_3 = path_ / "code"
+                    new_value = (operator_, parts[2])
+                    term = self.create_term(path_3, new_value, modifier)
+                    terms.append(term)
+                else:
+                    path_2 = path_ / "unit"
+                    new_value = (operator_, parts[2])
+                    term = self.create_term(path_2, new_value, modifier)
+                    terms.append(term)
+
+            else:
+                # may be validation error
+                raise NotImplementedError
+
+            if len(terms) > 1:
+                return G_(*terms)
+            else:
+                return terms[0]
+        else:
+            path_1 = path_ / "value"
+            return self.create_term(path_1, value, modifier)
 
     def create_coding_term(self, param_name, param_value, modifier):
         """ """
@@ -302,7 +357,7 @@ class Search(object):
 
     def single_valued_coding_term(self, path_, value, modifier):
         """ """
-        operator, original_value = value
+        operator_, original_value = value
         has_pipe = "|" in original_value
 
         if modifier == "text" and not has_pipe:
@@ -365,7 +420,7 @@ class Search(object):
 
     def single_valued_codeableconcept_term(self, path_, value, modifier):
         """ """
-        operator, original_value = value
+        operator_, original_value = value
         has_pipe = "|" in original_value
 
         if modifier == "text" and not has_pipe:
@@ -387,9 +442,9 @@ class Search(object):
         assert IFhirPrimitiveType.implementedBy(path_.context.type_class)
 
         if isinstance(value, tuple):
-            operator, original_value = value
+            operator_, original_value = value
             if isinstance(original_value, list):
-                # we force IN will have equal or not equal operator
+                # we force IN will have equal or not equal operator_
                 # xxx: should be validated already
                 term = in_(path_, original_value)
                 if modifier == "not":
@@ -402,17 +457,17 @@ class Search(object):
 
             val = V_(original_value)
 
-            if operator == "eq":
+            if operator_ == "eq":
                 term = term == val
-            elif operator == "ne":
+            elif operator_ == "ne":
                 term = term != val
-            elif operator == "lt":
+            elif operator_ == "lt":
                 term = term < val
-            elif operator == "le":
+            elif operator_ == "le":
                 term = term <= val
-            elif operator == "gt":
+            elif operator_ == "gt":
                 term = term > val
-            elif operator == "ge":
+            elif operator_ == "ge":
                 term = term >= val
             else:
                 raise NotImplementedError
