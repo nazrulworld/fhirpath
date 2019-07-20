@@ -146,18 +146,18 @@ class QueryBuilder(object):
                 )
             )
         # xxx: do any validation?
-        if len(self._selects) == 0:
+        if len(self._select) == 0:
             el_path = ElementPath("*")
-            self._selects.append(el_path)
+            self._select.append(el_path)
 
         # Finalize path elements
-        [se.finalize(engine) for se in self._selects]
+        [se.finalize(self._engine) for se in self._select]
 
         # Finalize where terms on demand
-        [wr.finalize(self._engine) for wr in self._wheres]
+        [wr.finalize(self._engine) for wr in self._where]
 
         # Finalize sorts ondemand
-        [sr.finalize(self._engine) for sr in self._sorts]
+        [sr.finalize(self._engine) for sr in self._sort]
 
         self._validate()
 
@@ -173,9 +173,9 @@ class QueryBuilder(object):
 
         newone._limit = copy(self._limit)
         newone._from = copy(self._from)
-        newone._selects = copy(self._select)
-        newone._wheres = copy(self._where)
-        newone._sorts = copy(self._sort)
+        newone._select = copy(self._select)
+        newone._where = copy(self._where)
+        newone._sort = copy(self._sort)
 
         return newone
 
@@ -274,7 +274,7 @@ class QueryBuilder(object):
 
     def __call__(self, engine=None):
         """ """
-        if not self._finalized:
+        if not self._finalized and (engine or self._engine):
             self.finalized(engine)
 
         query = self.get_query()

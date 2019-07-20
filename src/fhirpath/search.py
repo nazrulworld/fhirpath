@@ -189,10 +189,11 @@ class Search(object):
         """Create QueryBuilder from search query string"""
         builder = Q_(self.context.resource_name, self.context.engine)
         terms_container = list()
-        for param_name in self.search_params:
+        # making sure no duplicate keys, important!
+        for param_name in set(self.search_params):
             """ """
             normalized_data = self.normalize_param(param_name)
-            self.add_term(self, normalized_data, terms_container)
+            self.add_term(normalized_data, terms_container)
 
         result = self.attach_limit_terms(
             self.attach_sort_terms(builder.where(*terms_container))
@@ -213,15 +214,14 @@ class Search(object):
 
         if not IFhirPrimitiveType.implementedBy(path_.context.type_class):
             # we need normalization
-            klass_name = path_.context.type_class.__class__.__name__
-            if klass_name == "Reference":
+            klass_name = path_.context.type_class.__name__
+            if klass_name == "FHIRReference":
                 path_ = path_ / "reference"
-                path_.finalize(self.context.engine)
                 term_factory = self.create_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
             elif klass_name == "Quantity":
-                term_factory = self.create_identifier_term
+                term_factory = self.create_quantity_term
             elif klass_name == "CodeableConcept":
                 term_factory = self.create_codeableconcept_term
             elif klass_name == "Coding":
@@ -329,7 +329,7 @@ class Search(object):
                 terms.append(term)
 
                 if parts[1]:
-                    # check if val||unit or codeß
+                    # check if val||unit or code
                     path_2 = path_ / "system"
                     new_value = (operator_eq, parts[1])
                     term = self.create_term(path_2, new_value, modifier)

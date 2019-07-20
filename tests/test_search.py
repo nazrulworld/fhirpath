@@ -225,7 +225,7 @@ def test_create_quantity_term(engine):
     context = SearchContext(engine, "ChargeItem")
     params = (
         ("quantity", "5.4|http://unitsofmeasure.org|mg"),
-        ("quantity", "lt5.4||mg"),
+        ("quantity", "lt5.1||mg"),
         ("quantity", "5.40e-3"),
         ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg"),
     )
@@ -279,3 +279,28 @@ def test_limit_attachment(engine):
     builder = fhir_search.attach_limit_terms(builder)
 
     assert builder._limit.offset == 300
+
+
+def test_build_query_from_search_params(engine):
+    """ """
+    context = SearchContext(engine, "ChargeItem")
+    params = (
+        ("subject", "Patient/PAT001"),
+        ("quantity", "5.4|http://unitsofmeasure.org|mg"),
+        ("quantity", "lt5.9||mg"),
+        ("quantity", "5.40e-3"),
+        ("quantity:not", "gt5.4|http://unitsofmeasure.org|mg"),
+    )
+    fhir_search = Search(context, params=params)
+    builder = Q_(fhir_search.context.resource_name, fhir_search.context.engine)
+    terms_container = list()
+    for param_name in set(fhir_search.search_params):
+        """ """
+        normalized_data = fhir_search.normalize_param(param_name)
+        fhir_search.add_term(normalized_data, terms_container)
+
+    builder = builder.where(*terms_container)
+    builder.finalize()
+    query = builder.get_query()
+    assert len(query.get_select()) == 1
+    assert len(query.get_where()) == 3
