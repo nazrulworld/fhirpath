@@ -33,6 +33,7 @@ class IStorage(Interface):
 
     def empty():
         """ """
+
     def total():
         """ """
 
@@ -95,3 +96,18 @@ class IConnection(Interface):
 
 class IEngineFactory(Interface):
     """ """
+
+
+class IDialect(Interface):
+    """ """
+
+    _connection = Attribute("Connection from Engine")
+
+    def bind(connection):
+        """ """
+
+    def compile(query):
+        """ """
+
+    def pre_compile(query):
+        """ """

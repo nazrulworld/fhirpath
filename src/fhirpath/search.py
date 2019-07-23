@@ -242,7 +242,8 @@ class Search(object):
                 # Term or Group
                 term = self.create_identifier_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms)
+            # IN Like Group
+            group = G_(*terms, path=path_)
             return group
 
         elif isinstance(param_value, tuple):
@@ -289,7 +290,7 @@ class Search(object):
                     pass
 
                 if len(terms) > 1:
-                    return G_(*terms)
+                    return G_(*terms, path=path_)
                 else:
                     return terms[0]
         else:
@@ -304,7 +305,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_quantity_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms)
+            group = G_(*terms, path=path_)
             return group
 
         elif isinstance(param_value, tuple):
@@ -350,7 +351,7 @@ class Search(object):
                 raise NotImplementedError
 
             if len(terms) > 1:
-                return G_(*terms)
+                return G_(*terms, path=path_)
             else:
                 return terms[0]
         else:
@@ -365,7 +366,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_coding_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms)
+            group = G_(*terms, path=path_)
             return group
 
         elif isinstance(param_value, tuple):
@@ -412,7 +413,7 @@ class Search(object):
                     pass
 
                 if len(terms) > 1:
-                    return G_(*terms)
+                    return G_(*terms, path=path_)
                 else:
                     return terms[0]
         else:
@@ -427,7 +428,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_codeableconcept_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms)
+            group = G_(*terms, path=path_)
             return group
 
         elif isinstance(param_value, tuple):
@@ -498,7 +499,7 @@ class Search(object):
                 term = self.create_term(path_, val, modifier)
                 terms.append(term)
 
-            g_term = G_(*terms)
+            g_term = G_(*terms, path=path_)
             return g_term
 
     def normalize_param_value(self, raw_value, container):

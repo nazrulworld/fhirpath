@@ -486,7 +486,7 @@ class TermValue(object):
 class GroupTerm(object):
     """ """
 
-    def __init__(self, *terms):
+    def __init__(self, *terms, path=None):
         """ """
         # flag
         self._finalized = False
@@ -501,6 +501,11 @@ class GroupTerm(object):
         for term in terms:
             # could be GroupTerm | Term
             self.terms.append(ITerm(term))
+
+        if isinstance(path, str):
+            self.path = ElementPath.from_el_path(path)
+        else:
+            self.path = path
 
     def __add__(self, other):
         """ """
@@ -523,6 +528,9 @@ class GroupTerm(object):
 
     def finalize(self, context):
         """ """
+        if self.path is not None and (not self.path.is_finalized()):
+            self.path.finalize(context)
+
         for term in self.terms:
             term.finalize(context)
 

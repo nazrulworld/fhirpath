@@ -44,9 +44,9 @@ def V_(value):
     return val
 
 
-def G_(*terms):
+def G_(*terms, path=None):
     """ """
-    group_term = GroupTerm(*terms)
+    group_term = GroupTerm(*terms, path=path)
     return group_term
 
 

@@ -304,3 +304,21 @@ def test_build_query_from_search_params(engine):
     query = builder.get_query()
     assert len(query.get_select()) == 1
     assert len(query.get_where()) == 3
+
+
+def test_build_result(engine):
+    """ """
+    context = SearchContext(engine, "ChargeItem")
+    params = (
+        ("subject", "Patient/PAT001"),
+        ("quantity", "5.4|http://unitsofmeasure.org|mg"),
+        ("quantity", "lt5.9||mg"),
+        ("quantity", "5.40e-3"),
+        ("quantity:not", "gt5.4|http://unitsofmeasure.org|mg"),
+        ("_sort", "_id"),
+        ("_count", "100"),
+        ("page", "4")
+    )
+    fhir_search = Search(context, params=params)
+    result = fhir_search.build()
+    import pdb;pdb.set_trace(result)

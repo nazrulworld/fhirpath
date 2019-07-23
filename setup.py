@@ -53,12 +53,12 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
-    "fhir.resources>=5.0.0b2",
+    "fhir.resources>=5.0.1",
 ]
 
 setup_requirements = ["pytest-runner"]
 
-test_requirements = ["pytest", "guillotina>=4.7.0", "guillotina_elasticsearch"]
+test_requirements = ["pytest", "guillotina>=4.8.13", "guillotina_elasticsearch"]
 
 setup(
     name="fhirpath",

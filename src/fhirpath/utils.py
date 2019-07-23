@@ -371,6 +371,10 @@ class PathInfoContext:
 
     children = property(_get_children, _set_children)
 
+    def is_root(self):
+        """ """
+        return self._parent is None
+
     def add_child(self, path):
         """ """
         if path not in self._children:

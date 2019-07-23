@@ -275,7 +275,7 @@ class QueryBuilder(object):
     def __call__(self, engine=None):
         """ """
         if not self._finalized and (engine or self._engine):
-            self.finalized(engine)
+            self.finalize(engine)
 
         query = self.get_query()
         result = QueryResult(query=query, engine=self._engine)
