@@ -5,7 +5,7 @@ from fhirpath.search import Search
 from fhirpath.search import SearchContext
 
 
-def test_raw_es_query_generation_from_search(engine):
+def test_raw_es_query_generation_from_search(engine, es_requester):
     """Sample pytest test function with the pytest fixture as an argument."""
     context = SearchContext(engine, "Patient")
     params = (

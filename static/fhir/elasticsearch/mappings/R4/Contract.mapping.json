@@ -1,0 +1,118 @@
+{
+    "mapping": {
+        "properties": {
+            "authority": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "domain": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "id": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "identifier": {
+                "properties": {
+                    "system": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "type": {
+                        "properties": {
+                            "text": {
+                                "analyzer": "standard",
+                                "index": true,
+                                "store": false,
+                                "type": "text"
+                            }
+                        }
+                    },
+                    "use": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "value": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "issued": {
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false,
+                "type": "date"
+            },
+            "meta": {
+                "properties": {
+                    "lastUpdated": {
+                        "format": "date_time_no_millis||date_optional_time",
+                        "store": false,
+                        "type": "date"
+                    },
+                    "profile": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "versionId": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "resourceType": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "subject": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "topic": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            }
+        }
+    },
+    "meta": {
+        "lastUpdated": "2019-04-22T19:09:31+02:00",
+        "versionId": "STU3"
+    },
+    "resourceType": "Contract"
+}

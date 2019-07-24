@@ -1,0 +1,40 @@
+{
+    "mapping": {
+        "properties": {
+            "id": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "meta": {
+                "properties": {
+                    "lastUpdated": {
+                        "format": "date_time_no_millis||date_optional_time",
+                        "store": false,
+                        "type": "date"
+                    },
+                    "profile": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "versionId": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "resourceType": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            }
+        }
+    },
+    "meta": {
+        "lastUpdated": "2019-04-22T19:09:31+02:00",
+        "versionId": "STU3"
+    },
+    "resourceType": "Resource"
+}

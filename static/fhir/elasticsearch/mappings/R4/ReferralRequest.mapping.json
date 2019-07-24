@@ -1,0 +1,274 @@
+{
+    "mapping": {
+        "properties": {
+            "authoredOn": {
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false,
+                "type": "date"
+            },
+            "basedOn": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "context": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                }
+            },
+            "definition": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "groupIdentifier": {
+                "properties": {
+                    "system": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "type": {
+                        "properties": {
+                            "text": {
+                                "analyzer": "standard",
+                                "index": true,
+                                "store": false,
+                                "type": "text"
+                            }
+                        }
+                    },
+                    "use": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "value": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "id": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "identifier": {
+                "properties": {
+                    "system": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "type": {
+                        "properties": {
+                            "text": {
+                                "analyzer": "standard",
+                                "index": true,
+                                "store": false,
+                                "type": "text"
+                            }
+                        }
+                    },
+                    "use": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "value": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                },
+                "type": "nested"
+            },
+            "intent": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "meta": {
+                "properties": {
+                    "lastUpdated": {
+                        "format": "date_time_no_millis||date_optional_time",
+                        "store": false,
+                        "type": "date"
+                    },
+                    "profile": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "versionId": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "priority": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "recipient": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "replaces": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "resourceType": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "serviceRequested": {
+                "properties": {
+                    "coding": {
+                        "properties": {
+                            "code": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "display": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "system": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            }
+                        },
+                        "type": "nested"
+                    },
+                    "text": {
+                        "analyzer": "standard",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "specialty": {
+                "properties": {
+                    "coding": {
+                        "properties": {
+                            "code": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "display": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "system": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            }
+                        },
+                        "type": "nested"
+                    },
+                    "text": {
+                        "analyzer": "standard",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                }
+            },
+            "status": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "subject": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                }
+            },
+            "type": {
+                "properties": {
+                    "coding": {
+                        "properties": {
+                            "code": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "display": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "system": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            }
+                        },
+                        "type": "nested"
+                    },
+                    "text": {
+                        "analyzer": "standard",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                }
+            }
+        }
+    },
+    "meta": {
+        "lastUpdated": "2019-04-22T19:09:31+02:00",
+        "versionId": "STU3"
+    },
+    "resourceType": "ReferralRequest"
+}

@@ -1,5 +1,6 @@
 graft src/fhirpath
 prune docs
+prune static
 prune .github
 include AUTHORS.rst
 include CONTRIBUTING.rst

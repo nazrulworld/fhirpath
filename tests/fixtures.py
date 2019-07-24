@@ -2,6 +2,8 @@
 import subprocess
 
 import pytest
+from guillotina import testing
+from guillotina_elasticsearch.tests.fixtures import elasticsearch
 
 from fhirpath.engine import create_engine
 from fhirpath.fhirspec import DEFAULT_SETTINGS
@@ -10,6 +12,39 @@ from fhirpath.utils import proxy
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def base_settings_configurator(settings):
+    if "applications" not in settings:
+        settings["applications"] = []
+
+    if "guillotina_elasticsearch" not in settings["applications"]:
+        settings["applications"].append("guillotina_elasticsearch")
+
+    if "guillotina_elasticsearch.testing" not in settings["applications"]:  # noqa
+        settings["applications"].append("guillotina_elasticsearch.testing")
+
+    settings["elasticsearch"] = {
+        "index_name_prefix": "guillotina-",
+        "connection_settings": {
+            "hosts": [
+                "{}:{}".format(
+                    getattr(elasticsearch, "host", "localhost"),
+                    getattr(elasticsearch, "port", "9200"),
+                )
+            ],
+            "sniffer_timeout": None,
+        },
+    }
+
+    settings["load_utilities"]["catalog"] = {
+        "provides": "guillotina_elasticsearch.interfaces.IElasticSearchUtility",  # noqa
+        "factory": "guillotina_elasticsearch.utility.ElasticSearchUtility",
+        "settings": {},
+    }
+
+
+testing.configure_with(base_settings_configurator)
 
 
 @pytest.fixture

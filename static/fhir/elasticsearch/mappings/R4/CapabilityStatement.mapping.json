@@ -1,0 +1,133 @@
+{
+    "mapping": {
+        "properties": {
+            "date": {
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false,
+                "type": "date"
+            },
+            "description": {
+                "analyzer": "standard",
+                "index": true,
+                "store": false,
+                "type": "text"
+            },
+            "format": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "id": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "implementationGuide": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "jurisdiction": {
+                "properties": {
+                    "coding": {
+                        "properties": {
+                            "code": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "display": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            },
+                            "system": {
+                                "index": true,
+                                "store": false,
+                                "type": "keyword"
+                            }
+                        },
+                        "type": "nested"
+                    },
+                    "text": {
+                        "analyzer": "standard",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "meta": {
+                "properties": {
+                    "lastUpdated": {
+                        "format": "date_time_no_millis||date_optional_time",
+                        "store": false,
+                        "type": "date"
+                    },
+                    "profile": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "versionId": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "name": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "profile": {
+                "properties": {
+                    "reference": {
+                        "analyzer": "fhir_reference_analyzer",
+                        "index": true,
+                        "store": false,
+                        "type": "text"
+                    }
+                },
+                "type": "nested"
+            },
+            "publisher": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "resourceType": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "status": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "title": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "url": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            },
+            "version": {
+                "index": true,
+                "store": false,
+                "type": "keyword"
+            }
+        }
+    },
+    "meta": {
+        "lastUpdated": "2019-04-22T19:09:31+02:00",
+        "versionId": "STU3"
+    },
+    "resourceType": "CapabilityStatement"
+}

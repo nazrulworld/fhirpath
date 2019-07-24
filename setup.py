@@ -58,7 +58,12 @@ requirements = [
 
 setup_requirements = ["pytest-runner"]
 
-test_requirements = ["pytest", "guillotina>=4.8.13", "guillotina_elasticsearch"]
+test_requirements = [
+    "pytest",
+    "guillotina>=4.8.13",
+    "guillotina_elasticsearch",
+    "pytest-docker-fixtures",
+]
 
 setup(
     name="fhirpath",
@@ -101,8 +106,5 @@ setup(
         "GitHub: repo": "https://github.com/nazrulworld/aiohttp",
     },
     zip_safe=False,
-    cmdclass={
-        "install": PostIntsall,
-        "develop": PostDevelop
-    }
+    cmdclass={"install": PostIntsall, "develop": PostDevelop},
 )
