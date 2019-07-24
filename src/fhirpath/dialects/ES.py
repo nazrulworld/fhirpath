@@ -1,6 +1,7 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
 import operator
+import isodate
 
 from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.fql.interfaces import IExistsTerm
@@ -18,7 +19,7 @@ ES_PY_OPERATOR_MAP = {
     operator.ne: None,
     operator.gt: "gt",
     operator.lt: "lt",
-    operator.gt: "gte",
+    operator.ge: "gte",
     operator.le: "lte",
 }
 
@@ -40,13 +41,22 @@ class ElasticSearchDialect(DialectBase):
 
             if unary_operator == operator.neg:
                 container = body_structure["query"]["bool"]["must_not"]
-            elif term.arithmetic_operator == operator.pos:
+            elif unary_operator == operator.pos:
                 container = body_structure["query"]["bool"]["filter"]
             else:
                 # xxx: if None may be should?
-                raise NotImplementedError
+                from inspect import currentframe, getframeinfo
+
+                frameinfo = getframeinfo(currentframe())
+                raise NotImplementedError(
+                    "File: {0} Line: {1}".format(
+                        frameinfo.filename, frameinfo.lineno + 1
+                    )
+                )
 
             container.append(q)
+
+        return body_structure
 
     def resolve_term(self, term):
         """ """
@@ -74,26 +84,46 @@ class ElasticSearchDialect(DialectBase):
                         q = {"terms": {term.path.path: [term.value.value]}}
                     else:
                         q = {"term": {term.path.path: term.value.value}}
+
                     return q, term.unary_operator
 
-                elif term.path.context.type_name == "dateTime":
-                    q = {"term": {term.path.path: term.value.value}}
-                    return q, term.unary_operator
+                elif term.path.context.type_name in (
+                    "dateTime",
+                    "date",
+                    "time",
+                    "instant",
+                ):
+
+                    return self.resolve_datetime_term(term)
+                else:
+                    raise NotImplementedError
             else:
-                raise NotImplementedError
+                raise NotImplementedError("Line 85")
 
         else:
             raise NotImplementedError
 
     def resolve_datetime_term(self, term):
-        """ """
+        """TODO: 1.) Value Conversion(stringify) based of context.type_name
+        i.e date or dateTime or Time """
         q = dict()
+        type_name = term.path.context.type_name
+        if type_name in ("dateTime", "instant"):
+            value_formatter = (
+                isodate.DATE_EXT_COMPLETE + "T" + isodate.TIME_EXT_COMPLETE
+            )
+        elif type_name == "date":
+            value_formatter = isodate.DATE_EXT_COMPLETE
+        elif type_name == "time":
+            value_formatter = isodate.TIME_EXT_COMPLETE
+        else:
+            raise NotImplementedError
 
         if term.comparison_operator in (operator.eq, operator.ne):
             q["range"] = {
                 term.path.path: {
-                    operator.ge: term.value.value,
-                    operator.le: term.value.value,
+                    operator.ge: isodate.strftime(term.value.value, value_formatter),
+                    operator.le: isodate.strftime(term.value.value, value_formatter),
                 }
             }
 
@@ -105,12 +135,16 @@ class ElasticSearchDialect(DialectBase):
         ):
             q["range"] = {
                 term.path.path: {
-                    ES_PY_OPERATOR_MAP[term.comparison_operator]: term.value.value
+                    ES_PY_OPERATOR_MAP[term.comparison_operator]: isodate.strftime(
+                        term.value.value, value_formatter
+                    )
                 }
             }
 
-        if term.value.value.tzinfo:
-            q["range"][term.path.path]["time_zone"] = term.value.value.tzinfo
+        if type_name in ("dateTime", "instant", "time") and term.value.value.tzinfo:
+            timezone = isodate.tz_isoformat(term.value.value)
+            if timezone not in ("", "Z"):
+                q["range"][term.path.path]["time_zone"] = timezone
 
         if (
             term.comparison_operator != operator.ne
