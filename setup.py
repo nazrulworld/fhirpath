@@ -54,6 +54,7 @@ requirements = [
     "multidict",
     "decorator",
     "fhir.resources>=5.0.1",
+    "jsonpatch"
 ]
 
 setup_requirements = ["pytest-runner"]

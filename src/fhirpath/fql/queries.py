@@ -6,8 +6,10 @@ from zope.interface import implementer
 
 from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.exceptions import ValidationError
+from fhirpath.navigator import PathNavigator
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
+from fhirpath.utils import ModelFactory
 from fhirpath.utils import builder
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
@@ -25,11 +27,9 @@ from .interfaces import IQueryBuilder
 from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
-from .navigator import PathNavigator
 from .types import ElementPath
 from .types import FromClause
 from .types import LimitClause
-from .types import ModelFactory
 from .types import SelectClause
 from .types import SortClause
 from .types import WhereClause

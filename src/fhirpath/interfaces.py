@@ -111,3 +111,7 @@ class IDialect(Interface):
 
     def pre_compile(query):
         """ """
+
+
+class IModel(Interface):
+    """FHIR Model Class"""

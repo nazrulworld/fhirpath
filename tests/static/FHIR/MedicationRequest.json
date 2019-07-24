@@ -1,0 +1,129 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "241d5b3a-3f45-43f0-9a19-16d84ba90cc8",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://www.bmc.nl/portal/prescriptions",
+      "value": "12345689"
+    }
+  ],
+  "status": "completed",
+  "intent": "order",
+  "medicationCodeableConcept": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "322254008",
+        "display": "Paracetamol 240mg suppository (product)"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/pat1",
+    "display": "Donald Duck"
+  },
+  "authoredOn": "2015-01-15",
+  "requester": {
+    "agent": {
+      "reference": "Practitioner/f007",
+      "display": "Patrick Pump"
+    },
+    "onBehalfOf": {
+      "reference": "Organization/f002"
+    }
+  },
+  "reasonCode": [
+    {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "30242009",
+          "display": "Scarlet Fever (disorder)"
+        }
+      ]
+    }
+  ],
+  "dosageInstruction": [
+    {
+      "sequence": 1,
+      "text": "Insert one suppository rectally twice daily as needed for fever to a maximim of 3 per day",
+      "additionalInstruction": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "418637003",
+              "display": "Do not take with any other paracetamol products (qualifier value)"
+            }
+          ]
+        }
+      ],
+      "timing": {
+        "repeat": {
+          "frequency": 2,
+          "period": 1,
+          "periodUnit": "d"
+        }
+      },
+      "asNeededCodeableConcept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "386661006",
+            "display": "Fever (finding)"
+          }
+        ]
+      },
+      "doseQuantity": {
+        "value": 240,
+        "unit": "mg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg"
+      },
+      "maxDosePerPeriod": {
+        "numerator": {
+          "value": 720,
+          "system": "http://unitsofmeasure.org",
+          "code": "mg"
+        },
+        "denominator": {
+          "value": 1,
+          "system": "http://unitsofmeasure.org",
+          "code": "d"
+        }
+      }
+    }
+  ],
+  "dispenseRequest": {
+    "validityPeriod": {
+      "start": "2015-01-15",
+      "end": "2016-01-15"
+    },
+    "numberOfRepeatsAllowed": 3,
+    "quantity": {
+      "value": 30,
+      "unit": "RECSUPP",
+      "system": "http://hl7.org/fhir/v3/orderableDrugForm",
+      "code": "RECSUPP"
+    },
+    "expectedSupplyDuration": {
+      "value": 10,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    }
+  },
+  "substitution": {
+    "allowed": true,
+    "reason": {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/v3/ActReason",
+          "code": "FP",
+          "display": "formulary policy"
+        }
+      ]
+    }
+  }
+}

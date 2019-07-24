@@ -1,0 +1,58 @@
+{
+    "status": "active",
+    "definition": [
+        {
+            "reference": "Questionnaire/JOINT_SCORE_28"
+        }
+    ],
+    "code": {
+        "text": "JOINT SCORE 28",
+        "coding": [
+            {
+                "code": "xxxxxx",
+                "system": "http://snomed.info/sct",
+                "display": "JOINT SCORE 28"
+            }
+        ]
+    },
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/StructureDefinition/procedurerequest-questionnaireRequest",
+            "valueReference": {
+                "display": "Questionnaire/JOINT_SCORE_28",
+                "reference": "Questionnaire/JOINT_SCORE_28"
+            }
+        }
+    ],
+    "resourceType": "ProcedureRequest",
+    "authoredOn": "2017-08-05T06:16:41",
+    "meta": {
+        "versionId": "1.0.0",
+        "lastUpdated": "2017-10-15T06:31:18"
+    },
+    "intent": "order",
+    "requester": {
+        "agent": {
+            "display": "",
+            "reference": "test-user"
+        }
+    },
+    "identifier": [
+        {
+            "assigner": {
+                "display": "Zitelab ApS"
+            },
+            "use": "usual",
+            "type": {
+                "text": "Plone Patient UUID"
+            },
+            "system": "UUID",
+            "value": "b36945f9-b808-4485-b9f3-8a96a1bbafe6"
+        }
+    ],
+    "id": "b36945f9-b808-4485-b9f3-8a96a1bbafe6",
+    "subject": {
+        "display": "Eelector Patient Full",
+        "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"
+    }
+}

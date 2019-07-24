@@ -13,7 +13,9 @@ from zope.interface import implementer
 from fhirpath.thirdparty import Proxy
 
 from .enums import FHIR_VERSION
+from .interfaces import IModel
 from .interfaces import IPathInfoContext
+from .navigator import PathNavigator
 from .storage import FHIR_RESOURCE_CLASS_STORAGE
 from .storage import PATH_INFO_STORAGE
 from .types import PrimitiveDataTypes
@@ -54,27 +56,16 @@ def import_string(dotted_path: str) -> type:
     try:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except (ValueError, AttributeError):
-
-        t, v, tb = sys.exc_info()
-        msg = "{0} doesn't look like a module path".format(dotted_path)
-        try:
-            reraise(ImportError(msg), None, tb)
-        finally:
-            del t, v, tb
+        msg = f"{dotted_path} doesn't look like a module path"
+        return reraise(ImportError, msg)
 
     module = import_module(module_path)
 
     try:
         return getattr(module, class_name)
     except AttributeError:
-        msg = 'Module "{0}" does not define a "{1}" attribute/class'.format(
-            module_path, class_name
-        )
-        t, v, tb = sys.exc_info()
-        try:
-            return reraise(ImportError(msg), None, tb)
-        finally:
-            del t, v, tb
+        msg = f'Module "{module_path}" does not define a "{class_name}" attribute/class'
+        return reraise(ImportError, msg)
 
 
 def builder(func):
@@ -398,3 +389,43 @@ class PathInfoContextProxy(Proxy):
         """ """
         super(PathInfoContextProxy, self).__init__()
         self.initialize(context)
+
+
+class ModelFactory(type):
+    """FHIR Model factory"""
+
+    def __new__(cls, name, bases, attrs, **kwargs):
+        super_new = super().__new__
+
+        # xxx: customize module path?
+        module = attrs.pop("__module__", cls.__module__)
+        new_attrs = {"__module__": module}
+        classcell = attrs.pop("__classcell__", None)
+        if classcell is not None:
+            new_attrs["__classcell__"] = classcell
+
+        new_class = super_new(cls, name, bases, new_attrs, **kwargs)
+
+        # Attach Interface
+        new_class = implementer(IModel)(new_class)
+
+        return new_class
+
+    def add_to_class(cls, name, value):
+        """ """
+        setattr(cls, name, value)
+
+
+class Model:
+    """ """
+
+    @staticmethod
+    def create(resource_type: str, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
+        """ """
+        klass = import_string(
+            lookup_fhir_class_path(resource_type, fhir_release=fhir_version)
+        )
+        # xxx: should be cache?
+        model = ModelFactory(f"{klass.__name__}Model", (klass, PathNavigator), {})
+
+        return model

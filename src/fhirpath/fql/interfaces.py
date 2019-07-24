@@ -28,10 +28,6 @@ class IFqlClause(Interface):
     empty = Attribute("Empty Flag")
 
 
-class IModel(Interface):
-    """ """
-
-
 class ITerm(IBaseClass):
     """ """
 

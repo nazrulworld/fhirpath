@@ -1,0 +1,58 @@
+{
+    "status": "active",
+    "definition": [
+        {
+            "reference": "Questionnaire/e1218e8a-2727-4889-a26e-84b56582d238"
+        }
+    ],
+    "code": {
+        "text": "e1218e8a-2727-4889-a26e-84b56582d238",
+        "coding": [
+            {
+                "code": "273510007",
+                "system": "http://snomed.info/sct",
+                "display": "e1218e8a-2727-4889-a26e-84b56582d238"
+            }
+        ]
+    },
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/StructureDefinition/procedurerequest-questionnaireRequest",
+            "valueReference": {
+                "display": "Questionnaire/e1218e8a-2727-4889-a26e-84b56582d238",
+                "reference": "Questionnaire/e1218e8a-2727-4889-a26e-84b56582d238"
+            }
+        }
+    ],
+    "resourceType": "ProcedureRequest",
+    "authoredOn": "2017-08-05T06:16:41",
+    "meta": {
+        "versionId": "1.0.0",
+        "lastUpdated": "2017-10-15T06:31:18"
+    },
+    "intent": "order",
+    "requester": {
+        "agent": {
+            "display": "",
+            "reference": "test-user"
+        }
+    },
+    "identifier": [
+        {
+            "assigner": {
+                "display": "Zitelab ApS"
+            },
+            "use": "usual",
+            "type": {
+                "text": "Plone Patient UUID"
+            },
+            "system": "UUID",
+            "value": "0c57a6c9-c275-4a0a-bd96-701daf7bd7ce"
+        }
+    ],
+    "id": "0c57a6c9-c275-4a0a-bd96-701daf7bd7ce",
+    "subject": {
+        "display": "Eelector Patient Full",
+        "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"
+    }
+}

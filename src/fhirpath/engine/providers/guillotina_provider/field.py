@@ -3,7 +3,9 @@ import sys
 from collections import OrderedDict
 from typing import NewType
 from typing import Union
+import inspect
 
+import jsonpatch
 import ujson
 from fhir.resources.fhirabstractbase import FHIRValidationError
 from guillotina import configure
@@ -29,7 +31,7 @@ from zope.interface.exceptions import DoesNotImplement
 from zope.interface.interfaces import IInterface
 from zope.interface.verify import verifyObject
 
-import jsonpatch
+from fhirpath.utils import Model
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
 
@@ -311,6 +313,8 @@ class FhirField(Object):
         if self.resource_class:
             try:
                 klass = import_string(self.resource_class)
+                self.ensure_fhir_abstract(klass)
+
             except ImportError:
                 msg = (
                     "Invalid FHIR Resource class `{0}`! "
@@ -335,8 +339,9 @@ class FhirField(Object):
         if self.resource_type:
 
             try:
-                klass_str = lookup_fhir_class_path(self.resource_type)
-                self._resource_class = import_string(klass_str)
+                self._resource_class = implementer(IFhirResource)(
+                    Model.create(self.resource_type)
+                )
             except ImportError:
                 msg = "{0} is not valid fhir resource type!".format(self.resource_type)
                 t, v, tb = sys.exc_info()
@@ -348,7 +353,9 @@ class FhirField(Object):
 
         if self.resource_interface:
             try:
-                klass = import_string(self.resource_interface)
+                klass = implementer(IFhirResource)(
+                    import_string(self.resource_interface)
+                )
             except ImportError:
                 msg = (
                     "Invalid FHIR Resource Interface`{0}`! "
@@ -393,6 +400,16 @@ class FhirField(Object):
                 "Invalid FHIR resource json is provided!\n{0}".format(fhir_json)
             )
 
+    def ensure_fhir_abstract(self, klass):
+        """ """
+        yes = False
+        for cls in inspect.getmro(klass):
+            if cls.__name__ == "FHIRAbstractBase":
+                yes = True
+                break
+        if not yes:
+            raise Invalid(f"{klass} has not been derrived from FHIRAbstractBase class")
+
     def _from_dict(self, dict_value):
         """ """
         self._pre_value_validate(dict_value)
@@ -400,7 +417,9 @@ class FhirField(Object):
 
         if klass is None:
             # relay on json value for resource type
-            klass = import_string(lookup_fhir_class_path(dict_value["resourceType"]))
+            klass = implementer(IFhirResource)(
+                import_string(lookup_fhir_class_path(dict_value["resourceType"]))
+            )
 
         # check constraint
         if klass.resource_type != dict_value.get("resourceType"):

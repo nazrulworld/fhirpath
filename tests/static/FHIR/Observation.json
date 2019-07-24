@@ -1,0 +1,71 @@
+{
+  "resourceType": "Observation",
+  "id": "508b70ef-9b54-41c9-8ade-184f2bb237c2",
+  "meta": {
+      "versionId": "1.0.0",
+      "lastUpdated": "2017-10-15T06:31:18"
+  },
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://www.bmc.nl/zorgportal/identifiers/observations",
+      "value": "6325"
+    }
+  ],
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "11557-6",
+        "display": "Carbon dioxide in blood"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e",
+    "display": "P. van de Heuvel"
+  },
+  "effectivePeriod": {
+    "start": "2013-04-02T10:30:10+01:00",
+    "end": "2013-04-05T10:30:10+01:00"
+  },
+  "issued": "2013-04-03T15:30:10+01:00",
+  "performer": [
+    {
+      "reference": "Practitioner/f005",
+      "display": "A. Langeveld"
+    }
+  ],
+  "valueQuantity": {
+    "value": 6.2,
+    "unit": "kPa",
+    "system": "http://unitsofmeasure.org",
+    "code": "kPa"
+  },
+  "interpretation": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/v2/0078",
+        "code": "H",
+        "display": "High"
+      }
+    ]
+  },
+  "referenceRange": [
+    {
+      "low": {
+        "value": 4.8,
+        "unit": "kPa",
+        "system": "http://unitsofmeasure.org",
+        "code": "kPa"
+      },
+      "high": {
+        "value": 6.0,
+        "unit": "kPa",
+        "system": "http://unitsofmeasure.org",
+        "code": "kPa"
+      }
+    }
+  ]
+}

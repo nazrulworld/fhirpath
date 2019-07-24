@@ -1,17 +1,45 @@
 # _*_ coding: utf-8 _*_
+import io
+import json
+import os
+import pathlib
 import subprocess
 
 import pytest
+from guillotina import configure
 from guillotina import testing
+from guillotina.api.service import Service
+from guillotina.component import get_utility
+from guillotina.content import Folder
+from guillotina.directives import index_field
+from guillotina.interfaces import ICatalogUtility
+from guillotina.interfaces import IContainer
+from guillotina_elasticsearch.directives import index
+from guillotina_elasticsearch.interfaces import IContentIndex
 from guillotina_elasticsearch.tests.fixtures import elasticsearch
 
 from fhirpath.engine import create_engine
+from fhirpath.engine.providers.guillotina_provider.field import FhirField
+from fhirpath.engine.providers.guillotina_provider.helpers import FHIR_ES_MAPPINGS_CACHE
+from fhirpath.engine.providers.guillotina_provider.interfaces import IFhirContent
+from fhirpath.engine.providers.guillotina_provider.interfaces import IFhirResource
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import proxy
+from zope.interface import implementer
+from fhir.resources.organization import Organization as fhir_org
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+ES_JSON_MAPPING_DIR = (
+    pathlib.Path(os.path.dirname(os.path.abspath(__file__))).parent
+    / "static"
+    / "fhir"
+    / "elasticsearch"
+    / "mappings"
+    / "R4"
+)
 
 
 def base_settings_configurator(settings):
@@ -79,3 +107,71 @@ def has_internet_connection():
         return res == 0
     except subprocess.CalledProcessError:
         return False
+
+
+def fhir_resource_mapping(resource_type: str, cache: bool = True):
+
+    """"""
+    if resource_type in FHIR_ES_MAPPINGS_CACHE and cache:
+
+        return FHIR_ES_MAPPINGS_CACHE[resource_type]
+
+    filename = f"{resource_type}.mapping.json"
+
+    with io.open(str(ES_JSON_MAPPING_DIR / filename), "r", encoding="utf8") as fp:
+
+        mapping_dict = json.load(fp)
+        FHIR_ES_MAPPINGS_CACHE[resource_type] = mapping_dict["mapping"]
+
+    return FHIR_ES_MAPPINGS_CACHE[resource_type]
+
+
+class IOrganization(IFhirContent, IContentIndex):
+
+    index_field(
+        "organization_resource",
+        type="object",
+        field_mapping=fhir_resource_mapping("Organization"),
+        fhir_field_indexer=True,
+        resource_type="Organization",
+    )
+
+    organization_resource = FhirField(
+        title="Organization Resource", resource_type="Organization", fhir_version="R4"
+    )
+
+
+@configure.contenttype(type_name="Organization", schema=IOrganization)
+class Organization(Folder):
+    """ """
+
+    index(schemas=[IOrganization], settings={})
+    resource_type = "Organization"
+
+
+@configure.service(
+    context=IContainer,
+    method="GET",
+    permission="guillotina.AccessContent",
+    name="@fhir/{resource_type}",
+    summary="FHIR search result",
+    responses={
+        "200": {
+            "description": "Result results on FHIR Bundle",
+            "schema": {"properties": {}},
+        }
+    },
+)
+class FhirServiceSearch(Service):
+    async def prepare(self):
+        pass
+
+    async def __call__(self):
+        catalog = get_utility(ICatalogUtility)
+        await catalog.stats(self.context)
+        # import pytest;pytest.set_trace()
+
+
+@implementer(IFhirResource)
+class MyOrganizationResource(fhir_org):
+    """ """

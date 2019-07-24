@@ -1,0 +1,63 @@
+{
+  "resourceType": "Practitioner",
+  "id": "619c1ac0-821d-46d9-9d40-a61f2578cadf",
+  "identifier": [
+    {
+      "system": "http://www.acme.org/practitioners",
+      "value": "23"
+    }
+  ],
+  "meta": {
+    "versionId": "1.0.0",
+    "lastUpdated": "2017-10-15T06:31:18+00:00"
+  },
+  "active": true,
+  "name": [
+    {
+      "family": "Careful",
+      "given": [
+        "Adam"
+      ],
+      "prefix": [
+        "Dr"
+      ]
+    }
+  ],
+  "address": [
+    {
+      "use": "home",
+      "line": [
+        "534 Erewhon St"
+      ],
+      "city": "PleasantVille",
+      "state": "Vic",
+      "postalCode": "3999"
+    }
+  ],
+  "qualification": [
+    {
+      "identifier": [
+        {
+          "system": "http://example.org/UniversityIdentifier",
+          "value": "12345"
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/v2/0360/2.7",
+            "code": "BS",
+            "display": "Bachelor of Science"
+          }
+        ],
+        "text": "Bachelor of Science"
+      },
+      "period": {
+        "start": "1995"
+      },
+      "issuer": {
+        "display": "Example University"
+      }
+    }
+  ]
+}

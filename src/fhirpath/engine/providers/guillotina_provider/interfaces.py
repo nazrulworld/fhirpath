@@ -8,6 +8,8 @@ from guillotina.schema.interfaces import IObject
 from zope.interface import Attribute
 from zope.interface import Interface
 
+from fhirpath.interfaces import IModel
+
 
 class IFhirContent(IResource):
     """ """
@@ -15,7 +17,7 @@ class IFhirContent(IResource):
     resource_type = TextLine(readonly=True)
 
 
-class IFhirResource(Interface):
+class IFhirResource(IModel):
     """ """
 
     resource_type = Attribute("resource_type", "Resource Type")
@@ -35,7 +37,8 @@ class IFhirField(IObject):
 
     resource_type = TextLine(title="FHIR Resource Type", required=False)
     resource_class = DottedName(
-        title="FHIR Resource class from fhir.resources", required=False
+        title="FHIR Resource custom class that is based from fhir.resources",
+        required=False,
     )
     resource_interface = DottedName(title="FHIR Resource Interface", required=False)
     fhir_version = ASCIILine(title="FHIR Release Version", required=True)

@@ -1,0 +1,100 @@
+{
+    "status": "ready",
+    "restriction": {
+        "repetitions": 1,
+        "recipient": [
+            {
+                "display": "Eelector Patient Full",
+                "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"
+            }
+        ],
+        "period": {
+            "start": "2017-08-05T06:16:41",
+            "end": "2017-09-04T06:16:41"
+        }
+    },
+    "code": {
+        "text": "Parent Task",
+        "coding": [
+            {
+                "code": "parentTask",
+                "system": "zitelab:fhir:task:code:coding",
+                "display": "Parent Task"
+            }
+        ]
+    },
+    "description": "e1218e8a-2727-4889-a26e-84b56582d238 & CRP",
+    "for": {
+        "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"
+    },
+    "groupIdentifier": {
+        "use": "official",
+        "system": "zitelab:fhir:task:uid",
+        "value": "5df31190-0ed4-45ba-8b16-3c689fc2e686"
+    },
+    "resourceType": "Task",
+    "statusReason": {
+        "text": "Ordered from DANBIO by Elector HCP"
+    },
+    "reason": {
+        "text": "As defined by the Elector eCRF"
+    },
+    "meta": {
+        "versionId": "1.0.0",
+        "lastUpdated": "2017-10-15T06:31:18+00:00"
+    },
+    "intent": "order",
+    "requester": {
+        "agent": {
+            "display": "",
+            "reference": "test-user"
+        }
+    },
+    "owner": {
+        "display": "Eelector Patient Full",
+        "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"
+    },
+    "input": [
+        {
+            "valueReference": {
+                "display": "e1218e8a-2727-4889-a26e-84b56582d238 questionnaire",
+                "reference": "c32a996a-20b2-4d38-b7f0-67c74fba6993"
+            },
+            "type": {
+                "text": "Sub Task",
+                "coding": [
+                    {
+                        "code": "subTask",
+                        "system": "zitelab:fhir:task:input:coding",
+                        "display": "Sub Task"
+                    }
+                ]
+            }
+        },
+        {
+            "valueReference": {
+                "display": "Joint score 28",
+                "reference": "1d954689-a60e-40ae-80d8-44c0831812b1"
+            },
+            "type": {
+                "text": "Sub Task",
+                "coding": [
+                    {
+                        "code": "subTask",
+                        "system": "zitelab:fhir:task:input:coding",
+                        "display": "Sub Task"
+                    }
+                ]
+            }
+        }
+    ],
+    "identifier": [
+        {
+            "use": "official",
+            "system": "zitelab:fhir:task:uid",
+            "value": "5df31190-0ed4-45ba-8b16-3c689fc2e686"
+        }
+    ],
+    "id": "5df31190-0ed4-45ba-8b16-3c689fc2e686",
+    "authoredOn": "2017-08-05T06:16:41"
+}
