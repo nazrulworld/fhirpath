@@ -524,5 +524,8 @@ class Empty:
 
     __slots__ = ()
 
+    def __repr__(self):
+        return '<NO_VALUE>'
+
 
 EMPTY_VALUE = Empty()
