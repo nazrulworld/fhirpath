@@ -11,7 +11,6 @@ flake8 = "*"
 flake8-isort = "*"
 zc-buildout = "*"
 setuptools = "*"
-
 [packages]
 fhir-resources = {version = ">=5.0.1"}
 zope-interface = "*"

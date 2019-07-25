@@ -133,13 +133,13 @@ def fhir_resource_mapping(resource_type: str, cache: bool = True):
 
 class IOrganization(IFhirContent, IContentIndex):
 
-    index_field(
-        "organization_resource",
-        type="object",
-        field_mapping=fhir_resource_mapping("Organization"),
-        fhir_field_indexer=True,
-        resource_type="Organization",
-    )
+    # index_field(
+    #     "organization_resource",
+    #     type="object",
+    #     field_mapping=fhir_resource_mapping("Organization"),
+    #     fhir_field_indexer=True,
+    #     resource_type="Organization",
+    # )
 
     organization_resource = FhirField(
         title="Organization Resource", resource_type="Organization", fhir_version="R4"

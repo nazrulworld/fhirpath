@@ -90,12 +90,14 @@ install: clean ## install the package to the active Python's site-packages
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 current_dir := $(dir $(mkfile_path))
 current_dir_name := $(notdir $(patsubst %/,%,$(current_dir)))
-es_version := 6.3.0
+es_version := 7.2.0
 
 run-es:
 	docker run --rm \
 	-e "cluster.name=docker-cluster" \
 	-e "ES_JAVA_OPTS=-Xms1024m -Xmx1024m" \
 	-e "cluster.routing.allocation.disk.threshold_enabled=false" \
+	-e "discovery.type=single-node" \
 	-p 127.0.0.1:9200:9200 \
-	docker.elastic.co/elasticsearch/elasticsearch-oss:$(es_version)
+	-p 9300:9300 \
+	docker.elastic.co/elasticsearch/elasticsearch:$(es_version)
