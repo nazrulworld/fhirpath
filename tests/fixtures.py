@@ -6,6 +6,8 @@ import pathlib
 import subprocess
 
 import pytest
+from fhir.resources.organization import Organization as fhir_org
+from fhir.resources.task import Task as fhir_task
 from guillotina import configure
 from guillotina import testing
 from guillotina.api.service import Service
@@ -17,17 +19,16 @@ from guillotina.interfaces import IContainer
 from guillotina_elasticsearch.directives import index
 from guillotina_elasticsearch.interfaces import IContentIndex
 from guillotina_elasticsearch.tests.fixtures import elasticsearch
+from zope.interface import implementer
 
 from fhirpath.engine import create_engine
-from fhirpath.engine.providers.guillotina_provider.field import FhirField
-from fhirpath.engine.providers.guillotina_provider.helpers import FHIR_ES_MAPPINGS_CACHE
-from fhirpath.engine.providers.guillotina_provider.interfaces import IFhirContent
-from fhirpath.engine.providers.guillotina_provider.interfaces import IFhirResource
+from fhirpath.engine.providers.guillotina_app.field import FhirField
+from fhirpath.engine.providers.guillotina_app.helpers import FHIR_ES_MAPPINGS_CACHE
+from fhirpath.engine.providers.guillotina_app.interfaces import IFhirContent
+from fhirpath.engine.providers.guillotina_app.interfaces import IFhirResource
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import proxy
-from zope.interface import implementer
-from fhir.resources.organization import Organization as fhir_org
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -51,6 +52,10 @@ def base_settings_configurator(settings):
 
     if "guillotina_elasticsearch.testing" not in settings["applications"]:  # noqa
         settings["applications"].append("guillotina_elasticsearch.testing")
+
+    # Add App
+    settings['applications'].append('fhirpath.engine.providers.guillotina_app')
+    settings['applications'].append('tests.fixtures')
 
     settings["elasticsearch"] = {
         "index_name_prefix": "guillotina-",
@@ -175,3 +180,19 @@ class FhirServiceSearch(Service):
 @implementer(IFhirResource)
 class MyOrganizationResource(fhir_org):
     """ """
+
+
+@implementer(IFhirResource)
+class MyTaskResource(fhir_task):
+    """ """
+
+
+class NoneInterfaceClass(object):
+    """docstring for ClassName"""
+
+
+class IWrongInterface(IFhirResource):
+    """ """
+
+    def meta():
+        """ """

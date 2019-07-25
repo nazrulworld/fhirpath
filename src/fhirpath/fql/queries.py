@@ -6,13 +6,10 @@ from zope.interface import implementer
 
 from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.exceptions import ValidationError
-from fhirpath.navigator import PathNavigator
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
-from fhirpath.utils import ModelFactory
+from fhirpath.utils import Model
 from fhirpath.utils import builder
-from fhirpath.utils import import_string
-from fhirpath.utils import lookup_fhir_class_path
 
 from .constraints import required_finalized
 from .constraints import required_from_resource
@@ -188,7 +185,7 @@ class QueryBuilder(object):
             # info: we are allowing single resource only
             raise ValidationError("from_ value already assigned!")
 
-        model = QueryBuilder.create_model(resource_type)
+        model = Model.create(resource_type)
         alias = alias or model.resource_type
         self._from.append((alias, model))
 
@@ -242,17 +239,6 @@ class QueryBuilder(object):
                 else:
                     sort_path = sort_(sort_path)
             self._sort.append(sort_path)
-
-    @staticmethod
-    def create_model(resource_type, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
-        """ """
-        klass = import_string(
-            lookup_fhir_class_path(resource_type, fhir_release=fhir_version)
-        )
-        # xxx: should be cache?
-        model = ModelFactory(f"{klass.__name__}Model", (klass, PathNavigator), {})
-
-        return model
 
     def get_query(self):
         """ """

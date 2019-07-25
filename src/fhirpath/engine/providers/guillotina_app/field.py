@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-import sys
+import inspect
 from collections import OrderedDict
 from typing import NewType
 from typing import Union
-import inspect
 
 import jsonpatch
 import ujson
@@ -11,7 +10,6 @@ from fhir.resources.fhirabstractbase import FHIRValidationError
 from guillotina import configure
 from guillotina import directives
 from guillotina.component import get_utilities_for
-from guillotina.configure.config import reraise
 from guillotina.interfaces import IResourceFactory
 from guillotina.interfaces import ISchemaFieldSerializeToJson
 from guillotina.json.serialize_schema_field import DefaultSchemaFieldSerializer
@@ -31,9 +29,11 @@ from zope.interface.exceptions import DoesNotImplement
 from zope.interface.interfaces import IInterface
 from zope.interface.verify import verifyObject
 
-from fhirpath.utils import Model
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.utils import import_string
+from fhirpath.utils import lookup_fhir_class
 from fhirpath.utils import lookup_fhir_class_path
+from fhirpath.utils import reraise
 
 from .helpers import parse_json_str
 from .interfaces import IFhirField
@@ -82,12 +82,8 @@ class FhirFieldValue(object):
 
             object.__setattr__(self, "_resource_obj", new_value)
 
-        except jsonpatch.JsonPatchException:
-            t, v, tb = sys.exc_info()
-            try:
-                reraise(Invalid(str(v)), None, tb)
-            finally:
-                del t, v, tb
+        except jsonpatch.JsonPatchException as exc:
+            return reraise(Invalid, str(exc))
 
     def stringify(self, prettify=False):
         """ """
@@ -110,28 +106,17 @@ class FhirFieldValue(object):
         try:
             verifyObject(IFhirResource, obj, False)
 
-        except (BrokenImplementation, BrokenMethodImplementation):
+        except (BrokenImplementation, BrokenMethodImplementation) as exc:
+            return reraise(Invalid, str(exc))
 
-            t, v, tb = sys.exc_info()
-            try:
-                reraise(Invalid(str(v)), None, tb)
-            finally:
-                del t, v, tb
-
-        except DoesNotImplement:
+        except DoesNotImplement as exc:
             msg = "Object must be derived from valid FHIR resource class!"
             msg += "But it is found that object is derived from `{0}`".format(
                 obj.__class__.__module__ + "." + obj.__class__.__name__
             )
+            msg += "\nOriginal Exception: {0!s}".format(exc)
 
-            t, v, tb = sys.exc_info()
-
-            msg += "\nOriginal Exception: {0!s}".format(str(v))
-
-            try:
-                reraise(WrongType(msg), None, tb)
-            finally:
-                del t, v, tb
+            return reraise(WrongType, msg)
 
     def __init__(self, obj: FhirResourceType = None):
         """ """
@@ -222,7 +207,12 @@ class FhirField(Object):
     _resource_interface_class = None
 
     def __init__(
-        self, resource_class=None, resource_interface=None, resource_type=None, **kw
+        self,
+        resource_class=None,
+        resource_interface=None,
+        resource_type=None,
+        fhir_version=None,
+        **kw,
     ):
         """
         :arg resource_class: dotted path of FHIR Resource class
@@ -234,7 +224,9 @@ class FhirField(Object):
 
         self.schema = IFhirFieldValue
 
-        self._init(resource_class, resource_interface, resource_type, **kw)
+        self._init(
+            resource_class, resource_interface, resource_type, fhir_version, **kw
+        )
 
         if "default" in kw:
             default = kw["default"]
@@ -263,9 +255,15 @@ class FhirField(Object):
         self.validate(value)
         return value
 
-    def _init(self, resource_class, resource_interface, resource_type, **kw):
+    def _init(
+        self,
+        resource_class,
+        resource_interface,
+        resource_type,
+        fhir_version,
+        **kw
+    ):
         """ """
-
         if "default" in kw:
 
             if (
@@ -304,6 +302,16 @@ class FhirField(Object):
             attribute_val = attribute.from_unicode(resource_type)
         attribute.set(self, attribute_val)
 
+        attribute = field_attributes["fhir_version"].bind(self)
+        if fhir_version is None:
+            attribute.validate(fhir_version)
+            attribute_val = None
+        else:
+            attribute_val = attribute.from_unicode(fhir_version)
+            # just for ensure correct value
+            FHIR_VERSION[attribute_val]
+        attribute.set(self, attribute_val)
+
         if self.resource_type and self.resource_class is not None:
             raise Invalid(
                 "Either `resource_class` or `resource_type` value is acceptable! "
@@ -321,11 +329,7 @@ class FhirField(Object):
                     "Please check the module or class name."
                 ).format(self.resource_class)
 
-                t, v, tb = sys.exc_info()
-                try:
-                    reraise(Invalid(msg), None, tb)
-                finally:
-                    del t, v, tb
+                return reraise(Invalid, msg)
 
             if not IFhirResource.implementedBy(klass):
 
@@ -340,16 +344,11 @@ class FhirField(Object):
 
             try:
                 self._resource_class = implementer(IFhirResource)(
-                    Model.create(self.resource_type)
+                    lookup_fhir_class(self.resource_type)
                 )
             except ImportError:
                 msg = "{0} is not valid fhir resource type!".format(self.resource_type)
-                t, v, tb = sys.exc_info()
-                try:
-                    reraise(Invalid(msg), None, tb)
-                finally:
-                    del t, v, tb
-                raise Invalid(msg)
+                return reraise(Invalid, msg)
 
         if self.resource_interface:
             try:
@@ -361,11 +360,7 @@ class FhirField(Object):
                     "Invalid FHIR Resource Interface`{0}`! "
                     "Please check the module or class name."
                 ).format(self.resource_interface)
-                t, v, tb = sys.exc_info()
-                try:
-                    reraise(Invalid(msg), None, tb)
-                finally:
-                    del t, v, tb
+                return reraise(Invalid, msg)
 
             if not IInterface.providedBy(klass):
                 raise WrongType("An interface is required", klass, self.__name__)
@@ -418,7 +413,7 @@ class FhirField(Object):
         if klass is None:
             # relay on json value for resource type
             klass = implementer(IFhirResource)(
-                import_string(lookup_fhir_class_path(dict_value["resourceType"]))
+                lookup_fhir_class(dict_value["resourceType"])
             )
 
         # check constraint
@@ -444,13 +439,13 @@ class FhirField(Object):
                     self._resource_interface_class, value.foreground_origin(), False
                 )
 
-            except (BrokenImplementation, BrokenMethodImplementation, DoesNotImplement):
+            except (
+                BrokenImplementation,
+                BrokenMethodImplementation,
+                DoesNotImplement,
+            ) as exc:
 
-                t, v, tb = sys.exc_info()
-                try:
-                    reraise(Invalid(str(v)), None, tb)
-                finally:
-                    del t, v, tb
+                return reraise(Invalid, str(exc))
 
         if self.resource_type and value.resource_type != self.resource_type:
             msg = (
@@ -480,11 +475,8 @@ class FhirField(Object):
                 msg = (
                     "There is invalid element inside " "fhir model object.\n{0!s}"
                 ).format(exc)
-                t, v, tb = sys.exc_info()
-                try:
-                    reraise(Invalid(msg), None, tb)
-                finally:
-                    del t, v, tb
+
+                return reraise(Invalid, msg)
 
 
 @configure.value_deserializer(IFhirField)
@@ -567,6 +559,9 @@ def fhir_field_from_resource_type(
         return _RESOURCE_TYPE_TO_FHIR_FIELD_CACHE[resource_type]
 
     # validate_resource_type(resource_type)
+    klass_path = lookup_fhir_class_path(resource_type)
+    if klass_path is None:
+        raise Invalid(f"{resource_type} is not valid FHIR Resource")
 
     factories = [x[1] for x in get_utilities_for(IResourceFactory)]
 

@@ -152,6 +152,14 @@ def lookup_fhir_class_path(
     return None
 
 
+def lookup_fhir_class(
+    resource_type: str, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
+):  # noqa: E999
+    klass_path = lookup_fhir_class_path(resource_type, True, fhir_release)
+    klass = import_string(klass_path)
+    return klass
+
+
 CONTAINS_PY_PACKAGE = re.compile(r"^\$\{(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE)
 
 
