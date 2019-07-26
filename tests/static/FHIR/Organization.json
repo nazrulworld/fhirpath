@@ -1,6 +1,7 @@
 {
   "resourceType": "Organization",
   "id": "f001",
+  "active": true,
   "text": {
     "status": "generated",
     "div": "<div>EMPTY</div>"

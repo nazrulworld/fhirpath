@@ -43,9 +43,10 @@
             "endpoint": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 },
                 "type": "nested"
@@ -112,9 +113,10 @@
             "partOf": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },

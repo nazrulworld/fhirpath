@@ -13,6 +13,7 @@ from guillotina import testing
 from guillotina.api.service import Service
 from guillotina.component import get_utility
 from guillotina.content import Folder
+from guillotina.schema import TextLine
 from guillotina.directives import index_field
 from guillotina.interfaces import ICatalogUtility
 from guillotina.interfaces import IContainer
@@ -54,8 +55,8 @@ def base_settings_configurator(settings):
         settings["applications"].append("guillotina_elasticsearch.testing")
 
     # Add App
-    settings['applications'].append('fhirpath.engine.providers.guillotina_app')
-    settings['applications'].append('tests.fixtures')
+    settings["applications"].append("fhirpath.engine.providers.guillotina_app")
+    settings["applications"].append("tests.fixtures")
 
     settings["elasticsearch"] = {
         "index_name_prefix": "guillotina-",
@@ -133,14 +134,15 @@ def fhir_resource_mapping(resource_type: str, cache: bool = True):
 
 class IOrganization(IFhirContent, IContentIndex):
 
-    # index_field(
-    #     "organization_resource",
-    #     type="object",
-    #     field_mapping=fhir_resource_mapping("Organization"),
-    #     fhir_field_indexer=True,
-    #     resource_type="Organization",
-    # )
-
+    index_field(
+        "organization_resource",
+        type="object",
+        field_mapping=fhir_resource_mapping("Organization"),
+        fhir_field_indexer=True,
+        resource_type="Organization",
+    )
+    index_field("org_type", type="keyword")
+    org_type = TextLine(title="Organization Type", required=False)
     organization_resource = FhirField(
         title="Organization Resource", resource_type="Organization", fhir_version="R4"
     )
