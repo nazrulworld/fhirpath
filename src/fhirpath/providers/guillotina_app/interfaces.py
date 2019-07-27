@@ -8,6 +8,7 @@ from guillotina.schema.interfaces import IObject
 from zope.interface import Attribute
 from zope.interface import Interface
 
+from fhirpath.interfaces import IEngineFactory
 from fhirpath.interfaces import IModel
 
 
@@ -62,3 +63,11 @@ class IFhirFieldValue(Interface):
 
     def foreground_origin():
         """Return the original object of FHIR model that is proxied!"""
+
+
+class IElasticsearchEngineFactory(IEngineFactory):
+    """ """
+
+
+class IFhirSearch(Interface):
+    """ """

@@ -171,6 +171,11 @@ class Search(object):
     def from_query_string(cls, query_string):
         """ """
 
+    @classmethod
+    def from_params(cls, context, params):
+        """ """
+        return cls(context, params=params)
+
     @staticmethod
     def get_parameter_definition(fhir_release: FHIR_VERSION, resource_name: str):
         """ """

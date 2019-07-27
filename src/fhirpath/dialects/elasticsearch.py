@@ -1,13 +1,14 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
 import operator
+
 import isodate
 
-from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import IInTerm
 from fhirpath.fql.interfaces import ITerm
+from fhirpath.interfaces import IFhirPrimitiveType
 
 from .base import DialectBase
 

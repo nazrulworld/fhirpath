@@ -3,9 +3,15 @@
 from fhirpath.enums import FHIR_VERSION
 
 from .base import Engine
+from .connection import Connection
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+__all__ = [
+    "Connection",
+    "Engine"
+]
 
 
 def create_engine():
@@ -20,13 +26,11 @@ def create_engine_from_context():
 
 def dialect_factory(engine):
     """ """
-    from fhirpath.dialects.ES import ElasticSearchDialect
+    from fhirpath.dialects.elasticsearch import ElasticSearchDialect
 
     return ElasticSearchDialect()
 
 
 def connection_factory(engine):
     """ """
-    from .connection import Connection
-
-    return Connection()
+    return Connection(None)

@@ -46,6 +46,10 @@ class ISearchContext(Interface):
     """ """
 
 
+class ISearchContextFactory(Interface):
+    """ """
+
+
 class IFhirPrimitiveType(Interface):
     """ """
 
@@ -85,17 +89,23 @@ class IEngine(Interface):
         """Return a new Connection object."""
 
 
+class IEngineFactory(Interface):
+    """Utility marker"""
+
+
 class IConnection(Interface):
     """ """
 
-    raw = Attribute("Raw connection underlaying DBAPI")
+    _conn = Attribute("Raw connection underlaying DBAPI")
+
+    def raw_connection():
+        """return underlaying DBAPI, could be realtime connection from config"""
+
+    def server_info():
+        """ """
 
     def execute(query, **kwargs):
         """ """
-
-
-class IEngineFactory(Interface):
-    """ """
 
 
 class IDialect(Interface):

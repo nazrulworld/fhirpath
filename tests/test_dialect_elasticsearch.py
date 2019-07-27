@@ -20,6 +20,27 @@ FHIR_EXAMPLE_RESOURCES = (
 )
 
 
+async def init_data(requester):
+    """ """
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Organization.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "Organization",
+                "title": data["name"],
+                "id": data["id"],
+                "organization_resource": data,
+                "org_type": "ABT",
+            }
+        ),
+    )
+    assert status == 201
+
+
 async def test_raw_es_query_generation_from_search(engine, es_requester):
     """Sample pytest test function with the pytest fixture as an argument."""
     context = SearchContext(engine, "Patient")
@@ -78,3 +99,11 @@ async def test_basic_search(es_requester):
             assert resp["member"][0]["path"] == "/" + data["id"]
 
         await run_with_retries(_test, requester)
+
+
+async def test_dialect_generated_raw_query(es_requester):
+    """ """
+    async with es_requester as requester:
+        container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
+        # init primary data
+        await init_data(requester)
