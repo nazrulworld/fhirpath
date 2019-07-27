@@ -24,14 +24,14 @@ from guillotina.schema.exceptions import WrongType
 from zope.interface import Invalid
 from zope.interface import implementer
 
-from fhirpath.engine.providers.guillotina_app.field import FhirField
-from fhirpath.engine.providers.guillotina_app.field import FhirFieldValue
-from fhirpath.engine.providers.guillotina_app.field import fhir_field_from_resource_type
-from fhirpath.engine.providers.guillotina_app.field import fhir_field_from_schema
-from fhirpath.engine.providers.guillotina_app.helpers import parse_json_str
-from fhirpath.engine.providers.guillotina_app.interfaces import IFhirField
-from fhirpath.engine.providers.guillotina_app.interfaces import IFhirFieldValue
-from fhirpath.engine.providers.guillotina_app.interfaces import IFhirResource
+from fhirpath.providers.guillotina_app.field import FhirField
+from fhirpath.providers.guillotina_app.field import FhirFieldValue
+from fhirpath.providers.guillotina_app.field import fhir_field_from_resource_type
+from fhirpath.providers.guillotina_app.field import fhir_field_from_schema
+from fhirpath.providers.guillotina_app.helpers import parse_json_str
+from fhirpath.providers.guillotina_app.interfaces import IFhirField
+from fhirpath.providers.guillotina_app.interfaces import IFhirFieldValue
+from fhirpath.providers.guillotina_app.interfaces import IFhirResource
 from fhirpath.utils import lookup_fhir_class
 
 from .fixtures import IOrganization
@@ -226,7 +226,7 @@ def test_field_validate(dummy_guillotina):
         fhir_field._validate(dict(hello="wrong"))
         raise AssertionError("Code should not come here! wrong data type is provide")
     except WrongType as exc:
-        assert "fhirpath.engine.providers.guillotina_app.field.FhirFieldValue" in str(
+        assert "fhirpath.providers.guillotina_app.field.FhirFieldValue" in str(
             exc
         )
 

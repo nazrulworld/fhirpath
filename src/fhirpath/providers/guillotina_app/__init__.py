@@ -11,4 +11,4 @@ app_settings = {
 
 
 def includeme(root):
-    configure.scan("fhirpath.engine.providers.guillotina_app.field")
+    configure.scan("fhirpath.providers.guillotina_app.field")

@@ -23,13 +23,14 @@ from guillotina_elasticsearch.tests.fixtures import elasticsearch
 from zope.interface import implementer
 
 from fhirpath.engine import create_engine
-from fhirpath.engine.providers.guillotina_app.field import FhirField
-from fhirpath.engine.providers.guillotina_app.helpers import FHIR_ES_MAPPINGS_CACHE
-from fhirpath.engine.providers.guillotina_app.interfaces import IFhirContent
-from fhirpath.engine.providers.guillotina_app.interfaces import IFhirResource
+from fhirpath.providers.guillotina_app.field import FhirField
+from fhirpath.providers.guillotina_app.helpers import FHIR_ES_MAPPINGS_CACHE
+from fhirpath.providers.guillotina_app.interfaces import IFhirContent
+from fhirpath.providers.guillotina_app.interfaces import IFhirResource
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import proxy
+from fhirpath.enums import FHIR_VERSION
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -55,7 +56,7 @@ def base_settings_configurator(settings):
         settings["applications"].append("guillotina_elasticsearch.testing")
 
     # Add App
-    settings["applications"].append("fhirpath.engine.providers.guillotina_app")
+    settings["applications"].append("fhirpath.providers.guillotina_app")
     settings["applications"].append("tests.fixtures")
 
     settings["elasticsearch"] = {
@@ -138,8 +139,9 @@ class IOrganization(IFhirContent, IContentIndex):
         "organization_resource",
         type="object",
         field_mapping=fhir_resource_mapping("Organization"),
-        fhir_field_indexer=True,
+        fhirpath_enabled=True,
         resource_type="Organization",
+        fhir_version=FHIR_VERSION.DEFAULT
     )
     index_field("org_type", type="keyword")
     org_type = TextLine(title="Organization Type", required=False)
