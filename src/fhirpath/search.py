@@ -260,33 +260,40 @@ class Search(object):
         """ """
         operator_, original_value = value
         has_pipe = "|" in original_value
+        terms = list()
 
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
             # make identifier.type.text query
-            path_ = path_ / "type" / "text"
-            return self.create_term(path_, value, modifier)
+            path_1 = path_ / "type" / "text"
+            term = self.create_term(path_1, value, modifier)
+
+            terms.append(term)
 
         elif has_pipe:
             if original_value.startswith("|"):
-                path_ = path_ / "value"
+                path_1 = path_ / "value"
                 new_value = (operator_, original_value[1:])
-                return self.create_term(path_, new_value, modifier)
+
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
+
             elif original_value.endswith("|"):
-                path_ = path_ / "system"
+                path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
-                return self.create_term(path_, new_value, modifier)
+
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
 
             else:
                 parts = original_value.split("|")
-                terms = list()
                 try:
-                    path_1 = path_ / "value"
+                    path_1 = path_ / "system"
                     new_value = (operator_, parts[0])
                     term = self.create_term(path_1, new_value, modifier)
                     terms.append(term)
 
-                    path_2 = path_ / "system"
+                    path_2 = path_ / "value"
                     new_value = (operator_, parts[1])
                     term = self.create_term(path_2, new_value, modifier)
                     terms.append(term)
@@ -294,13 +301,12 @@ class Search(object):
                 except IndexError:
                     pass
 
-                if len(terms) > 1:
-                    return G_(*terms, path=path_)
-                else:
-                    return terms[0]
         else:
             path_1 = path_ / "value"
-            return self.create_term(path_1, value, modifier)
+            term = self.create_term(path_1, value, modifier)
+            terms.append(term)
+
+        return G_(*terms, path=path_)
 
     def create_quantity_term(self, path_, param_value, modifier):
         """ """
@@ -383,22 +389,29 @@ class Search(object):
         """ """
         operator_, original_value = value
         has_pipe = "|" in original_value
+        terms = list()
 
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
             # make identifier.type.text query
-            path_ = path_ / "display"
-            return self.create_term(path_, value, modifier)
+            path_1 = path_ / "display"
+
+            term = self.create_term(path_1, value, modifier)
+            terms.append(term)
 
         elif has_pipe:
             if original_value.startswith("|"):
-                path_ = path_ / "code"
+                path_1 = path_ / "code"
                 new_value = (value[0], original_value[1:])
-                return self.create_term(path_, new_value, modifier)
+
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
+
             elif original_value.endswith("|"):
-                path_ = path_ / "system"
+                path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
-                return self.create_term(path_, new_value, modifier)
+
+                terms.append(self.create_term(path_1, new_value, modifier))
 
             else:
                 parts = original_value.split("|")
@@ -416,14 +429,11 @@ class Search(object):
 
                 except IndexError:
                     pass
-
-                if len(terms) > 1:
-                    return G_(*terms, path=path_)
-                else:
-                    return terms[0]
         else:
             path_1 = path_ / "code"
-            return self.create_term(path_1, value, modifier)
+            terms.append(self.create_term(path_1, value, modifier))
+
+        return G_(*terms, path=path_)
 
     def create_codeableconcept_term(self, path_, param_value, modifier):
         """ """
@@ -449,8 +459,10 @@ class Search(object):
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
             # make identifier.type.text query
-            path_ = path_ / "text"
-            return self.create_term(path_, value, modifier)
+            terms = list()
+            path_1 = path_ / "text"
+            terms.append(self.create_term(path_, value, modifier))
+            return G_(*terms, path=path_)
 
         else:
             path_1 = path_ / "coding"

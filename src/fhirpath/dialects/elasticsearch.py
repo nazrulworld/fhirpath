@@ -28,6 +28,43 @@ ES_PY_OPERATOR_MAP = {
 class ElasticSearchDialect(DialectBase):
     """ """
 
+    def _apply_nested(self, query, dotted_path):
+        """ """
+        wrapper = {
+            "nested": {
+                "path": dotted_path,
+                "query": query,
+                "ignore_unmapped": False,
+                "score_mode": "min",
+            }
+        }
+        return wrapper
+
+    def _apply_path_replacement(self, dotted_path, root_replacer):
+        """ """
+        if root_replacer is not None:
+            path_ = ".".join([root_replacer] + list(dotted_path.split(".")[1:]))
+        else:
+            path_ = dotted_path
+        return path_
+
+    def _clean_up(self, body_structure):
+        """ """
+        if len(body_structure["query"]["bool"]["should"]) == 0:
+            del body_structure["query"]["bool"]["should"]
+
+        if len(body_structure["query"]["bool"]["must"]) == 0:
+            del body_structure["query"]["bool"]["must"]
+
+        if len(body_structure["query"]["bool"]["must_not"]) == 0:
+            del body_structure["query"]["bool"]["must_not"]
+
+        if len(body_structure["query"]["bool"]["filter"]) == 0:
+            del body_structure["query"]["bool"]["filter"]
+
+        if len(body_structure["sort"]) == 0:
+            del body_structure["sort"]
+
     def compile(self, query, root_replacer=None):
         """
         :param: query
@@ -58,16 +95,44 @@ class ElasticSearchDialect(DialectBase):
 
             container.append(q)
 
+        self._clean_up(body_structure)
+
+        if "should" in body_structure["query"]["bool"]:
+            if "minimum_should_match" not in body_structure["query"]["bool"]:
+                body_structure["query"]["bool"]["minimum_should_match"] = 1
+
         return body_structure
 
     def resolve_term(self, term, root_replacer):
         """ """
         if IGroupTerm.providedBy(term):
-            pass
+            qr = {"bool": {"filter": list()}}
+            container = qr["bool"]["filter"]
+
+            for t_ in term.terms:
+                q, unary_operator = self.resolve_term(t_, root_replacer)
+                container.append(q)
+
+            path_context = term.path.context
+
+            while True:
+                if path_context.multiple:
+                    path_ = self._apply_path_replacement(
+                        str(path_context._path), root_replacer
+                    )
+                    qr = self._apply_nested(qr, path_)
+                if path_context.is_root():
+                    break
+                path_context = path_context.parent
+
+            return qr, operator.pos
+
         elif IInTerm.providedBy(term):
             raise NotImplementedError
+
         elif IExistsTerm.providedBy(term):
             raise NotImplementedError
+
         elif ITerm.providedBy(term):
             if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
                 if term.path.context.type_name in (
@@ -108,7 +173,7 @@ class ElasticSearchDialect(DialectBase):
                     "integer",
                     "decimal",
                     "unsignedInt",
-                    "positiveInt"
+                    "positiveInt",
                 ):
 
                     return self.resolve_numeric_term(term, root_replacer)
@@ -144,8 +209,12 @@ class ElasticSearchDialect(DialectBase):
         if term.comparison_operator in (operator.eq, operator.ne):
             q["range"] = {
                 path_: {
-                    operator.ge: isodate.strftime(term.value.value, value_formatter),
-                    operator.le: isodate.strftime(term.value.value, value_formatter),
+                    ES_PY_OPERATOR_MAP[operator.ge]: isodate.strftime(
+                        term.value.value, value_formatter
+                    ),
+                    ES_PY_OPERATOR_MAP[operator.le]: isodate.strftime(
+                        term.value.value, value_formatter
+                    ),
                 }
             }
 
@@ -193,8 +262,8 @@ class ElasticSearchDialect(DialectBase):
         if term.comparison_operator in (operator.eq, operator.ne):
             q["range"] = {
                 path_: {
-                    operator.ge: term.value.value,
-                    operator.le: term.value.value,
+                    ES_PY_OPERATOR_MAP[operator.ge]: term.value.value,
+                    ES_PY_OPERATOR_MAP[operator.le]: term.value.value,
                 }
             }
 
@@ -205,9 +274,7 @@ class ElasticSearchDialect(DialectBase):
             operator.gt,
         ):
             q["range"] = {
-                path_: {
-                    ES_PY_OPERATOR_MAP[term.comparison_operator]: term.value.value
-                }
+                path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: term.value.value}
             }
 
         if (

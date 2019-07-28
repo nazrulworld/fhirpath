@@ -63,10 +63,13 @@ class EsEngineFactory:
 class SearchContextFactory:
     """ """
 
-    def get(resource_type, fhir_version=None):
+    def get(self, resource_type, fhir_version=None):
         """ """
         engine = create_engine(fhir_version)
         return SearchContext(engine, resource_type)
+
+    def __call__(self, resource_type, fhir_version=None):
+        return self.get(resource_type, fhir_version)
 
 
 @configure.utility(provides=IFhirSearch)

@@ -3,6 +3,9 @@ import logging
 
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
+from guillotina.utils import get_current_container
+from guillotina.component import get_adapter
+from guillotina_elasticsearch.interfaces import IIndexManager
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -28,3 +31,12 @@ class EsConnection(Connection):
 
 class EsEngine(Engine):
     """Elasticsearch Engine"""
+
+    async def get_index_name(self, container=None):
+        """ """
+        if container is None:
+            container = get_current_container()
+
+        index_manager = get_adapter(container, IIndexManager)
+
+        return await index_manager.get_index_name()

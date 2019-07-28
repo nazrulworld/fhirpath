@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
+import asyncio
 import json
 import os
 import pathlib
 
+from guillotina.component import query_utility
 from guillotina_elasticsearch.tests.utils import run_with_retries
 from guillotina_elasticsearch.tests.utils import setup_txn_on_container
 
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
+from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
+from fhirpath.interfaces import ISearchContextFactory
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -107,3 +111,32 @@ async def test_dialect_generated_raw_query(es_requester):
         container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
         # init primary data
         await init_data(requester)
+        # give a little break
+        await asyncio.sleep(1)
+
+        search_context = query_utility(ISearchContextFactory).get(
+            resource_type="Organization"
+        )
+        search_tool = query_utility(IFhirSearch)
+        params = (
+            ("active", "true"),
+            #("_lastUpdated", "2010-05-28T05:35:56+06:00"),
+            #("_profile", "http://hl7.org/fhir/Organization"),
+            #("identifier", "91654"),
+        )
+
+        result = search_tool(params, context=search_context)
+        index_name = await search_context.engine.get_index_name(container)
+        body = search_context.engine.dialect.compile(
+            result._query, "organization_resource"
+        )
+
+        async def _test():
+            result = await search_context.engine.connection.raw_connection().search(
+                index=index_name, body=body
+            )
+            assert result["hits"]["total"] == 1
+            with open("output.json", "w") as fp:
+                fp.write(json.dumps(result, indent=2))
+
+        await run_with_retries(_test, requester)

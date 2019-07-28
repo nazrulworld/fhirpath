@@ -88,6 +88,9 @@ class IEngine(Interface):
     def connect(**kw):
         """Return a new Connection object."""
 
+    def get_index_name(context):
+        """ """
+
 
 class IEngineFactory(Interface):
     """Utility marker"""
