@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
-import asyncio
 import json
 import os
 import pathlib
@@ -10,10 +9,10 @@ from guillotina.component import query_utility
 from guillotina_elasticsearch.tests.utils import run_with_retries
 from guillotina_elasticsearch.tests.utils import setup_txn_on_container
 
+from fhirpath.interfaces import ISearchContextFactory
+from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
-from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
-from fhirpath.interfaces import ISearchContextFactory
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -105,20 +104,12 @@ async def test_basic_search(es_requester):
         await run_with_retries(_test, requester)
 
 
-async def refresh():
-    """ """
-    search = get_utility(ICatalogUtility)
-    await search.refresh(index_name="")
-
-
 async def test_dialect_generated_raw_query(es_requester):
     """ """
     async with es_requester as requester:
         container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
         # init primary data
         await init_data(requester)
-        # give a little break
-        await asyncio.sleep(1)
         search_context = query_utility(ISearchContextFactory).get(
             resource_type="Organization"
         )
@@ -133,6 +124,7 @@ async def test_dialect_generated_raw_query(es_requester):
             ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
             ("_profile", "http://hl7.org/fhir/Organization"),
             ("identifier", "urn:oid:2.16.528.1|91654"),
+            ("type", "http://hl7.org/fhir/organization-type|prov")
         )
 
         result_query = search_tool(params, context=search_context)
@@ -147,4 +139,3 @@ async def test_dialect_generated_raw_query(es_requester):
         assert len(result["hits"]["hits"]) == 1
         with open("output.json", "w") as fp:
             fp.write(json.dumps(result, indent=2))
-
