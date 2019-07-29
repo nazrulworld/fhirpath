@@ -105,6 +105,12 @@ async def test_basic_search(es_requester):
         await run_with_retries(_test, requester)
 
 
+async def refresh():
+    """ """
+    search = get_utility(ICatalogUtility)
+    await search.refresh(index_name="")
+
+
 async def test_dialect_generated_raw_query(es_requester):
     """ """
     async with es_requester as requester:
@@ -113,30 +119,32 @@ async def test_dialect_generated_raw_query(es_requester):
         await init_data(requester)
         # give a little break
         await asyncio.sleep(1)
-
         search_context = query_utility(ISearchContextFactory).get(
             resource_type="Organization"
         )
+        index_name = await search_context.engine.get_index_name(container)
+
+        conn = search_context.engine.connection.raw_connection()
+        await conn.indices.refresh(index=index_name)
+
         search_tool = query_utility(IFhirSearch)
         params = (
             ("active", "true"),
-            #("_lastUpdated", "2010-05-28T05:35:56+06:00"),
-            #("_profile", "http://hl7.org/fhir/Organization"),
-            #("identifier", "91654"),
+            ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+            ("_profile", "http://hl7.org/fhir/Organization"),
+            ("identifier", "urn:oid:2.16.528.1|91654"),
         )
 
-        result = search_tool(params, context=search_context)
-        index_name = await search_context.engine.get_index_name(container)
-        body = search_context.engine.dialect.compile(
-            result._query, "organization_resource"
+        result_query = search_tool(params, context=search_context)
+
+        compiled = search_context.engine.dialect.compile(
+            result_query._query, "organization_resource"
         )
+        search_params = search_context.engine.connection.finalize_search_params(
+            compiled
+        )
+        result = await conn.search(index=index_name, **search_params)
+        assert len(result["hits"]["hits"]) == 1
+        with open("output.json", "w") as fp:
+            fp.write(json.dumps(result, indent=2))
 
-        async def _test():
-            result = await search_context.engine.connection.raw_connection().search(
-                index=index_name, body=body
-            )
-            assert result["hits"]["total"] == 1
-            with open("output.json", "w") as fp:
-                fp.write(json.dumps(result, indent=2))
-
-        await run_with_retries(_test, requester)

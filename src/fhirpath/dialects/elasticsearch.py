@@ -301,7 +301,7 @@ class ElasticSearchDialect(DialectBase):
                     "filter": list(),
                 }
             },
-            "size": 0,
-            "from": 100,
-            "sort": list(),
+            "size": 100,
+            "from": 0,
+            "sort": list()
         }

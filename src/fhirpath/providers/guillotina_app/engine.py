@@ -28,6 +28,16 @@ class EsConnection(Connection):
             )
         return info
 
+    def finalize_search_params(self, compiled_query):
+        """ """
+        compiled_query = compiled_query.copy()
+        params = dict()
+        params["from_"] = compiled_query.pop("from", 0)
+        params["size"] = compiled_query.pop("size", 100)
+        params["ignore_unavailable"] = compiled_query.pop("ignore_unavailable", True)
+        params["body"] = compiled_query
+        return params
+
 
 class EsEngine(Engine):
     """Elasticsearch Engine"""
