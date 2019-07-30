@@ -7,6 +7,7 @@ from copy import copy
 from zope.interface import implementer
 from zope.interface import implementer_only
 
+from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import ValidationError
@@ -492,8 +493,10 @@ class GroupTerm(object):
 
         # and, or, xor
         self.arithmetic_operator = None
-        # any|all|one
+        # any|all|one|none
         self.match_operator = None
+        # COUPLED|DECOUPLED
+        self.type = None
 
         self.terms = list()
 
@@ -535,6 +538,9 @@ class GroupTerm(object):
 
         if self.match_operator is None:
             self.match_operator = MatchType.ANY
+
+        if self.type is None:
+            self.type = GroupType.COUPLED
 
         self._finalized = True
 

@@ -8,6 +8,8 @@ from zope.interface import Invalid
 from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.enums import GroupType
+from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
@@ -231,6 +233,8 @@ class Search(object):
                 term_factory = self.create_codeableconcept_term
             elif klass_name == "Coding":
                 term_factory = self.create_coding_term
+            elif klass_name == "Address":
+                term_factory = self.create_address_term
             else:
                 raise NotImplementedError
             term = term_factory(path_, param_value, modifier)
@@ -248,7 +252,7 @@ class Search(object):
                 term = self.create_identifier_term(path_, value, modifier)
                 terms.append(term)
             # IN Like Group
-            group = G_(*terms, path=path_)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -306,7 +310,7 @@ class Search(object):
             term = self.create_term(path_1, value, modifier)
             terms.append(term)
 
-        return G_(*terms, path=path_)
+        return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
     def create_quantity_term(self, path_, param_value, modifier):
         """ """
@@ -316,7 +320,8 @@ class Search(object):
                 # Term or Group
                 term = self.create_quantity_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+
             return group
 
         elif isinstance(param_value, tuple):
@@ -362,7 +367,7 @@ class Search(object):
                 raise NotImplementedError
 
             if len(terms) > 1:
-                return G_(*terms, path=path_)
+                return G_(*terms, path=path_, type_=GroupType.COUPLED)
             else:
                 return terms[0]
         else:
@@ -377,7 +382,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_coding_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -433,7 +438,7 @@ class Search(object):
             path_1 = path_ / "code"
             terms.append(self.create_term(path_1, value, modifier))
 
-        return G_(*terms, path=path_)
+        return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
     def create_codeableconcept_term(self, path_, param_value, modifier):
         """ """
@@ -443,7 +448,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_codeableconcept_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -462,11 +467,43 @@ class Search(object):
             terms = list()
             path_1 = path_ / "text"
             terms.append(self.create_term(path_, value, modifier))
-            return G_(*terms, path=path_)
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         else:
             path_1 = path_ / "coding"
             return self.single_valued_coding_term(path_1, value, modifier)
+
+    def create_address_term(self, path_, param_value, modifier):
+        """ """
+        if isinstance(param_value, list):
+            terms = list()
+            for value in param_value:
+                # Term or Group
+                term = self.create_address_term(path_, value, modifier)
+                terms.append(term)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
+        elif isinstance(param_value, tuple):
+            return self.single_valued_address_term(path_, param_value, modifier)
+
+        raise NotImplementedError
+
+    def single_valued_address_term(self, path_, value, modifier):
+        """ """
+        terms = [
+            self.create_term(path_ / "city", value, None),
+            self.create_term(path_ / "country", value, None),
+            self.create_term(path_ / "postalCode", value, None),
+            self.create_term(path_ / "state", value, None),
+        ]
+        group = G_(**terms, path=path_, type_=GroupType.DECOUPLED)
+        if modifier == "not":
+            group.match_operator = MatchType.NONE
+        else:
+            group.match_operator = MatchType.ANY
+
+        return group
 
     def validate_pre_term(self, path_, value, modifier):
         """ """

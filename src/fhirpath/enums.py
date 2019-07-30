@@ -29,3 +29,10 @@ class MatchType(enum.Enum):
     ANY = "ANY"
     ALL = "ALL"
     ONE = "ONE"
+    NONE = "NONE"
+
+
+@enum.unique
+class GroupType(enum.Enum):
+    DECOUPLED = "DECOUPLED"
+    COUPLED = "COUPLED"

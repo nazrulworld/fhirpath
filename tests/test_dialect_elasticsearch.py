@@ -124,7 +124,8 @@ async def test_dialect_generated_raw_query(es_requester):
             ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
             ("_profile", "http://hl7.org/fhir/Organization"),
             ("identifier", "urn:oid:2.16.528.1|91654"),
-            ("type", "http://hl7.org/fhir/organization-type|prov")
+            ("type", "http://hl7.org/fhir/organization-type|prov"),
+            ("address-postalcode", "9100 AA")
         )
 
         result_query = search_tool(params, context=search_context)

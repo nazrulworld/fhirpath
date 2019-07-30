@@ -3,6 +3,8 @@
 import operator
 
 import isodate
+from zope.interface import Interface
+from zope.interface import alsoProvides
 
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
@@ -23,6 +25,10 @@ ES_PY_OPERATOR_MAP = {
     operator.ge: "gte",
     operator.le: "lte",
 }
+
+
+class IIgnoreNestedCheck(Interface):
+    """Marker interface"""
 
 
 class ElasticSearchDialect(DialectBase):
@@ -47,6 +53,25 @@ class ElasticSearchDialect(DialectBase):
         else:
             path_ = dotted_path
         return path_
+
+    def _attach_nested_on_demand(self, context, query_, root_replacer):
+        """ """
+        path_context = context
+        qr = query_
+
+        while True:
+            if path_context.multiple and not IFhirPrimitiveType.implementedBy(
+                path_context.type_class
+            ):
+                path_ = self._apply_path_replacement(
+                    str(path_context._path), root_replacer
+                )
+                qr = self._apply_nested(qr, path_)
+            if path_context.is_root():
+                break
+            path_context = path_context.parent
+
+        return qr
 
     def _clean_up(self, body_structure):
         """ """
@@ -110,20 +135,13 @@ class ElasticSearchDialect(DialectBase):
             container = qr["bool"]["filter"]
 
             for t_ in term.terms:
+                # single term resolver should not look at this
+                alsoProvides(t_, IIgnoreNestedCheck)
+
                 q, unary_operator = self.resolve_term(t_, root_replacer)
                 container.append(q)
 
-            path_context = term.path.context
-
-            while True:
-                if path_context.multiple:
-                    path_ = self._apply_path_replacement(
-                        str(path_context._path), root_replacer
-                    )
-                    qr = self._apply_nested(qr, path_)
-                if path_context.is_root():
-                    break
-                path_context = path_context.parent
+            qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
             return qr, operator.pos
 
@@ -158,7 +176,7 @@ class ElasticSearchDialect(DialectBase):
                     else:
                         q = {"term": {path_: term.value.value}}
 
-                    return q, term.unary_operator
+                    resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
                     "dateTime",
@@ -167,7 +185,7 @@ class ElasticSearchDialect(DialectBase):
                     "instant",
                 ):
 
-                    return self.resolve_datetime_term(term, root_replacer)
+                    resolved = self.resolve_datetime_term(term, root_replacer)
 
                 elif term.path.context.type_name in (
                     "integer",
@@ -176,9 +194,17 @@ class ElasticSearchDialect(DialectBase):
                     "positiveInt",
                 ):
 
-                    return self.resolve_numeric_term(term, root_replacer)
+                    resolved = self.resolve_numeric_term(term, root_replacer)
                 else:
                     raise NotImplementedError
+
+                if IIgnoreNestedCheck.providedBy(term):
+                    return resolved
+
+                # check for nested
+                qr, unary_operator = resolved
+                qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+                return qr, unary_operator
             else:
                 raise NotImplementedError("Line 85")
 
@@ -303,5 +329,5 @@ class ElasticSearchDialect(DialectBase):
             },
             "size": 100,
             "from": 0,
-            "sort": list()
+            "sort": list(),
         }

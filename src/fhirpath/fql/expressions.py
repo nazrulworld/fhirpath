@@ -44,9 +44,11 @@ def V_(value):
     return val
 
 
-def G_(*terms, path=None):
+def G_(*terms, path=None, type_=None):
     """ """
     group_term = GroupTerm(*terms, path=path)
+    if type_ is not None:
+        group_term.type = type_
     return group_term
 
 
