@@ -6,6 +6,8 @@ import isodate
 from zope.interface import Interface
 from zope.interface import alsoProvides
 
+from fhirpath.enums import GroupType
+from fhirpath.enums import MatchType
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import IInTerm
@@ -131,19 +133,34 @@ class ElasticSearchDialect(DialectBase):
     def resolve_term(self, term, root_replacer):
         """ """
         if IGroupTerm.providedBy(term):
-            qr = {"bool": {"filter": list()}}
-            container = qr["bool"]["filter"]
+            unary_operator = operator.pos
+            if term.type == GroupType.DECOUPLED:
+                qr = {"bool": {"should": list()}}
+                container = qr["bool"]["should"]
+                if term.match_operator == MatchType.ANY:
+                    qr["bool"]["minimum_should_match"] = 1
+                elif term.match_operator == MatchType.ALL:
+                    qr["bool"]["minimum_should_match"] = len(term.terms)
+                elif term.match_operator == MatchType.NONE:
+                    qr["bool"]["minimum_should_match"] = 1
+                    unary_operator = operator.neg
+
+            elif term.type == GroupType.COUPLED:
+                qr = {"bool": {"filter": list()}}
+                container = qr["bool"]["filter"]
+            else:
+                raise NotImplementedError
 
             for t_ in term.terms:
                 # single term resolver should not look at this
                 alsoProvides(t_, IIgnoreNestedCheck)
 
-                q, unary_operator = self.resolve_term(t_, root_replacer)
-                container.append(q)
+                resolved = self.resolve_term(t_, root_replacer)
+                container.append(resolved[0])
 
             qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
-            return qr, operator.pos
+            return qr, unary_operator
 
         elif IInTerm.providedBy(term):
             raise NotImplementedError

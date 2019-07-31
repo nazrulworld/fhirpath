@@ -497,7 +497,7 @@ class Search(object):
             self.create_term(path_ / "postalCode", value, None),
             self.create_term(path_ / "state", value, None),
         ]
-        group = G_(**terms, path=path_, type_=GroupType.DECOUPLED)
+        group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
         if modifier == "not":
             group.match_operator = MatchType.NONE
         else:
