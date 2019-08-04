@@ -158,6 +158,29 @@ class Organization(Folder):
     resource_type = "Organization"
 
 
+class IPatient(IFhirContent, IContentIndex):
+
+    index_field(
+        "patient_resource",
+        type="object",
+        field_mapping=fhir_resource_mapping("Patient"),
+        fhirpath_enabled=True,
+        resource_type="Patient",
+        fhir_version=FHIR_VERSION.DEFAULT
+    )
+    patient_resource = FhirField(
+        title="Patient Resource", resource_type="Patient", fhir_version="R4"
+    )
+
+
+@configure.contenttype(type_name="Patient", schema=IPatient)
+class Patient(Folder):
+    """ """
+
+    index(schemas=[IPatient], settings={})
+    resource_type = "Patient"
+
+
 @configure.service(
     context=IContainer,
     method="GET",

@@ -43,6 +43,23 @@ async def init_data(requester):
     )
     assert status == 201
 
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Patient.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "Patient",
+                "title": data["name"][0]["text"],
+                "id": data["id"],
+                "patient_resource": data
+            }
+        ),
+    )
+    assert status == 201
+
 
 async def test_raw_es_query_generation_from_search(engine, es_requester):
     """Sample pytest test function with the pytest fixture as an argument."""
@@ -139,5 +156,27 @@ async def test_dialect_generated_raw_query(es_requester):
         )
         result = await conn.search(index=index_name, **search_params)
         assert len(result["hits"]["hits"]) == 1
-        with open("output.json", "w") as fp:
-            fp.write(json.dumps(result, indent=2))
+        # test ContactPoint,HumanName
+        params = (
+            ("active", "true"),
+            ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+            ("_profile", "http://hl7.org/fhir/Organization"),
+            ("identifier", "urn:oid:2.16.528.1|91654"),
+            ("type", "http://hl7.org/fhir/organization-type|prov"),
+            ("address-postalcode", "9100 AA"),
+            ("address", "Den Burg")
+        )
+
+        result_query = search_tool(params, context=search_context)
+
+        compiled = search_context.engine.dialect.compile(
+            result_query._query, "organization_resource"
+        )
+        # email, phone
+        """
+        A server defined search that may match any of the string fields in the HumanName, including family, give, prefix, suffix, suffix, and/or text
+        """
+        """
+        The value in any kind of telecom details of the patient
+        """
+
