@@ -28,6 +28,7 @@ from fhirpath.fql.types import TermValue
 from fhirpath.storage import PATH_INFO_STORAGE
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
+from fhirpath.enums import WhereConstraintType
 
 
 def test_term_normal(engine):
@@ -203,3 +204,31 @@ def test_type_path_element(engine):
     path_ = path_ / "firstname"
 
     assert path_.path == "Patient.name.firstname"
+
+
+def test_type_path_constraint():
+    """where(type='successor').​resource
+            where(resolve() is Patient)
+            where(system='email')
+            where(type='predecessor').​resource
+            """
+    path_ = ElementPath("Patient.telecom.where(system='email')")
+    assert path_._where is not None
+    assert path_._where.value == "email"
+    assert path_._where.name == "system"
+    assert path_._where.subpath is None
+    assert path_._where.type == WhereConstraintType.T1
+
+    path_ = ElementPath("CarePlan.subject.where(resolve() is Patient)")
+    assert path_._where.value == "Patient"
+    assert path_._where.name is None
+    assert path_._where.subpath is None
+    assert path_._where.type == WhereConstraintType.T2
+
+    path_ = ElementPath(
+        "ActivityDefinition.relatedArtifact."
+        "where(type='composed-of').resource")
+    assert path_._where.value == "composed-of"
+    assert path_._where.name is None
+    assert path_._where.subpath == "resource"
+    assert path_._where.type == WhereConstraintType.T3

@@ -168,6 +168,8 @@ class IPatient(IFhirContent, IContentIndex):
         resource_type="Patient",
         fhir_version=FHIR_VERSION.DEFAULT
     )
+    index_field("p_type", type="keyword")
+    p_type = TextLine(title="Patient Type", required=False)
     patient_resource = FhirField(
         title="Patient Resource", resource_type="Patient", fhir_version="R4"
     )

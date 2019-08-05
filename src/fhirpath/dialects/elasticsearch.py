@@ -135,15 +135,19 @@ class ElasticSearchDialect(DialectBase):
         if IGroupTerm.providedBy(term):
             unary_operator = operator.pos
             if term.type == GroupType.DECOUPLED:
-                qr = {"bool": {"should": list()}}
-                container = qr["bool"]["should"]
+
                 if term.match_operator == MatchType.ANY:
+                    qr = {"bool": {"should": list()}}
+                    container = qr["bool"]["should"]
                     qr["bool"]["minimum_should_match"] = 1
+
                 elif term.match_operator == MatchType.ALL:
-                    qr["bool"]["minimum_should_match"] = len(term.terms)
+                    qr = {"bool": {"filter": list()}}
+                    container = qr["bool"]["filter"]
+
                 elif term.match_operator == MatchType.NONE:
-                    qr["bool"]["minimum_should_match"] = 1
-                    unary_operator = operator.neg
+                    qr = {"bool": {"must_not": list()}}
+                    container = qr["bool"]["must_not"]
 
             elif term.type == GroupType.COUPLED:
                 qr = {"bool": {"filter": list()}}

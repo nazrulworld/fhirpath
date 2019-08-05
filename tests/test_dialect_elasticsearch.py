@@ -157,22 +157,32 @@ async def test_dialect_generated_raw_query(es_requester):
         result = await conn.search(index=index_name, **search_params)
         assert len(result["hits"]["hits"]) == 1
         # test ContactPoint,HumanName
+        search_context = query_utility(ISearchContextFactory).get(
+            resource_type="Patient"
+        )
+        index_name = await search_context.engine.get_index_name(container)
+        conn = search_context.engine.connection.raw_connection()
+        await conn.indices.refresh(index=index_name)
+
         params = (
             ("active", "true"),
-            ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
-            ("_profile", "http://hl7.org/fhir/Organization"),
-            ("identifier", "urn:oid:2.16.528.1|91654"),
-            ("type", "http://hl7.org/fhir/organization-type|prov"),
-            ("address-postalcode", "9100 AA"),
-            ("address", "Den Burg")
+            ("telecom", "2562000002"),
+            ("given", "Eelector"),
+            ("name", "Saint"),
+            ("email", "demo1@example.com")
         )
 
         result_query = search_tool(params, context=search_context)
 
         compiled = search_context.engine.dialect.compile(
-            result_query._query, "organization_resource"
+            result_query._query, "patient_resource"
         )
-        # email, phone
+        search_params = search_context.engine.connection.finalize_search_params(
+            compiled
+        )
+        result = await conn.search(index=index_name, **search_params)
+        assert len(result["hits"]["hits"]) == 1
+        # , phone
         """
         A server defined search that may match any of the string fields in the HumanName, including family, give, prefix, suffix, suffix, and/or text
         """

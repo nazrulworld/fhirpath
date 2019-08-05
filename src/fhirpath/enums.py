@@ -36,3 +36,15 @@ class MatchType(enum.Enum):
 class GroupType(enum.Enum):
     DECOUPLED = "DECOUPLED"
     COUPLED = "COUPLED"
+
+
+@enum.unique
+class WhereConstraintType(enum.Enum):
+    """ """
+
+    # normal key, value conditional
+    T1 = "T1"
+    # constraint certain FHIR Resource type
+    T2 = "T2"
+    # complex constraint with subpath
+    T3 = "T3"

@@ -1374,9 +1374,20 @@ class SearchParameter(object):
         self.target = definition.target
         self.multiple_or = definition.multiple_or
         self.multiple_and = definition.multiple_and
-        self.expression = definition.expression_map[resource_type]
+        self.expression = self.get_expression(resource_type, definition)
 
         return self
+
+    def get_expression(self, resource_type, definition):
+        """ """
+        exp = definition.expression_map[resource_type]
+        if not exp:
+            return exp
+        # try cleanup Zero Width Space
+        if "\u200b" in exp:
+            exp = exp.replace("\u200b", "")
+
+        return exp.strip()
 
     def clone(self):
         """ """

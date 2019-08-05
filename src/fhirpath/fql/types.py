@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+import ast
 import operator
 import re
 from collections import deque
@@ -10,6 +11,7 @@ from zope.interface import implementer_only
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
+from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.types import EMPTY_VALUE
@@ -29,13 +31,14 @@ from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .interfaces import ITermValue
 from .interfaces import IValuedClass
+from .interfaces import IPathConstraint
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
-has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)]+\)", re.I | re.U)
+has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)\s\-]+\)", re.I | re.U)
 
 
 @implementer(IFqlClause)
@@ -675,7 +678,10 @@ class ElementPath(object):
         elif has_dot_as.search(self._raw):
             raise NotImplementedError
         elif has_dot_where.search(self._raw):
-            raise NotImplementedError
+            pos = self._raw.lower().find("where(")
+            self._path = self._raw[0: pos - 1]
+            expr = self._raw[pos:]
+            self._where = PathWhereConstraint.from_expression(expr)
         else:
             self._path = self._raw
 
@@ -749,3 +755,38 @@ class ElementPath(object):
     def is_finalized(self):
         """ """
         return self._finalized
+
+
+@implementer(IPathConstraint)
+class PathWhereConstraint(object):
+    """ """
+
+    def __init__(self, type_, name=None, value=None, subpath=None):
+        """ """
+        self.type = type_
+        self.name = name
+        self.value = value
+        self.subpath = subpath
+
+    @classmethod
+    def from_expression(cls, expression):
+        """ """
+        if "resolve()" in expression:
+            resource_type = expression.split("is")[-1].strip()[:-1]
+            return cls(WhereConstraintType.T2, value=resource_type)
+        else:
+            parts = list(map(lambda x: x.strip(), expression.split("=")))
+            name = parts[0][6:]
+            if ")." in parts[1]:
+                parts_ = list(parts[1].split(")."))
+                value = ast.literal_eval(parts_[0].strip())
+                subpath = parts_[1].strip()
+                if name == "type":
+                    name = None
+                type_ = WhereConstraintType.T3
+            else:
+                value = ast.literal_eval(parts[1][:-1])
+                subpath = None
+                type_ = WhereConstraintType.T1
+
+            return cls(type_=type_, name=name, value=value, subpath=subpath)

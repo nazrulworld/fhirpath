@@ -107,3 +107,7 @@ class IQueryResult(Interface):
 
     def empty():
         """ """
+
+
+class IPathConstraint(Interface):
+    """ """
