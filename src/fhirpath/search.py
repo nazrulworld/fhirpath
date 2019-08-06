@@ -11,6 +11,7 @@ from fhirpath.enums import FHIR_VERSION
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
+from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
 from fhirpath.fql import Q_
@@ -213,7 +214,9 @@ class Search(object):
         path_ = self.resolve_path_context(param_name)
 
         if path_._where is not None:
-            raise NotImplementedError
+            if path_._where.type == WhereConstraintType.T3:
+                # we know what to do
+                raise NotImplementedError
         elif path_._is is not None:
             raise NotImplementedError
         elif path_._as is not None:
@@ -530,11 +533,24 @@ class Search(object):
 
     def single_valued_contactpoint_term(self, path_, value, modifier):
         """ """
-        terms = [
-            self.create_term(path_ / "system", value, None),
-            self.create_term(path_ / "use", value, None),
-            self.create_term(path_ / "value", value, None),
-        ]
+        if path_._where:
+            if path_._where.type != WhereConstraintType.T1:
+                raise NotImplementedError
+
+            assert path_._where.name == "system"
+
+            terms = [
+                self.create_term(
+                    path_ / "system", (value[0], path_._where.value), None
+                ),
+                self.create_term(path_ / "value", value, None),
+            ]
+        else:
+            terms = [
+                self.create_term(path_ / "system", value, None),
+                self.create_term(path_ / "use", value, None),
+                self.create_term(path_ / "value", value, None),
+            ]
         group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
         if modifier == "not":
             group.match_operator = MatchType.NONE
@@ -577,6 +593,26 @@ class Search(object):
             group.match_operator = MatchType.ANY
 
         return group
+
+    def create_reference_term(self, path_, param_value, modifier):
+        """ """
+        if isinstance(param_value, list):
+            terms = list()
+            for value in param_value:
+                # Term or Group
+                term = self.create_reference_term(path_, value, modifier)
+                terms.append(term)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
+        elif isinstance(param_value, tuple):
+            return self.single_valued_reference_term(path_, param_value, modifier)
+
+    def single_valued_reference_term(self, path_, value, modifier):
+        """ """
+        new_path = path_ / "reference"
+
+        return self.create_term(new_path, value, modifier)
 
     def validate_pre_term(self, path_, value, modifier):
         """ """
