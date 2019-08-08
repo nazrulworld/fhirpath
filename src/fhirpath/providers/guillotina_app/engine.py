@@ -1,11 +1,12 @@
 # _*_ coding: utf-8 _*_
 import logging
 
+from guillotina.component import get_adapter
+from guillotina.utils import get_current_container
+from guillotina_elasticsearch.interfaces import IIndexManager
+
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
-from guillotina.utils import get_current_container
-from guillotina.component import get_adapter
-from guillotina_elasticsearch.interfaces import IIndexManager
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"

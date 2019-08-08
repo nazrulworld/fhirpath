@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+import logging
 import re
 from urllib.parse import unquote_plus
 
@@ -17,8 +18,10 @@ from fhirpath.fql import G_
 from fhirpath.fql import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
+from fhirpath.fql import exists_
 from fhirpath.fql import in_
 from fhirpath.fql import not_
+from fhirpath.fql import not_exists_
 from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IFhirPrimitiveType
@@ -37,6 +40,7 @@ value_prefixes = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
+logger = logging.getLogger("fhirpath.search")
 
 
 def has_escape_comma(val):
@@ -222,7 +226,10 @@ class Search(object):
         elif path_._as is not None:
             raise NotImplementedError
 
-        if not IFhirPrimitiveType.implementedBy(path_.context.type_class):
+        if modifier in ("missing", "exists"):
+            term = self.create_exists_term(path_, param_value, modifier)
+
+        elif not IFhirPrimitiveType.implementedBy(path_.context.type_class):
             # we need normalization
             klass_name = path_.context.type_class.__name__
             if klass_name == "FHIRReference":
@@ -610,9 +617,33 @@ class Search(object):
 
     def single_valued_reference_term(self, path_, value, modifier):
         """ """
+        if path_._where:
+            if path_._where.type != WhereConstraintType.T2:
+                raise NotImplementedError
+            assert path_._where.value is not None
+
+            logger.info(
+                "an honest confession: we know that referenced resource type "
+                "must be ´{path_._where.value}´"
+                "but don`t have any restriction implementation yet! "
+                "It`s now user end who has to make sure that he is "
+                "provided search value that represent appropriate resource type"
+            )
+
         new_path = path_ / "reference"
 
         return self.create_term(new_path, value, modifier)
+
+    def create_exists_term(self, path_, param_value, modifier):
+        """ """
+        if isinstance(param_value, tuple):
+            operator_, original_value = param_value
+            if original_value == "true":
+                return exists_(path_)
+            elif original_value:
+                return not_exists_(path_)
+
+        raise NotImplementedError
 
     def validate_pre_term(self, path_, value, modifier):
         """ """
@@ -729,6 +760,8 @@ class Search(object):
         else:
             param_value_ = values
 
+        self.validate_normalized_value(param_name_, param_value_, modifier_)
+
         return param_name_, param_value_, modifier_
 
     def validate(self):
@@ -749,9 +782,20 @@ class Search(object):
             )
         # xxx: later more
 
-    def validate_normalized_value(self, normalized):
+    def validate_normalized_value(self, param_name, param_value, modifier):
         """ """
-        param_name, param_value, modifier = normalized
+        if modifier in ("missing", "exists"):
+            if not isinstance(param_value, tuple):
+                raise ValidationError(
+                    "Multiple values are not allowed for missing(exists) search"
+                )
+
+            if not param_value[1] in ("true", "false"):
+
+                raise ValidationError(
+                    "Only ´true´ or ´false´ as value is "
+                    "allowed for missing(exists) search"
+                )
 
     def resolve_path_context(self, param_name):
         """ """

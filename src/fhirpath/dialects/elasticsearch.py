@@ -170,7 +170,7 @@ class ElasticSearchDialect(DialectBase):
             raise NotImplementedError
 
         elif IExistsTerm.providedBy(term):
-            raise NotImplementedError
+            return self.resolve_exists_term(term, root_replacer=root_replacer)
 
         elif ITerm.providedBy(term):
             if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
@@ -336,6 +336,17 @@ class ElasticSearchDialect(DialectBase):
             unary_operator = operator.pos
 
         return q, unary_operator
+
+    def resolve_exists_term(self, term, root_replacer=None):
+        """ """
+        qr = dict()
+        path_ = self._apply_path_replacement(term.path.path, root_replacer)
+
+        qr = {"exists": {"field": path_}}
+
+        qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+
+        return qr, term.unary_operator
 
     def create_structure(self):
         """ """

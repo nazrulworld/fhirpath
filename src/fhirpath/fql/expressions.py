@@ -6,6 +6,7 @@ from fhirpath.utils import reraise
 
 from .interfaces import IGroupTerm
 from .interfaces import ITerm
+from .types import ExistsGroupTerm
 from .types import ExistsTerm
 from .types import GroupTerm
 from .types import InTerm
@@ -14,7 +15,7 @@ from .types import Term
 from .types import TermValue
 
 
-__author__ = "Md Nazrul Islam <email2nazrul>"
+__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 __all__ = [
     "T_",
@@ -22,6 +23,7 @@ __all__ = [
     "G_",
     "exists_",
     "not_exists_",
+    "exists_group_",
     "and_",
     "or_",
     "xor_",
@@ -62,6 +64,14 @@ def exists_(path):
 def not_exists_(path):
     """ """
     return not_(exists_(path))
+
+
+def exists_group_(*terms, type_=None):
+    """ """
+    g = ExistsGroupTerm(*terms)
+    if type_ is not None:
+        g.type = type_
+    return g
 
 
 def _prepare_term_or_group(path, value=EMPTY_VALUE):

@@ -36,6 +36,10 @@ class IGroupTerm(ITerm):
     """ """
 
 
+class IExistsGroupTerm(IBaseClass):
+    """ """
+
+
 class IInTerm(ITerm):
     """ """
 

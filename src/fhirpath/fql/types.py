@@ -23,15 +23,16 @@ from .constraints import required_finalized
 from .constraints import required_not_finalized
 from .constraints import required_value_not_assigned
 from .interfaces import IElementPath
+from .interfaces import IExistsGroupTerm
 from .interfaces import IExistsTerm
 from .interfaces import IFqlClause
 from .interfaces import IGroupTerm
 from .interfaces import IInTerm
+from .interfaces import IPathConstraint
 from .interfaces import ISortTerm
 from .interfaces import ITerm
 from .interfaces import ITermValue
 from .interfaces import IValuedClass
-from .interfaces import IPathConstraint
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -358,9 +359,7 @@ class ExistsTerm(object):
         # +,- (negetive, positive)
         self.unary_operator = None
 
-        if ITerm.providedBy(path):
-            self.path = path.path
-        elif isinstance(path, str):
+        if isinstance(path, str):
             self.path = ElementPath.from_el_path(path)
         else:
             self.path = path
@@ -374,7 +373,6 @@ class ExistsTerm(object):
         # xxx: find type using Context
         # May path as Resource Attribute
         # Do validation
-        self.fhir_release = context.fhir_release
         self.path.finalize(context)
 
         if self.unary_operator is None:
@@ -577,6 +575,84 @@ class GroupTerm(object):
         return self.clone()
 
 
+@implementer(IExistsGroupTerm)
+class ExistsGroupTerm(object):
+    """ """
+
+    def __init__(self, *terms):
+        """ """
+        # flag
+        self._finalized = False
+        # any|all|one|none
+        self.match_operator = None
+        # COUPLED|DECOUPLED
+        self.type = None
+
+        self.terms = list()
+        for term in terms:
+            # could be GroupTerm | Term
+            self.terms.append(IExistsTerm(term))
+
+    def __add__(self, other):
+        """ """
+        return self._add(other)
+
+    def __iadd__(self, other):
+        """ """
+        return self._add(other)
+
+    def _add(self, other):
+        """ """
+        required_not_finalized(self)
+        self.terms.append(IExistsTerm(other))
+
+        return self.clone()
+
+    def clone(self):
+        """ """
+        return self.__copy__()
+
+    def finalize(self, context):
+        """ """
+        for term in self.terms:
+            term.finalize(context)
+
+        if self.match_operator is None:
+            self.match_operator = MatchType.ANY
+
+        if self.type is None:
+            self.type = GroupType.COUPLED
+
+        self._finalized = True
+
+    def __copy__(self):
+        """ """
+        newone = type(self).__new__(type(self))
+        newone.__dict__.update(self.__dict__)
+
+        newone.terms = copy(self.terms)
+        newone._finalized = self._finalized
+        # any|all|one
+        newone.match_operator = self.match_operator
+
+        return newone
+
+    def match_all(self):
+        """ """
+        self.match_operator = MatchType.ALL
+        return self.clone()
+
+    def match_one(self):
+        """ """
+        self.match_operator = MatchType.ONE
+        return self.clone()
+
+    def match_any(self):
+        """ """
+        self.match_operator = MatchType.ANY
+        return self.clone()
+
+
 @implementer(ISortTerm)
 class SortTerm(object):
     """ """
@@ -679,7 +755,7 @@ class ElementPath(object):
             raise NotImplementedError
         elif has_dot_where.search(self._raw):
             pos = self._raw.lower().find("where(")
-            self._path = self._raw[0: pos - 1]
+            self._path = self._raw[0 : pos - 1]  # noqa: E203
             expr = self._raw[pos:]
             self._where = PathWhereConstraint.from_expression(expr)
         else:
