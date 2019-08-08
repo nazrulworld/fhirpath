@@ -13,24 +13,25 @@ from guillotina import testing
 from guillotina.api.service import Service
 from guillotina.component import get_utility
 from guillotina.content import Folder
-from guillotina.schema import TextLine
+from guillotina.content import Item
 from guillotina.directives import index_field
 from guillotina.interfaces import ICatalogUtility
 from guillotina.interfaces import IContainer
+from guillotina.schema import TextLine
 from guillotina_elasticsearch.directives import index
 from guillotina_elasticsearch.interfaces import IContentIndex
 from guillotina_elasticsearch.tests.fixtures import elasticsearch
 from zope.interface import implementer
 
 from fhirpath.engine import create_engine
+from fhirpath.enums import FHIR_VERSION
+from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.providers.guillotina_app.field import FhirField
 from fhirpath.providers.guillotina_app.helpers import FHIR_ES_MAPPINGS_CACHE
 from fhirpath.providers.guillotina_app.interfaces import IFhirContent
 from fhirpath.providers.guillotina_app.interfaces import IFhirResource
-from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import proxy
-from fhirpath.enums import FHIR_VERSION
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -141,7 +142,7 @@ class IOrganization(IFhirContent, IContentIndex):
         field_mapping=fhir_resource_mapping("Organization"),
         fhirpath_enabled=True,
         resource_type="Organization",
-        fhir_version=FHIR_VERSION.DEFAULT
+        fhir_version=FHIR_VERSION.DEFAULT,
     )
     index_field("org_type", type="keyword")
     org_type = TextLine(title="Organization Type", required=False)
@@ -166,7 +167,7 @@ class IPatient(IFhirContent, IContentIndex):
         field_mapping=fhir_resource_mapping("Patient"),
         fhirpath_enabled=True,
         resource_type="Patient",
-        fhir_version=FHIR_VERSION.DEFAULT
+        fhir_version=FHIR_VERSION.DEFAULT,
     )
     index_field("p_type", type="keyword")
     p_type = TextLine(title="Patient Type", required=False)
@@ -181,6 +182,56 @@ class Patient(Folder):
 
     index(schemas=[IPatient], settings={})
     resource_type = "Patient"
+
+
+class IChargeItem(IFhirContent, IContentIndex):
+
+    index_field(
+        "chargeitem_resource",
+        type="object",
+        field_mapping=fhir_resource_mapping("ChargeItem"),
+        fhirpath_enabled=True,
+        resource_type="ChargeItem",
+        fhir_version=FHIR_VERSION.DEFAULT,
+    )
+
+    chargeitem_resource = FhirField(
+        title="Charge Item Resource", resource_type="ChargeItem", fhir_version="R4"
+    )
+
+
+@configure.contenttype(type_name="ChargeItem", schema=IChargeItem)
+class ChargeItem(Item):
+    """ """
+
+    index(schemas=[IChargeItem], settings={})
+    resource_type = "ChargeItem"
+
+
+class IMedicationRequest(IFhirContent, IContentIndex):
+
+    index_field(
+        "medicationrequest_resource",
+        type="object",
+        field_mapping=fhir_resource_mapping("MedicationRequest"),
+        fhirpath_enabled=True,
+        resource_type="MedicationRequest",
+        fhir_version=FHIR_VERSION.DEFAULT,
+    )
+
+    medicationrequest_resource = FhirField(
+        title="Medication Request Resource",
+        resource_type="MedicationRequest",
+        fhir_version="R4",
+    )
+
+
+@configure.contenttype(type_name="MedicationRequest", schema=IMedicationRequest)
+class MedicationRequest(Item):
+    """ """
+
+    index(schemas=[IMedicationRequest], settings={})
+    resource_type = "MedicationRequest"
 
 
 @configure.service(

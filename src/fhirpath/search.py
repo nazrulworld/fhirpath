@@ -249,6 +249,8 @@ class Search(object):
                 term_factory = self.create_contactpoint_term
             elif klass_name == "HumanName":
                 term_factory = self.create_humanname_term
+            elif klass_name == "Money":
+                term_factory = self.create_money_term
             else:
                 raise NotImplementedError
             term = term_factory(path_, param_value, modifier)
@@ -644,6 +646,64 @@ class Search(object):
                 return not_exists_(path_)
 
         raise NotImplementedError
+
+    def create_money_term(self, path_, param_value, modifier):
+        """ """
+        if isinstance(param_value, list):
+            terms = list()
+            for value in param_value:
+                # Term or Group
+                term = self.create_money_term(path_, value, modifier)
+                terms.append(term)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+
+            return group
+
+        elif isinstance(param_value, tuple):
+            return self.single_valued_money_term(path_, param_value, modifier)
+
+        raise NotImplementedError
+
+    def single_valued_money_term(self, path_, value, modifier):
+        """ """
+        operator_, original_value = value
+        operator_eq = "eq"
+        has_pipe = "|" in original_value
+        # modifier = text, no impact
+        if has_pipe:
+            terms = list()
+            parts = original_value.split("|")
+
+            if original_value.startswith("|"):
+                new_value = (operator_eq, original_value[1:])
+                path_1 = path_ / "currency"
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
+
+            elif len(parts) == 2:
+                path_1 = path_ / "value"
+                new_value = (operator_, parts[0])
+                term = self.create_term(path_1, new_value, modifier)
+                terms.append(term)
+
+                if parts[1]:
+                    # check if val||unit or code
+                    path_2 = path_ / "currency"
+                    new_value = (operator_eq, parts[1])
+                    term = self.create_term(path_2, new_value, modifier)
+                    terms.append(term)
+
+            else:
+                # may be validation error
+                raise NotImplementedError
+
+            if len(terms) > 1:
+                return G_(*terms, path=path_, type_=GroupType.COUPLED)
+            else:
+                return terms[0]
+        else:
+            path_1 = path_ / "value"
+            return self.create_term(path_1, value, modifier)
 
     def validate_pre_term(self, path_, value, modifier):
         """ """

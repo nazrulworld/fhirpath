@@ -39,9 +39,10 @@
             "context": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
@@ -280,9 +281,10 @@
             "medicationReference": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
@@ -323,9 +325,10 @@
             "subject": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             }

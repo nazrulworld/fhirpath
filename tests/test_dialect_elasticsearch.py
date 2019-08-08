@@ -60,6 +60,40 @@ async def init_data(requester):
     )
     assert status == 201
 
+    with open(str(FHIR_EXAMPLE_RESOURCES / "ChargeItem.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "ChargeItem",
+                "title": "Chargeble Bill",
+                "id": data["id"],
+                "chargeitem_resource": data
+            }
+        ),
+    )
+    assert status == 201
+
+    with open(str(FHIR_EXAMPLE_RESOURCES / "MedicationRequest.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "MedicationRequest",
+                "title": "Prescription",
+                "id": data["id"],
+                "medicationrequest_resource": data
+            }
+        ),
+    )
+    assert status == 201
+
 
 async def test_raw_es_query_generation_from_search(engine, es_requester):
     """Sample pytest test function with the pytest fixture as an argument."""
@@ -169,7 +203,8 @@ async def test_dialect_generated_raw_query(es_requester):
             ("telecom", "2562000002"),
             ("given", "Eelector"),
             ("name", "Saint"),
-            ("email", "demo1@example.com")
+            ("email", "demo1@example.com"),
+            ("phone", "2562000002")
         )
 
         result_query = search_tool(params, context=search_context)
@@ -182,11 +217,28 @@ async def test_dialect_generated_raw_query(es_requester):
         )
         result = await conn.search(index=index_name, **search_params)
         assert len(result["hits"]["hits"]) == 1
-        # , phone
-        """
-        A server defined search that may match any of the string fields in the HumanName, including family, give, prefix, suffix, suffix, and/or text
-        """
-        """
-        The value in any kind of telecom details of the patient
-        """
 
+        # test Quantity, Number
+        search_context = query_utility(ISearchContextFactory).get(
+            resource_type="ChargeItem"
+        )
+        index_name = await search_context.engine.get_index_name(container)
+        conn = search_context.engine.connection.raw_connection()
+        await conn.indices.refresh(index=index_name)
+
+        params = (
+            ("quantity", "1"),
+            ("factor-override", "0.8"),
+            ("price-override", "40|EUR")
+        )
+
+        result_query = search_tool(params, context=search_context)
+
+        compiled = search_context.engine.dialect.compile(
+            result_query._query, "chargeitem_resource"
+        )
+        search_params = search_context.engine.connection.finalize_search_params(
+            compiled
+        )
+        result = await conn.search(index=index_name, **search_params)
+        assert len(result["hits"]["hits"]) == 1

@@ -4,9 +4,10 @@
             "account": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 },
                 "type": "nested"
@@ -44,9 +45,10 @@
             "context": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
@@ -58,9 +60,10 @@
             "enterer": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
@@ -124,21 +127,31 @@
             "performingOrganization": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
             "priceOverride": {
                 "properties": {
-                    "currency": {
+                    "code": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "system": {
+                        "index": true,
+                        "store": false,
+                        "type": "keyword"
+                    },
+                    "unit": {
                         "index": true,
                         "store": false,
                         "type": "keyword"
                     },
                     "value": {
-                        "index": true,
                         "store": false,
                         "type": "float"
                     }
@@ -170,9 +183,10 @@
             "requestingOrganization": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             },
@@ -184,9 +198,10 @@
             "service": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 },
                 "type": "nested"
@@ -194,9 +209,10 @@
             "subject": {
                 "properties": {
                     "reference": {
+                        "analyzer": "fhir_reference_analyzer",
                         "index": true,
                         "store": false,
-                        "type": "keyword"
+                        "type": "text"
                     }
                 }
             }
