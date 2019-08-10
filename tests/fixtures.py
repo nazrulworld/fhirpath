@@ -276,3 +276,80 @@ class IWrongInterface(IFhirResource):
 
     def meta():
         """ """
+
+
+FHIR_EXAMPLE_RESOURCES = (
+    pathlib.Path(os.path.abspath(__file__)).parent / "static" / "FHIR"
+)
+
+
+async def init_data(requester):
+    """ """
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Organization.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "Organization",
+                "title": data["name"],
+                "id": data["id"],
+                "organization_resource": data,
+                "org_type": "ABT",
+            }
+        ),
+    )
+    assert status == 201
+
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Patient.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "Patient",
+                "title": data["name"][0]["text"],
+                "id": data["id"],
+                "patient_resource": data,
+            }
+        ),
+    )
+    assert status == 201
+
+    with open(str(FHIR_EXAMPLE_RESOURCES / "ChargeItem.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "ChargeItem",
+                "title": "Chargeble Bill",
+                "id": data["id"],
+                "chargeitem_resource": data,
+            }
+        ),
+    )
+    assert status == 201
+
+    with open(str(FHIR_EXAMPLE_RESOURCES / "MedicationRequest.json"), "r") as fp:
+        data = json.load(fp)
+
+    resp, status = await requester(
+        "POST",
+        "/db/guillotina/",
+        data=json.dumps(
+            {
+                "@type": "MedicationRequest",
+                "title": "Prescription",
+                "id": data["id"],
+                "medicationrequest_resource": data,
+            }
+        ),
+    )
+    assert status == 201

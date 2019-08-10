@@ -482,7 +482,7 @@ class Search(object):
             # make identifier.type.text query
             terms = list()
             path_1 = path_ / "text"
-            terms.append(self.create_term(path_, value, modifier))
+            terms.append(self.create_term(path_1, value, modifier))
             return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         else:

@@ -2,8 +2,6 @@
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
 import json
-import os
-import pathlib
 
 from guillotina.component import query_utility
 from guillotina_elasticsearch.tests.utils import run_with_retries
@@ -14,85 +12,11 @@ from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
 
+from .fixtures import FHIR_EXAMPLE_RESOURCES
+from .fixtures import init_data
+
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-FHIR_EXAMPLE_RESOURCES = (
-    pathlib.Path(os.path.abspath(__file__)).parent / "static" / "FHIR"
-)
-
-
-async def init_data(requester):
-    """ """
-    with open(str(FHIR_EXAMPLE_RESOURCES / "Organization.json"), "r") as fp:
-        data = json.load(fp)
-
-    resp, status = await requester(
-        "POST",
-        "/db/guillotina/",
-        data=json.dumps(
-            {
-                "@type": "Organization",
-                "title": data["name"],
-                "id": data["id"],
-                "organization_resource": data,
-                "org_type": "ABT",
-            }
-        ),
-    )
-    assert status == 201
-
-    with open(str(FHIR_EXAMPLE_RESOURCES / "Patient.json"), "r") as fp:
-        data = json.load(fp)
-
-    resp, status = await requester(
-        "POST",
-        "/db/guillotina/",
-        data=json.dumps(
-            {
-                "@type": "Patient",
-                "title": data["name"][0]["text"],
-                "id": data["id"],
-                "patient_resource": data
-            }
-        ),
-    )
-    assert status == 201
-
-    with open(str(FHIR_EXAMPLE_RESOURCES / "ChargeItem.json"), "r") as fp:
-        data = json.load(fp)
-
-    resp, status = await requester(
-        "POST",
-        "/db/guillotina/",
-        data=json.dumps(
-            {
-                "@type": "ChargeItem",
-                "title": "Chargeble Bill",
-                "id": data["id"],
-                "chargeitem_resource": data
-            }
-        ),
-    )
-    assert status == 201
-
-    with open(str(FHIR_EXAMPLE_RESOURCES / "MedicationRequest.json"), "r") as fp:
-        data = json.load(fp)
-
-    resp, status = await requester(
-        "POST",
-        "/db/guillotina/",
-        data=json.dumps(
-            {
-                "@type": "MedicationRequest",
-                "title": "Prescription",
-                "id": data["id"],
-                "medicationrequest_resource": data
-            }
-        ),
-    )
-    assert status == 201
 
 
 async def test_raw_es_query_generation_from_search(engine, es_requester):
@@ -177,7 +101,7 @@ async def test_dialect_generated_raw_query(es_requester):
             ("identifier", "urn:oid:2.16.528.1|91654"),
             ("type", "http://hl7.org/fhir/organization-type|prov"),
             ("address-postalcode", "9100 AA"),
-            ("address", "Den Burg")
+            ("address", "Den Burg"),
         )
 
         result_query = search_tool(params, context=search_context)
@@ -204,7 +128,7 @@ async def test_dialect_generated_raw_query(es_requester):
             ("given", "Eelector"),
             ("name", "Saint"),
             ("email", "demo1@example.com"),
-            ("phone", "2562000002")
+            ("phone", "2562000002"),
         )
 
         result_query = search_tool(params, context=search_context)
@@ -229,7 +153,7 @@ async def test_dialect_generated_raw_query(es_requester):
         params = (
             ("quantity", "1"),
             ("factor-override", "0.8"),
-            ("price-override", "40|EUR")
+            ("price-override", "40|EUR"),
         )
 
         result_query = search_tool(params, context=search_context)

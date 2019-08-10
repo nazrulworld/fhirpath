@@ -1,11 +1,15 @@
 # _*_ coding: utf-8 _*_
 import operator
 from urllib.parse import urlencode
-from fhirpath.fql import Q_
-from fhirpath.enums import SortOrderType
+
+from guillotina.component import query_utility
+
 from fhirpath.enums import MatchType
+from fhirpath.enums import SortOrderType
+from fhirpath.fql import Q_
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import ITerm
+from fhirpath.interfaces import ISearchContextFactory
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
 
@@ -167,17 +171,21 @@ def test_create_codeableconcept_term(engine):
     assert code1_group.terms[0].path.path == "Task.code.coding.system"
     assert code1_group.terms[1].path.path == "Task.code.coding.code"
 
-    assert ITerm.providedBy(term.terms[1]) is True
-    assert ITerm.providedBy(term.terms[2]) is True
+    assert IGroupTerm.providedBy(term.terms[1]) is True
+    assert IGroupTerm.providedBy(term.terms[2]) is True
 
-    assert term.terms[1].path.path == "Task.code.coding.system"
-    assert term.terms[2].path.path == "Task.code.coding.code"
+    code2_group = term.terms[1]
+    assert code2_group.terms[0].path.path == "Task.code.coding.system"
+
+    code3_group = term.terms[2]
+    assert code3_group.terms[0].path.path == "Task.code.coding.code"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("code:text")
     path_ = fhir_search.resolve_path_context(field_name)
+
     term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
-    assert term.path.path == "Task.code.text"
+    assert term.terms[0].path.path == "Task.code.text"
 
 
 def test_create_identifier_term(engine):
@@ -199,18 +207,18 @@ def test_create_identifier_term(engine):
 
     assert IGroupTerm.providedBy(term.terms[0]) is True
     identifier_group = term.terms[0]
-    assert identifier_group.terms[0].path.path == "Task.identifier.value"
-    assert identifier_group.terms[1].path.path == "Task.identifier.system"
+    assert identifier_group.terms[0].path.path == "Task.identifier.system"
+    assert identifier_group.terms[1].path.path == "Task.identifier.value"
 
-    assert term.terms[1].path.path == "Task.identifier.system"
-    assert term.terms[2].path.path == "Task.identifier.value"
+    assert term.terms[1].terms[0].path.path == "Task.identifier.system"
+    assert term.terms[2].terms[0].path.path == "Task.identifier.value"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("identifier:text")
     path_ = fhir_search.resolve_path_context(field_name)
     term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
-    assert term.path.path == "Task.identifier.type.text"
+    assert term.terms[0].path.path == "Task.identifier.type.text"
 
     field_name, value_pack, modifier = fhir_search.normalize_param("identifier:not")
     path_ = fhir_search.resolve_path_context(field_name)
@@ -306,19 +314,26 @@ def test_build_query_from_search_params(engine):
     assert len(query.get_where()) == 3
 
 
-def test_build_result(engine):
+def test_build_result(dummy_guillotina):
     """ """
-    context = SearchContext(engine, "ChargeItem")
+    search_context = query_utility(ISearchContextFactory).get(
+        resource_type="Organization"
+    )
     params = (
-        ("subject", "Patient/PAT001"),
-        ("quantity", "5.4|http://unitsofmeasure.org|mg"),
-        ("quantity", "lt5.9||mg"),
-        ("quantity", "5.40e-3"),
-        ("quantity:not", "gt5.4|http://unitsofmeasure.org|mg"),
+        ("active", "true"),
+        ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+        ("_profile", "http://hl7.org/fhir/Organization"),
+        ("identifier", "urn:oid:2.16.528.1|91654"),
+        ("type", "http://hl7.org/fhir/organization-type|prov"),
+        ("address-postalcode", "9100 AA"),
+        ("address", "Den Burg"),
         ("_sort", "_id"),
         ("_count", "100"),
-        ("page", "4")
+        ("page", "4"),
     )
-    fhir_search = Search(context, params=params)
+    fhir_search = Search(search_context, params=params)
     result = fhir_search.build()
-    import pdb;pdb.set_trace(result)
+    import pdb
+
+    pdb.set_trace(result)
+
