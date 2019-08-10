@@ -6,7 +6,9 @@ from guillotina.component import get_utilities_for
 from guillotina.component import query_utility
 from guillotina.directives import index_field
 from guillotina.interfaces import IResourceFactory
+from guillotina.utils import get_authenticated_user
 from guillotina.utils import get_current_container
+from guillotina.utils import get_security_policy
 from guillotina_elasticsearch.interfaces import IIndexManager
 
 from fhirpath.engine import Connection
@@ -56,11 +58,35 @@ class EsEngine(Engine):
 
         return await index_manager.get_index_name()
 
-    async def execute(self, query):
+    async def execute(self, query, unrestricted=False):
         """ """
-        compiled = self.dialect.compile(query)
-        compiled
-        pass
+        # for now we support single from resource
+        resource_type = query.get_from()[0][1].resource_type
+        field_index_name = self.calculate_field_index_name(resource_type)
+
+        params = {"query": query, "root_replacer": field_index_name}
+        if unrestricted is False:
+            params["security_callable"] = self.build_security_query
+
+        compiled = self.dialect.compile(**params)
+
+        return compiled
+
+    def build_security_query(self):
+        # The users who has plone.AccessContent permission by prinperm
+        # The roles who has plone.AccessContent permission by roleperm
+        users = []
+        roles = []
+        user = get_authenticated_user()
+        policy = get_security_policy(user)
+
+        users.append(user.id)
+        users.extend(user.groups)
+
+        roles_dict = policy.global_principal_roles(user.id, user.groups)
+        roles.extend([key for key, value in roles_dict.items() if value])
+
+        return {"access_roles": roles, "access_users": users}
 
     def calculate_field_index_name(self, resource_types):
         """1.) xxx: should be cached

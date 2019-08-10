@@ -92,11 +92,12 @@ class ElasticSearchDialect(DialectBase):
         if len(body_structure["sort"]) == 0:
             del body_structure["sort"]
 
-    def compile(self, query, root_replacer=None):
+    def compile(self, query, root_replacer=None, security_callable=None):
         """
         :param: query
         :root_replacer: Path´s root replacer:
         Could be mapping name or index name in zope´s ZCatalog context
+        :security_callable:
         """
         body_structure = self.create_structure()
         conditional_terms = query.get_where()
@@ -121,6 +122,10 @@ class ElasticSearchDialect(DialectBase):
                 )
 
             container.append(q)
+
+        if security_callable is not None:
+            securities = security_callable()
+            self.apply_security(securities, body_structure)
 
         self._clean_up(body_structure)
 
@@ -347,6 +352,20 @@ class ElasticSearchDialect(DialectBase):
         qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
         return qr, term.unary_operator
+
+    def apply_security(self, securities, body_structure):
+        """ """
+        should_list = list()
+        for field in securities:
+            values = securities[field]
+            if isinstance(values, (str, bytes)):
+                values = [values]
+            for val in values:
+                should_list.append({"match": {field: val}})
+
+        body_structure["query"]["bool"]["filter"].append(
+            {"bool": {"should": should_list, "minimum_should_match": 1}}
+        )
 
     def create_structure(self):
         """ """
