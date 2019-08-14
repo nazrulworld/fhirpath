@@ -368,7 +368,7 @@ class QueryResult(object):
         """ """
         return self.count()
 
-    def __getitem__(self, key):
+    def OFF__getitem__(self, key):
         """
         Lazy loading es results with negative index support.
         We store the results in buckets of what the bulk size is.
@@ -431,6 +431,13 @@ class AsyncQueryResult(QueryResult):
         """ """
         result = await self._engine.execute(self._query, self._unrestricted)
         return result
+
+    async def __iter__(self):
+        """ """
+        result = await self._engine.execute(self._query, self._unrestricted)
+        model_class = self._query.get_from()[0][1]
+        for item in result.body:
+            yield model_class(item)
 
 
 def Q_(resource=None, engine=None):

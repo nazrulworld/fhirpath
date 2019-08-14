@@ -74,6 +74,11 @@ class LimitClause(object):
 
     __slots__ = ("_limit", "_offset")
 
+    def __init__(self):
+        """ """
+        object.__setattr__(self, "_limit", None)
+        object.__setattr__(self, "_offset", None)
+
     def _get_limit(self):
         """ """
         return self._limit

@@ -9,13 +9,14 @@ from guillotina.interfaces import IResourceFactory
 from guillotina.utils import get_authenticated_user
 from guillotina.utils import get_current_container
 from guillotina.utils import get_security_policy
+from guillotina_elasticsearch.exceptions import QueryErrorException
 from guillotina_elasticsearch.interfaces import IIndexManager
 
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
-from fhirpath.engine import EngineResultHeader
 from fhirpath.engine import EngineResultBody
+from fhirpath.engine import EngineResultHeader
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -58,6 +59,24 @@ class EsConnection(Connection):
         search_params = self.finalize_search_params(compiled_query)
         conn = self.raw_connection()
         result = await conn.search(**search_params)
+        self._evaluate_result(result)
+        return result
+
+    def _evaluate_result(self, result):
+        """ """
+        if result.get("_shards", {}).get("failed", 0) > 0:
+            logger.warning(f'Error running query: {result["_shards"]}')
+            error_message = "Unknown"
+            for failure in result["_shards"].get("failures") or []:
+                error_message = failure["reason"]
+            raise QueryErrorException(reason=error_message)
+
+    async def scroll(self, scroll_id, scroll="30s"):
+        """ """
+        result = await self.raw_connection().scroll(
+            body={"scroll_id": scroll_id}, scroll=scroll
+        )
+        self._evaluate_result(result)
         return result
 
 
@@ -85,8 +104,9 @@ class EsEngine(Engine):
 
         compiled = self.dialect.compile(**params)
         raw_result = await self.connection.fetch(compiled)
+
         # xxx: process result
-        result = self.process_raw_result(raw_result, field_index_name)
+        result = await self.process_raw_result(raw_result, field_index_name)
         result.header.raw_query = self.connection.finalize_search_params(compiled)
 
         return result
@@ -156,16 +176,36 @@ class EsEngine(Engine):
             if name is not None:
                 return name
 
-    def process_raw_result(self, rawresult, fieldname):
+    async def process_raw_result(self, rawresult, fieldname):
         """ """
         header = EngineResultHeader(total=rawresult["hits"]["total"]["value"])
         body = EngineResultBody()
 
-        for res in rawresult["hits"]["hits"]:
+        def extract(hits):
+            for res in hits:
+                if res["_type"] != "_doc":
+                    continue
+                if fieldname in res["_source"]:
+                    body.append(res["_source"][fieldname])
 
-            if res["_type"] != "_doc":
-                continue
-            if fieldname in res["_source"]:
-                body.append(res["_source"][fieldname])
+        # extract primary data
+        extract(rawresult["hits"]["hits"])
+
+        if "_scroll_id" in rawresult and header.total > len(rawresult["hits"]["hits"]):
+            # we need to fetch all!
+            consumed = len(rawresult["hits"]["hits"])
+
+            while header.total > consumed:
+                # xxx: dont know yet, if from_, size is better solution
+                raw_res = await self.connection.scroll(rawresult["_scroll_id"])
+                if len(raw_res["hits"]["hits"]) == 0:
+                    break
+
+                extract(raw_res["hits"]["hits"])
+
+                consumed += len(raw_res["hits"]["hits"])
+
+                if header.total <= consumed:
+                    break
 
         return EngineResult(header=header, body=body)

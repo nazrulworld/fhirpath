@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+import asyncio
 import copy
 import io
 import json
@@ -362,6 +363,7 @@ async def load_organizations_data(requester, count=1):
     with open(str(FHIR_EXAMPLE_RESOURCES / "Organization.json"), "r") as fp:
         data = json.load(fp)
     added = 0
+
     while count > added:
         data_ = copy.deepcopy(data)
         data_["id"] = str(uuid.uuid4())
@@ -380,3 +382,5 @@ async def load_organizations_data(requester, count=1):
         )
         assert status == 201
         added += 1
+        if added % 100 == 0:
+            await asyncio.sleep(1)
