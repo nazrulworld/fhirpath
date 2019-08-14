@@ -51,12 +51,14 @@ def has_escape_comma(val):
 class SearchContext(object):
     """ """
 
-    __slots__ = ("resource_name", "engine")
+    __slots__ = ("resource_name", "engine", "unrestricted", "async_result")
 
-    def __init__(self, engine, resource_type):
+    def __init__(self, engine, resource_type, unrestricted=False, async_result=False):
         """ """
         object.__setattr__(self, "engine", engine)
         object.__setattr__(self, "resource_name", resource_type)
+        object.__setattr__(self, "unrestricted", unrestricted)
+        object.__setattr__(self, "async_result", async_result)
 
 
 @implementer(ISearch)
@@ -209,7 +211,10 @@ class Search(object):
 
         result = self.attach_limit_terms(
             self.attach_sort_terms(builder.where(*terms_container))
-        )()
+        )(
+            unrestricted=self.context.unrestricted,
+            async_result=self.context.async_result,
+        )
         return result
 
     def add_term(self, normalized_data, terms_container):

@@ -13,6 +13,9 @@ from guillotina_elasticsearch.interfaces import IIndexManager
 
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
+from fhirpath.engine import EngineResult
+from fhirpath.engine import EngineResultHeader
+from fhirpath.engine import EngineResultBody
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -41,9 +44,21 @@ class EsConnection(Connection):
         params = dict()
         params["from_"] = compiled_query.pop("from", 0)
         params["size"] = compiled_query.pop("size", 100)
+        if "scroll" in compiled_query:
+            params["scroll"] = compiled_query.pop("scroll")
         params["ignore_unavailable"] = compiled_query.pop("ignore_unavailable", True)
         params["body"] = compiled_query
         return params
+
+    async def fetch(self, compiled_query):
+        """xxx: must have use scroll+slice
+        https://stackoverflow.com/questions/43211387/what-does-elasticsearch-automatic-slicing-do
+        https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
+        """
+        search_params = self.finalize_search_params(compiled_query)
+        conn = self.raw_connection()
+        result = await conn.search(**search_params)
+        return result
 
 
 class EsEngine(Engine):
@@ -69,8 +84,12 @@ class EsEngine(Engine):
             params["security_callable"] = self.build_security_query
 
         compiled = self.dialect.compile(**params)
+        raw_result = await self.connection.fetch(compiled)
+        # xxx: process result
+        result = self.process_raw_result(raw_result, field_index_name)
+        result.header.raw_query = self.connection.finalize_search_params(compiled)
 
-        return compiled
+        return result
 
     def build_security_query(self):
         # The users who has plone.AccessContent permission by prinperm
@@ -136,3 +155,17 @@ class EsEngine(Engine):
             name = _find(behavior)
             if name is not None:
                 return name
+
+    def process_raw_result(self, rawresult, fieldname):
+        """ """
+        header = EngineResultHeader(total=rawresult["hits"]["total"]["value"])
+        body = EngineResultBody()
+
+        for res in rawresult["hits"]["hits"]:
+
+            if res["_type"] != "_doc":
+                continue
+            if fieldname in res["_source"]:
+                body.append(res["_source"][fieldname])
+
+        return EngineResult(header=header, body=body)

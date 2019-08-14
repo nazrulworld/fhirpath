@@ -123,6 +123,8 @@ class ElasticSearchDialect(DialectBase):
 
             container.append(q)
 
+        self.apply_limit(query.get_limit(), body_structure)
+
         if security_callable is not None:
             securities = security_callable()
             self.apply_security(securities, body_structure)
@@ -367,6 +369,15 @@ class ElasticSearchDialect(DialectBase):
             {"bool": {"should": should_list, "minimum_should_match": 1}}
         )
 
+    def apply_limit(self, limit_clause, body_structure):
+        """ """
+        if limit_clause.empty:
+            return
+        if isinstance(limit_clause.limit, int):
+            body_structure["size"] = limit_clause.limit
+        if isinstance(limit_clause.offset, int):
+            body_structure["from"] = limit_clause.offset
+
     def create_structure(self):
         """ """
         return {
@@ -381,4 +392,5 @@ class ElasticSearchDialect(DialectBase):
             "size": 100,
             "from": 0,
             "sort": list(),
+            "scroll": "1m",
         }

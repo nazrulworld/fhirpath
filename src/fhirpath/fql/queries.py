@@ -258,13 +258,19 @@ class QueryBuilder(object):
 
         return self.__fql__()
 
-    def __call__(self, engine=None):
+    def __call__(self, unrestricted=False, engine=None, async_result=False):
         """ """
         if not self._finalized and (engine or self._engine):
             self.finalize(engine)
 
         query = self.get_query()
-        result = QueryResult(query=query, engine=self._engine)
+        result_factory = QueryResult
+        if async_result is True:
+            result_factory = AsyncQueryResult
+
+        result = result_factory(
+            query=query, engine=self._engine, unrestricted=unrestricted
+        )
         return result
 
     def _pre_check(self):
@@ -305,13 +311,15 @@ class QueryBuilder(object):
 class QueryResult(object):
     """ """
 
-    def __init__(self, query: Query, engine):
+    def __init__(self, query: Query, engine, unrestricted=False):
         """ """
         self._query = query
         self._engine = engine
+        self._unrestricted = unrestricted
 
     def fetchall(self):
         """ """
+        pass
 
     def single(self):
         """Will return the single item in the input if there is just one item.
@@ -414,6 +422,15 @@ class QueryResult(object):
         def __iter__(self):
             """ """
             pass
+
+
+class AsyncQueryResult(QueryResult):
+    """ """
+
+    async def fetchall(self):
+        """ """
+        result = await self._engine.execute(self._query, self._unrestricted)
+        return result
 
 
 def Q_(resource=None, engine=None):

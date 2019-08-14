@@ -1,4 +1,6 @@
 # _*_ coding: utf-8 _*_
+import time
+from collections import deque
 from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
@@ -56,3 +58,32 @@ class EngineProxy(Proxy):
         super(EngineProxy, self).__init__()
         # xxx: more?
         self.initialize(obj)
+
+
+class EngineResult(object):
+    """ """
+
+    __slot__ = ("header", "body")
+
+    def __init__(self, header, body):
+        """ """
+        object.__setattr__(self, "header", header)
+        object.__setattr__(self, "body", body)
+
+
+class EngineResultHeader(object):
+    """ """
+
+    total = None
+    raw_query = None
+    generated_on = None
+
+    def __init__(self, total, raw_query=None):
+        """ """
+        self.total = total
+        self.raw_query = raw_query
+        self.generated_on = time.time()
+
+
+class EngineResultBody(deque):
+    """ """

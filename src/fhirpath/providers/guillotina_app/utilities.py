@@ -54,7 +54,7 @@ def create_engine(fhir_version=None):
 class EsEngineFactory:
     """ """
 
-    def get(fhir_version=None):
+    def get(self, fhir_version=None):
         """ """
         return create_engine(fhir_version)
 
@@ -63,28 +63,39 @@ class EsEngineFactory:
 class SearchContextFactory:
     """ """
 
-    def get(self, resource_type, fhir_version=None):
+    def get(self, resource_type, fhir_version=None, unrestricted=False):
         """ """
         engine = create_engine(fhir_version)
-        return SearchContext(engine, resource_type)
+        return SearchContext(
+            engine, resource_type, unrestricted=unrestricted, async_result=True
+        )
 
-    def __call__(self, resource_type, fhir_version=None):
-        return self.get(resource_type, fhir_version)
+    def __call__(self, resource_type, fhir_version=None, unrestricted=False):
+        return self.get(resource_type, fhir_version, unrestricted)
 
 
 @configure.utility(provides=IFhirSearch)
 class FhirSearch:
     """ """
 
-    def __call__(self, params, context=None, resource_type=None, fhir_version=None):
+    def __call__(
+        self,
+        params,
+        context=None,
+        resource_type=None,
+        fhir_version=None,
+        unrestricted=False,
+    ):
         """ """
         if context is None:
-            context = self.create_context(resource_type, fhir_version)
+            context = self.create_context(resource_type, fhir_version, unrestricted)
 
         search = Search.from_params(context, params)
         return search.build()
 
-    def create_context(self, resource_type, fhir_version=None):
+    def create_context(self, resource_type, fhir_version=None, unrestricted=False):
         """ """
         engine = create_engine(fhir_version)
-        return SearchContext(engine, resource_type)
+        return SearchContext(
+            engine, resource_type, unrestricted=unrestricted, async_result=True
+        )

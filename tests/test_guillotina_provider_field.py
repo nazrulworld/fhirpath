@@ -59,7 +59,7 @@ def test_field_init_validate(dummy_guillotina):  # noqa: C901,E999
             title="Organization resource",
             resource_class="tests.fixtures.MyOrganizationResource",
             resource_interface=(
-                "fhirpath.engine.providers." "guillotina_app.interfaces.IFhirResource"
+                "fhirpath.providers." "guillotina_app.interfaces.IFhirResource"
             ),
             fhir_version="R4",
         )
@@ -690,7 +690,7 @@ async def test_fhir_field_from_resource_type(dummy_guillotina):
     assert 'organization_resource' in fields
 
     # test non existing
-    assert fhir_field_from_resource_type('Patient') is None
+    assert fhir_field_from_resource_type('Provenance') is None
 
     with pytest.raises(Invalid):
         fhir_field_from_resource_type('FakeResource')

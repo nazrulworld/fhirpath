@@ -3,15 +3,18 @@ import operator
 from urllib.parse import urlencode
 
 from guillotina.component import query_utility
+from guillotina_elasticsearch.tests.utils import setup_txn_on_container
 
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.fql import Q_
 from fhirpath.fql.interfaces import IGroupTerm
-from fhirpath.fql.interfaces import ITerm
 from fhirpath.interfaces import ISearchContextFactory
+from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
+
+from .fixtures import init_data
 
 
 __author__ = "Md Nazrul Islam<nazrul@zitelab.dk>"
@@ -333,7 +336,33 @@ def test_build_result(dummy_guillotina):
     )
     fhir_search = Search(search_context, params=params)
     result = fhir_search.build()
-    import pdb
 
-    pdb.set_trace(result)
 
+async def test_search_result(es_requester):
+    """ """
+    async with es_requester as requester:
+        container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
+        # init primary data
+        await init_data(requester)
+        search_context = query_utility(ISearchContextFactory).get(
+            resource_type="Organization"
+        )
+        index_name = await search_context.engine.get_index_name(container)
+
+        conn = search_context.engine.connection.raw_connection()
+        await conn.indices.refresh(index=index_name)
+
+        search_tool = query_utility(IFhirSearch)
+        params = (
+            ("active", "true"),
+            ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+            ("_profile", "http://hl7.org/fhir/Organization"),
+            ("identifier", "urn:oid:2.16.528.1|91654"),
+            ("type", "http://hl7.org/fhir/organization-type|prov"),
+            ("address-postalcode", "9100 AA"),
+            ("address", "Den Burg"),
+        )
+
+        result_query = search_tool(params, context=search_context)
+        result = await result_query.fetchall()
+        import pytest;pytest.set_trace()

@@ -1,9 +1,11 @@
 # _*_ coding: utf-8 _*_
+import copy
 import io
 import json
 import os
 import pathlib
 import subprocess
+import uuid
 
 import pytest
 from fhir.resources.organization import Organization as fhir_org
@@ -353,3 +355,28 @@ async def init_data(requester):
         ),
     )
     assert status == 201
+
+
+async def load_organizations_data(requester, count=1):
+    """ """
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Organization.json"), "r") as fp:
+        data = json.load(fp)
+    added = 0
+    while count > added:
+        data_ = copy.deepcopy(data)
+        data_["id"] = str(uuid.uuid4())
+        resp, status = await requester(
+            "POST",
+            "/db/guillotina/",
+            data=json.dumps(
+                {
+                    "@type": "Organization",
+                    "title": "{0}-{1}".format(data_["name"], data_["id"]),
+                    "id": data_["id"],
+                    "organization_resource": data_,
+                    "org_type": "ABT",
+                }
+            ),
+        )
+        assert status == 201
+        added += 1
