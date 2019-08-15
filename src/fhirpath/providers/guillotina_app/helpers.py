@@ -35,4 +35,3 @@ def parse_json_str(str_val: str, encoding: str = "utf-8") -> Union[dict, NoneTyp
             del t, v, tb
 
     return json_dict
-

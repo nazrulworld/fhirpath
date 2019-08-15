@@ -906,3 +906,17 @@ class Search(object):
             if current_page > 1:
                 offset = (current_page - 1) * self.result_params["_count"]
         return builder.limit(self.result_params["_count"], offset)
+
+    def response(self, result):
+        """ """
+
+
+class AsyncSearch(Search):
+    """ """
+    async def __call__(self):
+        """ """
+        query_result = self.build()
+        result = await query_result.fetchall()
+        response = self.response(result)
+
+

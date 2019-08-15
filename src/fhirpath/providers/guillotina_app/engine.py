@@ -8,6 +8,7 @@ from guillotina.directives import index_field
 from guillotina.interfaces import IResourceFactory
 from guillotina.utils import get_authenticated_user
 from guillotina.utils import get_current_container
+from guillotina.utils import get_current_request
 from guillotina.utils import get_security_policy
 from guillotina_elasticsearch.exceptions import QueryErrorException
 from guillotina_elasticsearch.interfaces import IIndexManager
@@ -17,6 +18,7 @@ from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
 from fhirpath.engine import EngineResultBody
 from fhirpath.engine import EngineResultHeader
+from fhirpath.utils import BundleWrapper
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -209,3 +211,10 @@ class EsEngine(Engine):
                     break
 
         return EngineResult(header=header, body=body)
+
+    def wrapped_with_bundle(self, result):
+        """ """
+        request = get_current_request()
+        url = request.rel_url
+        wrapper = BundleWrapper(self, result, url, "searchset")
+        return wrapper()

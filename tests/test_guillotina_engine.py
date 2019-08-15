@@ -32,7 +32,7 @@ async def test_raw_result(es_requester):
         container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
         # init primary data
         await init_data(requester)
-        await load_organizations_data(requester, 261)
+        await load_organizations_data(requester, 161)
         engine = query_utility(IElasticsearchEngineFactory).get()
 
         index_name = await engine.get_index_name(container)
@@ -61,3 +61,7 @@ async def test_raw_result(es_requester):
         )
 
         assert 20 == len(result.body)
+        # Test with bundle wrapper
+        bundle = engine.wrapped_with_bundle(result)
+
+        assert bundle.total == result.header.total

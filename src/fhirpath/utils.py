@@ -1,13 +1,17 @@
 # _*_ coding: utf-8 _*_
+import datetime
 import inspect
+import math
 import os
 import pkgutil
 import re
 import sys
+import uuid
 from importlib import import_module
 from typing import Union
 
 import pkg_resources
+from yarl import URL
 from zope.interface import implementer
 
 from fhirpath.thirdparty import Proxy
@@ -437,3 +441,116 @@ class Model:
         model = ModelFactory(f"{klass.__name__}Model", (klass, PathNavigator), {})
 
         return model
+
+
+class BundleWrapper:
+    """ """
+
+    def __init__(self, engine, result, url: URL, bundle_type="searchset"):
+        """ """
+        self.fhir_version = engine.fhir_release
+        self.bundle = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)()
+        self.bundle.id = str(uuid.uuid4())
+
+        self.bundle.meta = lookup_fhir_class("Meta", fhir_release=self.fhir_version)()
+
+        fhir_dt = lookup_fhir_class("FHIRDate", fhir_release=self.fhir_version)()
+        fhir_dt.date = datetime.datetime.now()
+        self.bundle.meta.lastModified = fhir_dt
+
+        self.bundle.type = bundle_type
+        self.bundle.total = result.header.total
+
+        self.attach_entry(result, "match")
+
+        self.attach_links(url, len(result.body))
+
+    def attach_entry(self, result, mode="match"):
+        """ """
+        if not self.bundle.entry:
+            self.bundle.entry = list()
+
+        for entry in result.body:
+            resource = lookup_fhir_class(
+                entry["resourceType"], fhir_release=self.fhir_version
+            )(entry)
+
+            item = lookup_fhir_class("BundleEntry", fhir_release=self.fhir_version)()
+            item.fullUrl = "{0}/{1}".format(resource.resource_type, resource.id)
+            item.resource = resource
+
+            item.search = lookup_fhir_class(
+                "BundleEntrySearch", fhir_release=self.fhir_version
+            )()
+            item.search.mode = mode
+
+            self.bundle.entry.append(item)
+
+    def attach_links(self, url, entries_count):
+        """ """
+        container = list()
+
+        _max_count = int(url.query.get("_count", 100))
+        _total_results = self.bundle.total
+        _current_offset = int(url.query.get("search-offset", 0))
+        url_params = {}
+
+        container.append(self.make_link("self", url))
+
+        # let's pagitionation here
+        if _total_results > _max_count:
+            # Yes pagination is required!
+            url_params["_count"] = _max_count
+            url_params["search-id"] = self.bundle.id
+
+            # first page
+            if _current_offset != 0:
+                url_params["search-offset"] = 0
+                container.append(self.make_link("first", url, url_params))
+            # Previous Page
+            if _current_offset > 0:
+                url_params["search-offset"] = int(_current_offset - _max_count)
+                container.append(self.make_link("previous", url, url_params))
+
+            # Next Page
+            if _current_offset < int(
+                math.floor(_total_results / _max_count) * _max_count
+            ):
+                url_params["search-offset"] = int(_current_offset + _max_count)
+                container.append(self.make_link("next", url, url_params))
+
+            # last page
+            last_offset = int(math.floor(_total_results / _max_count) * _max_count)
+            if (_total_results % last_offset) == 0:
+                last_offset -= _max_count
+
+            if _current_offset < last_offset and last_offset > 0:
+
+                url_params["search-offset"] = last_offset
+                container.append(self.make_link("last", url, url_params))
+
+        self.bundle.link = container
+
+    def make_link(self, relation, url, params={}):
+        """ """
+        item = lookup_fhir_class("BundleLink", fhir_release=self.fhir_version)()
+        item.relation = relation
+        # fix: params
+        existing_params = url.query.copy()
+        for key in params:
+            existing_params[key] = params[key]
+
+        new_url = url.with_query(existing_params)
+        item.url = str(new_url)
+
+        return item
+
+    def __call__(self):
+        """ """
+        # Validation purpose
+        self.as_json()
+        return self.bundle
+
+    def as_json(self):
+        """ """
+        return self.bundle.as_json()
