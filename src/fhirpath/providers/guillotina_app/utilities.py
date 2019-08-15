@@ -9,8 +9,8 @@ from guillotina_elasticsearch.interfaces import IElasticSearchUtility
 from fhirpath.dialects.elasticsearch import ElasticSearchDialect
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.interfaces import ISearchContextFactory
-from fhirpath.search import Search
 from fhirpath.search import SearchContext
+from fhirpath.search import fhir_search
 
 from .engine import EsConnection
 from .engine import EsEngine
@@ -90,8 +90,7 @@ class FhirSearch:
         if context is None:
             context = self.create_context(resource_type, fhir_version, unrestricted)
 
-        search = Search.from_params(context, params)
-        return search.build()
+        return fhir_search(context, params=params)
 
     def create_context(self, resource_type, fhir_version=None, unrestricted=False):
         """ """

@@ -432,7 +432,7 @@ class AsyncQueryResult(QueryResult):
         result = await self._engine.execute(self._query, self._unrestricted)
         return result
 
-    async def __iter__(self):
+    async def __aiter__(self):
         """ """
         result = await self._engine.execute(self._query, self._unrestricted)
         model_class = self._query.get_from()[0][1]

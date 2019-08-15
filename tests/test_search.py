@@ -335,7 +335,8 @@ def test_build_result(dummy_guillotina):
         ("page", "4"),
     )
     fhir_search = Search(search_context, params=params)
-    result = fhir_search.build()
+    query_result = fhir_search.build()
+    assert query_result.__class__.__name__ == "AsyncQueryResult"
 
 
 async def test_search_result(es_requester):
@@ -363,6 +364,5 @@ async def test_search_result(es_requester):
             ("address", "Den Burg"),
         )
 
-        result_query = search_tool(params, context=search_context)
-        result = await result_query.fetchall()
-        import pytest;pytest.set_trace()
+        bundle = await search_tool(params, context=search_context)
+        assert bundle.total == 1

@@ -909,14 +909,36 @@ class Search(object):
 
     def response(self, result):
         """ """
+        return self.context.engine.wrapped_with_bundle(result)
+
+    def __call__(self):
+        """ """
+        query_result = self.build()
+        result = query_result.fetchall()
+        response = self.response(result)
+
+        return response
 
 
 class AsyncSearch(Search):
     """ """
+
     async def __call__(self):
         """ """
         query_result = self.build()
         result = await query_result.fetchall()
         response = self.response(result)
 
+        return response
 
+
+@at_least_one_of("query_string", "params")
+@mutually_exclusive_parameters("query_string", "params")
+def fhir_search(context, query_string=None, params=None):
+    """ """
+    if context.async_result:
+        klass = AsyncSearch
+    else:
+        klass = Search
+    factory = klass(context, query_string=query_string, params=params)
+    return factory()
