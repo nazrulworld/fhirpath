@@ -2,7 +2,7 @@
 History
 =======
 
-0.1.1 (unreleased)
+0.1.1 (2019-08-15)
 ------------------
 
 - First working version has been released. Of-course not full featured.
