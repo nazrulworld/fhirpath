@@ -1,15 +1,18 @@
 graft src/fhirpath
+prune src/fhirpath/fhirspec
 prune docs
 prune static
+prune tests
+prune scripts
 prune .github
 include AUTHORS.rst
 include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE
 include README.rst
+include src/fhirpath/fhirspec/*.py
 
-recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
-exclude Makefile .editorconfig Pipfile* tox.ini
+exclude Makefile .editorconfig Pipfile* tox.ini buildout.cfg .gitmodules .readthedocs.yml

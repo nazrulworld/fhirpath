@@ -6,7 +6,7 @@ from .interfaces import IBaseClass
 from .interfaces import IValuedClass
 
 
-__author__ = "Md Nazrul Islam <nazrul@zitelab.dk>"
+__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
 def required_value_not_assigned(obj):

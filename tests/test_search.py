@@ -17,7 +17,7 @@ from fhirpath.search import SearchContext
 from .fixtures import init_data
 
 
-__author__ = "Md Nazrul Islam<nazrul@zitelab.dk>"
+__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
 def test_parse_query_string():

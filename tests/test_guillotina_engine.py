@@ -12,7 +12,7 @@ from .fixtures import init_data
 from .fixtures import load_organizations_data
 
 
-__author__ = "Md Nazrul Islam<nazrul@zitelab.dk>"
+__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
 def test_engine_calculate_field_index_name(dummy_guillotina):
