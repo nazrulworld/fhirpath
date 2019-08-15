@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Md Nazrul Islam <email2nazrul@gmail.com>
+* Md Nazrul Islam <email2nazrul@gmail.com> (Author)
 
 Contributors
 ------------

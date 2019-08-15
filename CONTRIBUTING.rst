@@ -66,9 +66,10 @@ Ready to contribute? Here's how to set up `fhirpath` for local development.
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv fhirpath
     $ cd fhirpath/
-    $ python setup.py develop
+    $ pipenv install --dev --pre -e .[test]
+    $ pipenv shell
+    $ buildout -c buildout.cfg
 
 4. Create a branch for local development::
 
@@ -111,7 +112,7 @@ Tips
 
 To run a subset of tests::
 
-$ py.test tests.test_fhirpath
+$ py.test tests
 
 
 Deploying

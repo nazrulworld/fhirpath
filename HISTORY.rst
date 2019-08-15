@@ -2,10 +2,10 @@
 History
 =======
 
-0.1.0a1 (unreleased)
---------------------
+0.1.1 (unreleased)
+------------------
 
-- Nothing changed yet.
+- First working version has been released. Of-course not full featured.
 
 
 0.1.0 (2018-12-15)
