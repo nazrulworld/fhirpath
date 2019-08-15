@@ -54,7 +54,7 @@ requirements = [
     "multidict",
     "decorator",
     "fhir.resources>=5.0.1",
-    "jsonpatch"
+    "jsonpatch",
 ]
 
 setup_requirements = ["pytest-runner"]
@@ -64,6 +64,12 @@ test_requirements = [
     "guillotina>=4.8.13",
     "guillotina_elasticsearch",
     "pytest-docker-fixtures",
+]
+docs_requirements = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinxcontrib-httpdomain",
+    "sphinxcontrib-httpexample",
 ]
 
 setup(
@@ -96,7 +102,10 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    extras_require={"test": test_requirements + setup_requirements},
+    extras_require={
+        "test": test_requirements + setup_requirements,
+        "docs": docs_requirements,
+    },
     url="https://github.com/nazrulworld/fhirpath",
     python_requires=", ".join((">=3.4", "<=3.8.*")),
     project_urls={
