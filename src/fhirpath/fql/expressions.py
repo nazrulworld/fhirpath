@@ -56,7 +56,11 @@ def G_(*terms, path=None, type_=None):
 
 def exists_(path):
     """ """
-    term = ExistsTerm(path)
+    if ITerm.providedBy(path):
+        path_ = path.path
+    else:
+        path_ = path
+    term = ExistsTerm(path_)
     term.unary_operator = operator.pos
     return term
 

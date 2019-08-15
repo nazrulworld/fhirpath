@@ -8,7 +8,6 @@ from guillotina_elasticsearch.tests.utils import run_with_retries
 from guillotina_elasticsearch.tests.utils import setup_txn_on_container
 
 from fhirpath.interfaces import ISearchContextFactory
-from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
 
@@ -93,7 +92,6 @@ async def test_dialect_generated_raw_query(es_requester):
         conn = search_context.engine.connection.raw_connection()
         await conn.indices.refresh(index=index_name)
 
-        search_tool = query_utility(IFhirSearch)
         params = (
             ("active", "true"),
             ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
@@ -103,8 +101,8 @@ async def test_dialect_generated_raw_query(es_requester):
             ("address-postalcode", "9100 AA"),
             ("address", "Den Burg"),
         )
-
-        result_query = search_tool(params, context=search_context)
+        search_tool = Search(context=search_context, params=params)
+        result_query = search_tool.build()
 
         compiled = search_context.engine.dialect.compile(
             result_query._query, "organization_resource"
@@ -130,8 +128,8 @@ async def test_dialect_generated_raw_query(es_requester):
             ("email", "demo1@example.com"),
             ("phone", "2562000002"),
         )
-
-        result_query = search_tool(params, context=search_context)
+        search_tool = Search(context=search_context, params=params)
+        result_query = search_tool.build()
 
         compiled = search_context.engine.dialect.compile(
             result_query._query, "patient_resource"
@@ -155,8 +153,8 @@ async def test_dialect_generated_raw_query(es_requester):
             ("factor-override", "0.8"),
             ("price-override", "40|EUR"),
         )
-
-        result_query = search_tool(params, context=search_context)
+        search_tool = Search(context=search_context, params=params)
+        result_query = search_tool.build()
 
         compiled = search_context.engine.dialect.compile(
             result_query._query, "chargeitem_resource"

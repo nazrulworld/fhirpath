@@ -7,6 +7,7 @@ from datetime import datetime
 import pytest
 import pytz
 
+from fhirpath.enums import WhereConstraintType
 from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
 from fhirpath.fql.expressions import V_
@@ -28,7 +29,6 @@ from fhirpath.fql.types import TermValue
 from fhirpath.storage import PATH_INFO_STORAGE
 from fhirpath.utils import import_string
 from fhirpath.utils import lookup_fhir_class_path
-from fhirpath.enums import WhereConstraintType
 
 
 def test_term_normal(engine):
@@ -132,7 +132,7 @@ def test_expression_existence(engine):
     assert term.unary_operator == operator.neg
 
     # Test from Term
-    term = T_("Task.for.reference", "Patient/PAT-001")
+    term = T_("Task.for.reference")
     term = exists_(term)
     term.finalize(engine)
 

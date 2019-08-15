@@ -5,13 +5,13 @@ import shutil
 import pytest
 
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.fhirspec import FHIRSearchSpecFactory
 from fhirpath.fhirspec import FHIRSpec
 from fhirpath.fhirspec import FhirSpecFactory
-from fhirpath.fhirspec import FHIRSearchSpecFactory
 from fhirpath.fhirspec.downloader import download_and_extract
+from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import expand_path
-from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 
 from .fixtures import has_internet_connection
 
