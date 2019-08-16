@@ -55,6 +55,7 @@ requirements = [
     "decorator",
     "fhir.resources>=5.0.1",
     "jsonpatch",
+    "yarl"
 ]
 
 setup_requirements = ["pytest-runner"]
