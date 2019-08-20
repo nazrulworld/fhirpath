@@ -107,8 +107,8 @@ setup(
         "test": test_requirements + setup_requirements,
         "docs": docs_requirements,
     },
-    url="https://github.com/nazrulworld/fhirpath",
-    python_requires=", ".join((">=3.4", "<=3.8.*")),
+    url="https://nazrul.me/fhirpath/",
+    python_requires=", ".join((">=3.5", "<=3.8.*")),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",
