@@ -51,7 +51,7 @@ class ElasticsearchEngineFactory:
 
     def __call__(self, fhir_version=None):
         """ """
-        return create_engine(fhir_version)
+        return create_engine(self.es_catalog, fhir_version=fhir_version)
 
 
 @implementer(ISearchContextFactory)

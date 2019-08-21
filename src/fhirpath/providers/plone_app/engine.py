@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
 import logging
-
+from plone import api
 from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
@@ -8,7 +8,14 @@ from fhirpath.engine import EngineResult
 from fhirpath.engine import EngineResultBody
 from fhirpath.engine import EngineResultHeader
 from fhirpath.utils import BundleWrapper
+from fhirpath.utils import import_string
 from zope.interface import Invalid
+from zope.schema import getFields
+from Products.CMFCore.utils import _checkPermission
+from Products.CMFCore.utils import _getAuthenticatedUser
+from Products.CMFCore.permissions import AccessInactivePortalContent
+from DateTime import DateTime
+from fhirpath.types import FhirDateTime
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -20,10 +27,10 @@ class ElasticsearchConnection(Connection):
     """Elasticsearch Connection"""
 
     def server_info(self):
-        info = {}
+        """ """
         try:
             conn = self.raw_connection()
-            info = await conn.info()
+            info = conn.info()
         except Exception:
             logger.warning(
                 "Could not retrieve Elasticsearch Server info, "
@@ -65,7 +72,7 @@ class ElasticsearchConnection(Connection):
 
     def scroll(self, scroll_id, scroll="30s"):
         """ """
-        result = await self.raw_connection().scroll(
+        result = self.raw_connection().scroll(
             body={"scroll_id": scroll_id}, scroll=scroll
         )
         self._evaluate_result(result)
@@ -78,7 +85,9 @@ class ElasticsearchEngine(Engine):
     def __init__(self, es_catalog, fhir_release, conn_factory, dialect_factory):
         """ """
         self.es_catalog = IElasticSearchCatalog(es_catalog)
-        super(ElasticsearchEngine, self).__init__(fhir_release, conn_factory, dialect_factory)
+        super(ElasticsearchEngine, self).__init__(
+            fhir_release, conn_factory, dialect_factory
+        )
 
     def get_index_name(self):
         """ """
@@ -95,10 +104,10 @@ class ElasticsearchEngine(Engine):
             params["security_callable"] = self.build_security_query
 
         compiled = self.dialect.compile(**params)
-        raw_result = await self.connection.fetch(compiled)
+        raw_result = self.connection.fetch(compiled)
 
         # xxx: process result
-        result = await self.process_raw_result(raw_result, field_index_name)
+        result = self.process_raw_result(raw_result, field_index_name)
         result.header.raw_query = self.connection.finalize_search_params(compiled)
 
         return result
@@ -106,66 +115,61 @@ class ElasticsearchEngine(Engine):
     def build_security_query(self):
         # The users who has plone.AccessContent permission by prinperm
         # The roles who has plone.AccessContent permission by roleperm
-        users = []
-        roles = []
-        user = get_authenticated_user()
-        policy = get_security_policy(user)
+        show_inactive = False  # we will take care later
+        user = _getAuthenticatedUser(self.es_catalog.catalogtool)
+        users_roles = self.es_catalog.catalogtool._listAllowedRolesAndUsers(user)
+        params = {"allowedRolesAndUsers": users_roles}
+        if not show_inactive and not _checkPermission(
+            AccessInactivePortalContent, self.es_catalog.catalogtool
+        ):
+            params["effectiveRange"] = FhirDateTime(DateTime().ISO8601())
 
-        users.append(user.id)
-        users.extend(user.groups)
+        return params
 
-        roles_dict = policy.global_principal_roles(user.id, user.groups)
-        roles.extend([key for key, value in roles_dict.items() if value])
-
-        return {"access_roles": roles, "access_users": users}
-
-    def calculate_field_index_name(self, resource_types):
+    def calculate_field_index_name(self, resource_type):
         """1.) xxx: should be cached
-        """
-        factory = query_utility(IResourceFactory, name=resource_types)
-        if factory:
-            name = EsEngine.field_index_name_from_factory(
-                factory, resource_type=resource_types
-            )
-            if name:
-                return name
 
-        types = [x[1] for x in get_utilities_for(IResourceFactory)]
-        for factory in types:
-            name = EsEngine.field_index_name_from_factory(
-                factory, resource_type=resource_types
-            )
-            if name:
-                return name
+        """
+        # Products.CMFPlone.TypesTool.TypesTool
+        types_tool = api.portal.get_tool("portal_types")
+        factory = types_tool.getTypeInfo(resource_type)
+        name = None
+
+        if factory:
+            name = ElasticsearchEngine.field_index_name_from_factory(factory)
+
+        if name is None:
+            for type_name in types_tool.listContentTypes():
+                factory = types_tool.getTypeInfo(type_name)
+                name = ElasticsearchEngine.field_index_name_from_factory(factory)
+                if name:
+                    break
+        if name and name in self.es_catalog.catalogtool.indexes():
+            return name
 
     @staticmethod
     def field_index_name_from_factory(factory, resource_type=None):
         """ """
         if resource_type is None:
-            resource_type = factory.type_name
+            resource_type = factory.id
 
-        def _find(schema):
-            field_indexes = schema.queryTaggedValue(index_field.key, default={})
-            for name in field_indexes:
-                configs = field_indexes[name]
+        def _from_schema(schema):
+            for name, field in getFields(schema).items():
                 if (
-                    "fhirpath_enabled" in configs
-                    and configs["fhirpath_enabled"] is True
+                    field.__class__.__name__ == "FhirResource"
+                    and resource_type == field.get_resource_type()
                 ):
-                    if resource_type == configs["resource_type"]:
-                        return name
-            return None
+                    return name
 
-        name = _find(factory.schema)
-        if name is not None:
+        schema = factory.lookupSchema() or factory.lookupModel().schema
+        name = _from_schema(schema)
+        if name:
             return name
 
         for behavior in factory.behaviors:
-            tagged_query = getattr(behavior, "queryTaggedValue", None)
-            if tagged_query is None:
-                continue
-            name = _find(behavior)
-            if name is not None:
+            schema = import_string(behavior)
+            name = _from_schema(schema)
+            if name:
                 return name
 
     def process_raw_result(self, rawresult, fieldname):
@@ -189,7 +193,7 @@ class ElasticsearchEngine(Engine):
 
             while header.total > consumed:
                 # xxx: dont know yet, if from_, size is better solution
-                raw_res = await self.connection.scroll(rawresult["_scroll_id"])
+                raw_res = self.connection.scroll(rawresult["_scroll_id"])
                 if len(raw_res["hits"]["hits"]) == 0:
                     break
 
