@@ -1,25 +1,14 @@
 # _*_ coding: utf-8 _*_
 import logging
 
-from guillotina.component import get_adapter
-from guillotina.component import get_utilities_for
-from guillotina.component import query_utility
-from guillotina.directives import index_field
-from guillotina.interfaces import IResourceFactory
-from guillotina.utils import get_authenticated_user
-from guillotina.utils import get_current_container
-from guillotina.utils import get_current_request
-from guillotina.utils import get_security_policy
-from guillotina_elasticsearch.exceptions import QueryErrorException
-from guillotina_elasticsearch.interfaces import IIndexManager
-from collective.elasticsearch.es import CUSTOM_INDEX_NAME_ATTR
-
+from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
 from fhirpath.engine import EngineResultBody
 from fhirpath.engine import EngineResultHeader
 from fhirpath.utils import BundleWrapper
+from zope.interface import Invalid
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -72,7 +61,7 @@ class ElasticsearchConnection(Connection):
             error_message = "Unknown"
             for failure in result["_shards"].get("failures") or []:
                 error_message = failure["reason"]
-            raise QueryErrorException(reason=error_message)
+            raise Invalid(reason=error_message)
 
     def scroll(self, scroll_id, scroll="30s"):
         """ """
@@ -86,18 +75,14 @@ class ElasticsearchConnection(Connection):
 class ElasticsearchEngine(Engine):
     """Elasticsearch Engine"""
 
+    def __init__(self, es_catalog, fhir_release, conn_factory, dialect_factory):
+        """ """
+        self.es_catalog = IElasticSearchCatalog(es_catalog)
+        super(ElasticsearchEngine, self).__init__(fhir_release, conn_factory, dialect_factory)
+
     def get_index_name(self):
         """ """
-        self.es_search.index_name
-
-    def real_index_name(self):
-        if self.index_version:
-            return '%s_%i' % (self.index_name, self.index_version)
-        return self.index_name
-
-
-    def doc_type(self):
-        return self.catalogtool.getId().lower()
+        self.es_catalog.index_name
 
     def execute(self, query, unrestricted=False):
         """ """

@@ -1,99 +1,87 @@
 # _*_ coding: utf-8 _*_
-from copy import deepcopy
-
-from guillotina import app_settings
-from guillotina import configure
-from guillotina.component import get_utility
-from guillotina_elasticsearch.interfaces import IElasticSearchUtility
-
+from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.dialects.elasticsearch import ElasticSearchDialect
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.interfaces import IEngine
+from fhirpath.interfaces import IFhirSearch
+from fhirpath.interfaces import ISearchContext
 from fhirpath.interfaces import ISearchContextFactory
+from fhirpath.providers.interfaces import IElasticsearchEngineFactory
 from fhirpath.search import SearchContext
 from fhirpath.search import fhir_search
+from zope.component import adapter
+from zope.interface import implementer
 
-from .engine import EsConnection
-from .engine import EsEngine
-from .interfaces import IElasticsearchEngineFactory
-from .interfaces import IFhirSearch
+from .engine import ElasticsearchConnection
+from .engine import ElasticsearchEngine
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
-def default_settings():
-
-    settings = app_settings.get("fhirpath", dict()).get("default_settings", dict())
-    return deepcopy(settings)
-
-
-def create_engine(fhir_version=None):
+def create_engine(es_catalog, fhir_version=None):
     """ """
-    if fhir_version is None:
-        fhir_version = default_settings().get("fhir_version", None)
-
     if fhir_version is None:
         fhir_version = FHIR_VERSION.DEFAULT
     if isinstance(fhir_version, str):
         fhir_version = FHIR_VERSION[fhir_version]
 
     def es_conn_factory(engine):
-        return EsConnection.from_prepared(engine.es_catalog.connection)
+        return ElasticsearchConnection.from_prepared(engine.es_catalog.connection)
 
     def es_dialect_factory(engine):
         """ """
         return ElasticSearchDialect(connection=engine.connection)
 
-    engine_ = EsEngine(fhir_version, es_conn_factory, es_dialect_factory)
+    engine_ = ElasticsearchEngine(
+        es_catalog, fhir_version, es_conn_factory, es_dialect_factory
+    )
 
     return engine_
 
 
-@configure.utility(provides=IElasticsearchEngineFactory)
-class EsEngineFactory:
+@implementer(IElasticsearchEngineFactory)
+@adapter(IElasticSearchCatalog)
+class ElasticsearchEngineFactory:
     """ """
 
-    def get(self, fhir_version=None):
+    def __init__(self, es_catalog):
+        """ """
+        self.es_catalog = es_catalog
+
+    def __call__(self, fhir_version=None):
         """ """
         return create_engine(fhir_version)
 
 
-@configure.utility(provides=ISearchContextFactory)
+@implementer(ISearchContextFactory)
+@adapter(IEngine)
 class SearchContextFactory:
     """ """
 
+    def __init__(self, engine):
+        """ """
+        self.engine = engine
+
     def get(self, resource_type, fhir_version=None, unrestricted=False):
         """ """
-        engine = create_engine(fhir_version)
         return SearchContext(
-            engine, resource_type, unrestricted=unrestricted, async_result=True
+            self.engine, resource_type, unrestricted=unrestricted, async_result=True
         )
 
     def __call__(self, resource_type, fhir_version=None, unrestricted=False):
         return self.get(resource_type, fhir_version, unrestricted)
 
 
-@configure.utility(provides=IFhirSearch)
+@implementer(IFhirSearch)
+@adapter(ISearchContext)
 class FhirSearch:
     """ """
 
-    def __call__(
-        self,
-        params,
-        context=None,
-        resource_type=None,
-        fhir_version=None,
-        unrestricted=False,
-    ):
+    def __init__(self, context):
         """ """
-        if context is None:
-            context = self.create_context(resource_type, fhir_version, unrestricted)
+        self.context = context
 
-        return fhir_search(context, params=params)
-
-    def create_context(self, resource_type, fhir_version=None, unrestricted=False):
+    def __call__(self, params):
         """ """
-        engine = create_engine(fhir_version)
-        return SearchContext(
-            engine, resource_type, unrestricted=unrestricted, async_result=True
-        )
+        return fhir_search(self.context, params=params)

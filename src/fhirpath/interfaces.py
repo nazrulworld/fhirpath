@@ -128,3 +128,7 @@ class IDialect(Interface):
 
 class IModel(Interface):
     """FHIR Model Class"""
+
+
+class IFhirSearch(Interface):
+    """ """
