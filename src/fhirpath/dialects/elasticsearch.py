@@ -363,7 +363,23 @@ class ElasticSearchDialect(DialectBase):
             if isinstance(values, (str, bytes)):
                 values = [values]
             for val in values:
-                should_list.append({"match": {field: val}})
+                if IFhirPrimitiveType.providedBy(val):
+                    if val.__visit_name__ == "dateTime":
+                        # just validation
+                        val.to_python()
+                        range_ = {
+                            field: {
+                                ES_PY_OPERATOR_MAP[operator.ge]: val,
+                                ES_PY_OPERATOR_MAP[operator.le]: val,
+                            }
+                        }
+                        should_list.append({"range": range_})
+                    else:
+                        raise NotImplementedError
+                elif isinstance(val, (str, bytes)):
+                    should_list.append({"match": {field: val}})
+                else:
+                    raise NotImplementedError
 
         body_structure["query"]["bool"]["filter"].append(
             {"bool": {"should": should_list, "minimum_should_match": 1}}
@@ -393,5 +409,5 @@ class ElasticSearchDialect(DialectBase):
             },
             "size": 100,
             "from": 0,
-            "sort": list()
+            "sort": list(),
         }
