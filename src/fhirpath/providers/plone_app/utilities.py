@@ -63,14 +63,14 @@ class SearchContextFactory:
         """ """
         self.engine = engine
 
-    def get(self, resource_type, fhir_version=None, unrestricted=False):
+    def get(self, resource_type, unrestricted=False):
         """ """
         return SearchContext(
-            self.engine, resource_type, unrestricted=unrestricted, async_result=True
+            self.engine, resource_type, unrestricted=unrestricted, async_result=False
         )
 
-    def __call__(self, resource_type, fhir_version=None, unrestricted=False):
-        return self.get(resource_type, fhir_version, unrestricted)
+    def __call__(self, resource_type, unrestricted=False):
+        return self.get(resource_type, unrestricted)
 
 
 @implementer(IFhirSearch)
