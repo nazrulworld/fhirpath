@@ -1,13 +1,8 @@
 # _*_ coding: utf-8 _*_
 import logging
 
-from DateTime import DateTime
-from zope.interface import Invalid
-from zope.schema import getFields
-from zope.globalrequest import getRequest
-from yarl import URL
-
 from collective.elasticsearch.interfaces import IElasticSearchCatalog
+from DateTime import DateTime
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
@@ -15,11 +10,16 @@ from fhirpath.engine import EngineResultBody
 from fhirpath.engine import EngineResultHeader
 from fhirpath.types import FhirDateTime
 from fhirpath.utils import BundleWrapper
-from fhirpath.utils import import_string
 from plone import api
+from plone.behavior.interfaces import IBehavior
 from Products.CMFCore.permissions import AccessInactivePortalContent
 from Products.CMFCore.utils import _checkPermission
 from Products.CMFCore.utils import _getAuthenticatedUser
+from yarl import URL
+from zope.component import getUtility
+from zope.globalrequest import getRequest
+from zope.interface import Invalid
+from zope.schema import getFields
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -140,14 +140,21 @@ class ElasticsearchEngine(Engine):
         name = None
 
         if factory:
-            name = ElasticsearchEngine.field_index_name_from_factory(factory)
+            name = ElasticsearchEngine.field_index_name_from_factory(
+                factory, resource_type=resource_type
+            )
 
         if name is None:
             for type_name in types_tool.listContentTypes():
                 factory = types_tool.getTypeInfo(type_name)
-                name = ElasticsearchEngine.field_index_name_from_factory(factory)
+                if factory.meta_type != "Dexterity FTI":
+                    continue
+                name = ElasticsearchEngine.field_index_name_from_factory(
+                    factory, resource_type=resource_type
+                )
                 if name:
                     break
+
         if name and name in self.es_catalog.catalogtool.indexes():
             return name
 
@@ -171,7 +178,9 @@ class ElasticsearchEngine(Engine):
             return name
 
         for behavior in factory.behaviors:
-            schema = import_string(behavior)
+            schema = getUtility(IBehavior, name=behavior).interface
+            if schema is None:
+                continue
             name = _from_schema(schema)
             if name:
                 return name
@@ -213,6 +222,12 @@ class ElasticsearchEngine(Engine):
     def wrapped_with_bundle(self, result):
         """ """
         request = getRequest()
-        url = request.rel_url
+        base_url = URL(request.getURL())
+
+        if request.get("QUERY_STRING", None):
+            url = base_url.with_query(request.get("QUERY_STRING", None))
+        else:
+            url = base_url
+
         wrapper = BundleWrapper(self, result, url, "searchset")
         return wrapper()
