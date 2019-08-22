@@ -1,21 +1,25 @@
 # _*_ coding: utf-8 _*_
 import logging
-from plone import api
+
+from DateTime import DateTime
+from zope.interface import Invalid
+from zope.schema import getFields
+from zope.globalrequest import getRequest
+from yarl import URL
+
 from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
 from fhirpath.engine import EngineResultBody
 from fhirpath.engine import EngineResultHeader
+from fhirpath.types import FhirDateTime
 from fhirpath.utils import BundleWrapper
 from fhirpath.utils import import_string
-from zope.interface import Invalid
-from zope.schema import getFields
+from plone import api
+from Products.CMFCore.permissions import AccessInactivePortalContent
 from Products.CMFCore.utils import _checkPermission
 from Products.CMFCore.utils import _getAuthenticatedUser
-from Products.CMFCore.permissions import AccessInactivePortalContent
-from DateTime import DateTime
-from fhirpath.types import FhirDateTime
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -208,7 +212,7 @@ class ElasticsearchEngine(Engine):
 
     def wrapped_with_bundle(self, result):
         """ """
-        request = get_current_request()
+        request = getRequest()
         url = request.rel_url
         wrapper = BundleWrapper(self, result, url, "searchset")
         return wrapper()

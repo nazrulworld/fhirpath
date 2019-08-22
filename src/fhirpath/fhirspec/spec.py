@@ -10,8 +10,8 @@ import logging
 import os
 import pathlib
 import re
-from copy import copy
 from collections import defaultdict
+from copy import copy
 
 from fhirpath.interfaces import IStorage
 from fhirpath.thirdparty import attrdict

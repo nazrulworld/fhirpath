@@ -7,9 +7,8 @@ with little customization
 Decorators for validating parameters"""
 import inspect
 
-from zope.interface import Invalid
-
 from decorator import decorator
+from zope.interface import Invalid
 
 
 class InvalidParameterError(Invalid):
