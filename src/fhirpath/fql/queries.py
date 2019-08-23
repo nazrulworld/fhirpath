@@ -419,9 +419,12 @@ class QueryResult(object):
 
             return self.results[result_key][result_index]
 
-        def __iter__(self):
-            """ """
-            pass
+    def __iter__(self):
+        """ """
+        result = self._engine.execute(self._query, self._unrestricted)
+        model_class = self._query.get_from()[0][1]
+        for item in result.body:
+            yield model_class(item)
 
 
 class AsyncQueryResult(QueryResult):
