@@ -2,14 +2,13 @@
 import math
 from copy import copy
 
-from zope.interface import implementer
-
 from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.exceptions import ValidationError
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
 from fhirpath.utils import Model
 from fhirpath.utils import builder
+from zope.interface import implementer
 
 from .constraints import required_finalized
 from .constraints import required_from_resource
@@ -319,7 +318,8 @@ class QueryResult(object):
 
     def fetchall(self):
         """ """
-        pass
+        result = self._engine.execute(self._query, self._unrestricted)
+        return result
 
     def single(self):
         """Will return the single item in the input if there is just one item.

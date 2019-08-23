@@ -187,12 +187,18 @@ class ElasticsearchEngine(Engine):
 
     def process_raw_result(self, rawresult, fieldname):
         """ """
-        header = EngineResultHeader(total=rawresult["hits"]["total"]["value"])
+        # let´s make some compabilities
+        if isinstance(rawresult["hits"]["total"], dict):
+            total = rawresult["hits"]["total"]["value"]
+        else:
+            total = rawresult["hits"]["total"]
+
+        header = EngineResultHeader(total=total)
         body = EngineResultBody()
 
         def extract(hits):
             for res in hits:
-                if res["_type"] != "_doc":
+                if res["_type"] != "portal_catalog":
                     continue
                 if fieldname in res["_source"]:
                     body.append(res["_source"][fieldname])
@@ -222,6 +228,9 @@ class ElasticsearchEngine(Engine):
     def wrapped_with_bundle(self, result):
         """ """
         request = getRequest()
+        if request is None:
+            # fallback
+            request = api.portal.get().REQUEST
         base_url = URL(request.getURL())
 
         if request.get("QUERY_STRING", None):

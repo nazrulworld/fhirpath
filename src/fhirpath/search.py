@@ -915,6 +915,7 @@ class Search(object):
         """ """
         query_result = self.build()
         result = query_result.fetchall()
+        assert result is not None
         response = self.response(result)
 
         return response
