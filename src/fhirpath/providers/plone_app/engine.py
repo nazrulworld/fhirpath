@@ -1,8 +1,14 @@
 # _*_ coding: utf-8 _*_
 import logging
 
-from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from DateTime import DateTime
+from yarl import URL
+from zope.component import getUtility
+from zope.globalrequest import getRequest
+from zope.interface import Invalid
+from zope.schema import getFields
+
+from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
@@ -15,11 +21,6 @@ from plone.behavior.interfaces import IBehavior
 from Products.CMFCore.permissions import AccessInactivePortalContent
 from Products.CMFCore.utils import _checkPermission
 from Products.CMFCore.utils import _getAuthenticatedUser
-from yarl import URL
-from zope.component import getUtility
-from zope.globalrequest import getRequest
-from zope.interface import Invalid
-from zope.schema import getFields
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"

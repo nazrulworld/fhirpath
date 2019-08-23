@@ -54,6 +54,33 @@ def reraise(klass, msg=None, callback=None, **kw):
         del t, v, tb
 
 
+def force_str(value, allow_non_str=True):
+    """ """
+    if isinstance(value, bytes):
+        return value.decode("utf8", "strict")
+
+    if not isinstance(value, str) and allow_non_str:
+        if not allow_non_str:
+            return value
+        else:
+            value = str(value)
+    return value
+
+
+def force_bytes(string, encoding="utf8", errors="strict"):
+
+    if isinstance(string, bytes):
+        if encoding == "utf8":
+            return string
+        else:
+            return string.decode("utf8", errors).encode(encoding, errors)
+
+    if not isinstance(string, str):
+        return string
+
+    return string.encode(encoding, errors)
+
+
 def import_string(dotted_path: str) -> type:
     """Shameless hack from django utils, please don't mind!"""
     module_path, class_name = None, None

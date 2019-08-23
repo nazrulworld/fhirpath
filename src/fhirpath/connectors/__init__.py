@@ -1,3 +1,10 @@
 # _*_ coding: utf-8 _*_
+from .url import _parse_rfc1738_args
 
-"""Connection Management Module"""
+
+__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def make_url(connection_str):
+    """ """
+    return _parse_rfc1738_args(connection_str)
