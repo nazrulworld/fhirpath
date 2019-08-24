@@ -13,7 +13,7 @@ from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import expand_path
 
-from .fixtures import has_internet_connection
+from ._utils import has_internet_connection
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
