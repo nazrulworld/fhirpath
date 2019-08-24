@@ -20,9 +20,9 @@ __all__ = [
 ]
 
 
-def create_engine():
+def create_engine(conn):
     """For now we are using ES dialect"""
-    engine = Engine(FHIR_VERSION.R4, connection_factory, dialect_factory)
+    engine = Engine(FHIR_VERSION.R4, lambda x: conn, dialect_factory)
     return engine
 
 
