@@ -9,6 +9,7 @@ from zope.interface import Invalid
 from zope.schema import getFields
 
 from collective.elasticsearch.interfaces import IElasticSearchCatalog
+from fhirpath.connectors import create_connection
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
@@ -30,6 +31,12 @@ logger = logging.getLogger("fhirpath.providers.plone.engine")
 
 class ElasticsearchConnection(Connection):
     """Elasticsearch Connection"""
+
+    @classmethod
+    def from_url(cls, url: str):
+        """ """
+        self = cls(create_connection(url, "elasticsearch.Elasticsearch"))
+        return self
 
     def server_info(self):
         """ """

@@ -13,6 +13,7 @@ from guillotina.utils import get_security_policy
 from guillotina_elasticsearch.exceptions import QueryErrorException
 from guillotina_elasticsearch.interfaces import IIndexManager
 
+from fhirpath.connectors import create_connection
 from fhirpath.engine import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
@@ -28,6 +29,12 @@ logger = logging.getLogger("fhirpath.providers.guillotina.engine")
 
 class EsConnection(Connection):
     """Elasticsearch Connection"""
+
+    @classmethod
+    def from_url(cls, url: str):
+        """ """
+        self = cls(create_connection(url, "aioelasticsearch.Elasticsearch"))
+        return self
 
     async def server_info(self):
         info = {}
