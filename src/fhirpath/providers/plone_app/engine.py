@@ -11,17 +11,13 @@ from zope.schema import getFields
 from collective.elasticsearch.interfaces import IElasticSearchCatalog
 from fhirpath.connectors import create_connection
 from fhirpath.engine import Connection
-from fhirpath.engine import Engine
-from fhirpath.engine import EngineResult
-from fhirpath.engine import EngineResultBody
-from fhirpath.engine import EngineResultHeader
 from fhirpath.types import FhirDateTime
-from fhirpath.utils import BundleWrapper
 from plone import api
 from plone.behavior.interfaces import IBehavior
 from Products.CMFCore.permissions import AccessInactivePortalContent
 from Products.CMFCore.utils import _checkPermission
 from Products.CMFCore.utils import _getAuthenticatedUser
+from fhirpath.engine.es import ElasticsearchEngine as BaseEngine
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -91,7 +87,7 @@ class ElasticsearchConnection(Connection):
         return result
 
 
-class ElasticsearchEngine(Engine):
+class ElasticsearchEngine(BaseEngine):
     """Elasticsearch Engine"""
 
     def __init__(self, es_catalog, fhir_release, conn_factory, dialect_factory):
@@ -104,25 +100,6 @@ class ElasticsearchEngine(Engine):
     def get_index_name(self):
         """ """
         self.es_catalog.index_name
-
-    def execute(self, query, unrestricted=False):
-        """ """
-        # for now we support single from resource
-        resource_type = query.get_from()[0][1].resource_type
-        field_index_name = self.calculate_field_index_name(resource_type)
-
-        params = {"query": query, "root_replacer": field_index_name}
-        if unrestricted is False:
-            params["security_callable"] = self.build_security_query
-
-        compiled = self.dialect.compile(**params)
-        raw_result = self.connection.fetch(compiled)
-
-        # xxx: process result
-        result = self.process_raw_result(raw_result, field_index_name)
-        result.header.raw_query = self.connection.finalize_search_params(compiled)
-
-        return result
 
     def build_security_query(self):
         # The users who has plone.AccessContent permission by prinperm
@@ -193,48 +170,10 @@ class ElasticsearchEngine(Engine):
             if name:
                 return name
 
-    def process_raw_result(self, rawresult, fieldname):
-        """ """
-        # let´s make some compabilities
-        if isinstance(rawresult["hits"]["total"], dict):
-            total = rawresult["hits"]["total"]["value"]
-        else:
-            total = rawresult["hits"]["total"]
-
-        header = EngineResultHeader(total=total)
-        body = EngineResultBody()
-
-        def extract(hits):
-            for res in hits:
-                if res["_type"] != "portal_catalog":
-                    continue
-                if fieldname in res["_source"]:
-                    body.append(res["_source"][fieldname])
-
-        # extract primary data
-        extract(rawresult["hits"]["hits"])
-
-        if "_scroll_id" in rawresult and header.total > len(rawresult["hits"]["hits"]):
-            # we need to fetch all!
-            consumed = len(rawresult["hits"]["hits"])
-
-            while header.total > consumed:
-                # xxx: dont know yet, if from_, size is better solution
-                raw_res = self.connection.scroll(rawresult["_scroll_id"])
-                if len(raw_res["hits"]["hits"]) == 0:
-                    break
-
-                extract(raw_res["hits"]["hits"])
-
-                consumed += len(raw_res["hits"]["hits"])
-
-                if header.total <= consumed:
-                    break
-
-        return EngineResult(header=header, body=body)
-
-    def wrapped_with_bundle(self, result):
-        """ """
+    def current_url(self):
+        """
+        complete url from current request
+        return yarl.URL"""
         request = getRequest()
         if request is None:
             # fallback
@@ -245,6 +184,12 @@ class ElasticsearchEngine(Engine):
             url = base_url.with_query(request.get("QUERY_STRING", None))
         else:
             url = base_url
+        return url
 
-        wrapper = BundleWrapper(self, result, url, "searchset")
-        return wrapper()
+    def extract_hits(self, fieldname, hits, container):
+        """ """
+        for res in hits:
+            if res["_type"] != "portal_catalog":
+                continue
+            if fieldname in res["_source"]:
+                container.append(res["_source"][fieldname])

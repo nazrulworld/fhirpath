@@ -46,7 +46,7 @@ class ElasticsearchEngine(Engine):
     def calculate_field_index_name(self, resource_type):
         raise NotImplementedError
 
-    def extract_hits(self, hits, container):
+    def extract_hits(self, fieldname, hits, container):
         """ """
         raise NotImplementedError
 
@@ -62,7 +62,7 @@ class ElasticsearchEngine(Engine):
         body = EngineResultBody()
 
         # extract primary data
-        self.extract_hits(rawresult["hits"]["hits"], body)
+        self.extract_hits(fieldname, rawresult["hits"]["hits"], body)
 
         if "_scroll_id" in rawresult and header.total > len(rawresult["hits"]["hits"]):
             # we need to fetch all!
@@ -74,7 +74,7 @@ class ElasticsearchEngine(Engine):
                 if len(raw_res["hits"]["hits"]) == 0:
                     break
 
-                self.extract_hits(raw_res["hits"]["hits"], body)
+                self.extract_hits(fieldname, raw_res["hits"]["hits"], body)
 
                 consumed += len(raw_res["hits"]["hits"])
 
