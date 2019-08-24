@@ -6,6 +6,7 @@ import os
 import pathlib
 import subprocess
 import uuid
+import time
 
 import pytz
 from isodate import datetime_isoformat
@@ -57,6 +58,25 @@ def fhir_resource_mapping(resource_type: str, cache: bool = True):
         FHIR_ES_MAPPINGS_CACHE[resource_type] = mapping_dict["mapping"]
 
     return FHIR_ES_MAPPINGS_CACHE[resource_type]
+
+
+def load_organizations_data(conn, count=1):
+    """ """
+    added = 0
+
+    while count > added:
+        organization_data = _make_index_item("Organization")
+        bulk_data = [
+            {"index": {"_id": organization_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+            organization_data,
+        ]
+        res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+        assert res["errors"] is False
+        added += 1
+        if added % 100 == 0:
+            time.sleep(1)
+
+    conn.indices.refresh(index=ES_INDEX_NAME_REAL)
 
 
 def _setup_es_index(conn):

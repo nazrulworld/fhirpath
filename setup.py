@@ -62,6 +62,7 @@ setup_requirements = ["pytest-runner"]
 
 test_requirements = [
     "pytest",
+    "pytest-mock",
     "guillotina>=4.8.13",
     "guillotina_elasticsearch",
     "pytest-docker-fixtures",

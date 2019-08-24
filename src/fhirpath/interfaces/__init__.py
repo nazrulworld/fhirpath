@@ -2,6 +2,9 @@
 from zope.interface import Attribute
 from zope.interface import Interface
 
+from .engine import IElasticsearchEngine  # noqa: F401
+from .engine import IEngine  # noqa: F401
+
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
@@ -73,23 +76,6 @@ class IPathInfoContext(Interface):
     type_class = Attribute("Type Class")
     optional = Attribute("Optional")
     multiple = Attribute("Multiple")
-
-
-class IEngine(Interface):
-    """ """
-
-    fhir_release = Attribute("FHIR Release")
-    connection = Attribute("DB Connection")
-    dialect = Attribute("Dialect")
-
-    def create_query():
-        """Return QueryBuilder"""
-
-    def connect(**kw):
-        """Return a new Connection object."""
-
-    def get_index_name(context):
-        """ """
 
 
 class IEngineFactory(Interface):

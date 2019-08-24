@@ -16,30 +16,21 @@ from .fixtures import load_organizations_data
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
-async def test_fetch_all(es_requester):
+def test_fetch_all(es_data, engine):
     """ """
-    async with es_requester as requester:
-        container, request, txn, tm = await setup_txn_on_container(requester)  # noqa
-        # init primary data
-        await init_data(requester)
-        await load_organizations_data(requester, 152)
-        engine = query_utility(IElasticsearchEngineFactory).get()
+    conn, meta_info = es_data
+    load_organizations_data(conn, 152)
 
-        index_name = await engine.get_index_name(container)
+    builder = Q_(resource="Organization", engine=engine)
+    builder = (
+        builder.where(T_("Organization.active") == V_("true"))
+        .where(T_("Organization.meta.lastUpdated", "2010-05-28T05:35:56+00:00"))
+        .sort(sort_("Organization.meta.lastUpdated", SortOrderType.DESC))
+        .limit(20, 2)
+    )
 
-        conn = engine.connection.raw_connection()
-        await conn.indices.refresh(index=index_name)
-
-        builder = Q_(resource="Organization", engine=engine)
-        builder = (
-            builder.where(T_("Organization.active") == V_("true"))
-            .where(T_("Organization.meta.lastUpdated", "2010-05-28T05:35:56+00:00"))
-            .sort(sort_("Organization.meta.lastUpdated", SortOrderType.DESC))
-            .limit(20, 2)
-        )
-
-        async for resource in builder(async_result=True):
-            assert resource.__class__.__name__ == "OrganizationModel"
+    for resource in builder(async_result=False):
+        assert resource.__class__.__name__ == "OrganizationModel"
         # test fetch all
-        result = await builder(async_result=True).fetchall()
-        result.__class__.__name__ == "EngineResult"
+    result = builder(async_result=False).fetchall()
+    result.__class__.__name__ == "EngineResult"
