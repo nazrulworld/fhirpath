@@ -14,7 +14,7 @@ from guillotina_elasticsearch.exceptions import QueryErrorException
 from guillotina_elasticsearch.interfaces import IIndexManager
 
 from fhirpath.connectors import create_connection
-from fhirpath.engine import Connection
+from fhirpath.connectors.connection import Connection
 from fhirpath.engine import Engine
 from fhirpath.engine import EngineResult
 from fhirpath.engine import EngineResultBody

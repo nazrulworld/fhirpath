@@ -1,12 +1,12 @@
 # _*_ coding: utf-8 _*_
 """Implementation, the medium result collected from ES server"""
+from fhirpath.connectors.connection import Connection
 from fhirpath.enums import FHIR_VERSION
 
 from .base import Engine
 from .base import EngineResult
 from .base import EngineResultBody
 from .base import EngineResultHeader
-from .connection import Connection
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
