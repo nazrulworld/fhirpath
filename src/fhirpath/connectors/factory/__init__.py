@@ -20,7 +20,10 @@ class ConnectionFactory(object):
 
         :param klass: Connection Class or full path of string class.
         """
-        self.url = IURL(url)
+        if isinstance(url, (list, tuple)):
+            self.url = [IURL(u) for u in url]
+        else:
+            self.url = IURL(url)
 
         if isinstance(klass, (str, bytes)):
             klass = import_string(klass)
