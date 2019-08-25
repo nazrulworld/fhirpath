@@ -44,7 +44,7 @@ class TestElasticsearchEngine(ElasticsearchEngine):
     def __init__(self, connection):
         """ """
         ElasticsearchEngine.__init__(
-            FHIR_VERSION.R4, lambda x: connection, dialect_factory
+            self, FHIR_VERSION.R4, lambda x: connection, dialect_factory
         )
 
     def get_index_name(self):
@@ -151,8 +151,11 @@ def _setup_es_index(es_conn):
 
     org_mapping = fhir_resource_mapping("Organization")
     patient_mapping = fhir_resource_mapping("Patient")
+    chargeitem_mapping = fhir_resource_mapping("ChargeItem")
+
     body["mappings"]["properties"]["organization_resource"] = org_mapping
     body["mappings"]["properties"]["patient_resource"] = patient_mapping
+    body["mappings"]["properties"]["chargeitem_resource"] = chargeitem_mapping
 
     conn.indices.create(ES_INDEX_NAME_REAL, body=body)
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
@@ -197,6 +200,12 @@ def _make_index_item(resource_type):
     tpl[resource_type.lower() + "_resource"] = data
     if resource_type == "Organization":
         tpl["title"] = data["name"]
+    elif resource_type == "Patient":
+        tpl["title"] = data["name"][0]["text"]
+    elif resource_type == "Task":
+        tpl["title"] = "Task-" + tpl["id"]
+    elif resource_type == "ChargeItem":
+        tpl["title"] = "ChargeItem-" + tpl["id"]
     else:
         raise NotImplementedError
 
@@ -210,6 +219,22 @@ def _load_es_data(es_conn):
     bulk_data = [
         {"index": {"_id": organization_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
         organization_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    patient_data = _make_index_item("Patient")
+    bulk_data = [
+        {"index": {"_id": patient_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        patient_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    chargeitem_data = _make_index_item("ChargeItem")
+    bulk_data = [
+        {"index": {"_id": chargeitem_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        chargeitem_data,
     ]
     res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
     assert res["errors"] is False

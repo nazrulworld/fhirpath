@@ -91,7 +91,7 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
         else:
             url_ = self.url
 
-        wrapper_class = url_.params.get("wrapper_class", ElasticsearchConnection)
+        wrapper_class = url_.query.get("wrapper_class", ElasticsearchConnection)
 
         if isinstance(wrapper_class, (str, bytes)):
             wrapper_class = import_string(wrapper_class)
