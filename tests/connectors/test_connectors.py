@@ -13,4 +13,4 @@ def test_es_connection_creation(es):
     conn_str = "es://@{0}:{1}/".format(host, port)
     conn = create_connection(conn_str, Elasticsearch)
 
-    assert conn.ping() is True
+    assert conn.raw_connection.ping() is True

@@ -37,7 +37,7 @@ async def test_raw_result(es_requester):
 
         index_name = await engine.get_index_name(container)
 
-        conn = engine.connection.raw_connection()
+        conn = engine.connection.raw_connection
         await conn.indices.refresh(index=index_name)
 
         query = Q_(resource="Organization", engine=engine)

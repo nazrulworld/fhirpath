@@ -38,7 +38,7 @@ from .fixtures import IOrganization
 
 
 FHIR_EXAMPLE_RESOURCES = (
-    pathlib.Path(os.path.abspath(__file__)).parent / "static" / "FHIR"
+    pathlib.Path(os.path.abspath(__file__)).parent / "_static" / "FHIR"
 )
 
 

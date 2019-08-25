@@ -16,16 +16,16 @@ async def test_elasticsearch_conn_creation(es):
 
     es_conn_factory = ES.ElasticsearchConnectionFactory(url, Elasticsearch)
     conn = es_conn_factory()
-    assert conn.ping() is True
+    assert conn.raw_connection.ping() is True
 
     # test from string path
     es_conn_factory = ES.ElasticsearchConnectionFactory(
         url, "aioelasticsearch.Elasticsearch"
     )
     conn = es_conn_factory()
-    assert await conn.ping() is True
+    assert await conn.raw_connection.ping() is True
 
     # test connection creation from helper method
     # with default connection class elasticsearch.Elasticsearch
     conn = ES.create(url)
-    assert conn.ping() is True
+    assert conn.raw_connection.ping() is True
