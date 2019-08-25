@@ -11,7 +11,7 @@ from .expressions import not_exists_
 from .expressions import not_in_
 from .expressions import or_
 from .expressions import sort_
-from .queries import Q_
+from .query import Q_
 
 
 __author__ = "Md Nazrul Islam"

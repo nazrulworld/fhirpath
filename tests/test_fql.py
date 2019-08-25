@@ -22,7 +22,7 @@ from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import IQuery
 from fhirpath.fql.interfaces import IQueryResult
 from fhirpath.fql.interfaces import ITerm
-from fhirpath.fql.queries import QueryBuilder
+from fhirpath.fql.query import QueryBuilder
 from fhirpath.fql.types import ElementPath
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
