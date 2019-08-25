@@ -39,7 +39,7 @@ class EsConnection(Connection):
     async def server_info(self):
         info = {}
         try:
-            conn = self.raw_connection()
+            conn = self.raw_connection
             info = await conn.info()
         except Exception:
             logger.warning(
@@ -66,7 +66,7 @@ class EsConnection(Connection):
         https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
         """
         search_params = self.finalize_search_params(compiled_query)
-        conn = self.raw_connection()
+        conn = self.raw_connection
         result = await conn.search(**search_params)
         self._evaluate_result(result)
         return result
@@ -82,7 +82,7 @@ class EsConnection(Connection):
 
     async def scroll(self, scroll_id, scroll="30s"):
         """ """
-        result = await self.raw_connection().scroll(
+        result = await self.raw_connection.scroll(
             body={"scroll_id": scroll_id}, scroll=scroll
         )
         self._evaluate_result(result)

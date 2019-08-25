@@ -2,6 +2,7 @@
 import logging
 
 from zope.interface import Invalid
+from fhirpath.utils import import_string
 
 from ..connection import Connection
 from ..url import _parse_rfc1738_args
@@ -30,7 +31,7 @@ class ElasticsearchConnection(Connection):
     def server_info(self):
         """ """
         try:
-            conn = self.raw_connection()
+            conn = self.raw_connection
             info = conn.info()
         except Exception:
             logger.warning(
@@ -57,7 +58,7 @@ class ElasticsearchConnection(Connection):
         https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
         """
         search_params = self.finalize_search_params(compiled_query)
-        conn = self.raw_connection()
+        conn = self.raw_connection
         result = conn.search(**search_params)
         self._evaluate_result(result)
         return result
@@ -73,7 +74,7 @@ class ElasticsearchConnection(Connection):
 
     def scroll(self, scroll_id, scroll="30s"):
         """ """
-        result = self.raw_connection().scroll(
+        result = self.raw_connection.scroll(
             body={"scroll_id": scroll_id}, scroll=scroll
         )
         self._evaluate_result(result)
@@ -82,6 +83,20 @@ class ElasticsearchConnection(Connection):
 
 class ElasticsearchConnectionFactory(ConnectionFactory):
     """ """
+
+    def wrap(self, raw_conn):
+        """ """
+        if isinstance(self.url, (list, tuple)):
+            url_ = self.url[0]
+        else:
+            url_ = self.url
+
+        wrapper_class = url_.params.get("wrapper_class", ElasticsearchConnection)
+
+        if isinstance(wrapper_class, (str, bytes)):
+            wrapper_class = import_string(wrapper_class)
+
+        return wrapper_class.from_prepared(raw_conn)
 
     def prepare_params(self):
         """ """
@@ -115,7 +130,9 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
     def __call__(self):
         """ """
         params = self.prepare_params()
-        return self.klass(**params)
+        raw_conn = self.klass(**params)
+
+        return self.wrap(raw_conn)
 
 
 def create(url, conn_class=None):

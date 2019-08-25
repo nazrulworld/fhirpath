@@ -29,3 +29,7 @@ class ConnectionFactory(object):
             klass = import_string(klass)
 
         self.klass = klass
+
+    def wrap(self, raw_conn):
+        """ """
+        raise NotImplementedError

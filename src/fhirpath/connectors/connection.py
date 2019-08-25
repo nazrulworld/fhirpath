@@ -16,6 +16,7 @@ class Connection(object):
         """ """
         self._conn = conn
 
+    @property
     def raw_connection(self):
         """ """
         return self._conn

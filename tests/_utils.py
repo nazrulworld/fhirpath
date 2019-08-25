@@ -5,12 +5,16 @@ import json
 import os
 import pathlib
 import subprocess
-import uuid
 import time
+import uuid
 
 import pytz
+import yarl
 from isodate import datetime_isoformat
 
+from fhirpath.engine import dialect_factory
+from fhirpath.engine.es import ElasticsearchEngine
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.storage import MemoryStorage
 
 
@@ -32,6 +36,36 @@ DOC_TYPE = "_doc"
 
 ES_INDEX_NAME = "fhirpath_elasticsearch_index"
 ES_INDEX_NAME_REAL = "fhirpath_elasticsearch_index_1"
+
+
+class TestElasticsearchEngine(ElasticsearchEngine):
+    """ """
+
+    def __init__(self, connection):
+        """ """
+        ElasticsearchEngine.__init__(
+            FHIR_VERSION.R4, lambda x: connection, dialect_factory
+        )
+
+    def get_index_name(self):
+        """ """
+        return ES_INDEX_NAME_REAL
+
+    def calculate_field_index_name(self, resource_type):
+        """ """
+        return "{0}_resource".format(resource_type.lower())
+
+    def current_url(self):
+        """ """
+        return yarl.URL("http://nohost/@fhir")
+
+    def extract_hits(self, fieldname, hits, container):
+        """ """
+        for res in hits:
+            if res["_type"] != DOC_TYPE:
+                continue
+            if fieldname in res["_source"]:
+                container.append(res["_source"][fieldname])
 
 
 def has_internet_connection():
@@ -60,9 +94,10 @@ def fhir_resource_mapping(resource_type: str, cache: bool = True):
     return FHIR_ES_MAPPINGS_CACHE[resource_type]
 
 
-def load_organizations_data(conn, count=1):
+def load_organizations_data(es_conn, count=1):
     """ """
     added = 0
+    conn = es_conn.raw_connection
 
     while count > added:
         organization_data = _make_index_item("Organization")
@@ -79,8 +114,10 @@ def load_organizations_data(conn, count=1):
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
 
 
-def _setup_es_index(conn):
+def _setup_es_index(es_conn):
     """ """
+    conn = es_conn.raw_connection
+
     body = {
         "settings": {
             "analysis": {
@@ -166,8 +203,9 @@ def _make_index_item(resource_type):
     return tpl
 
 
-def _load_es_data(conn):
+def _load_es_data(es_conn):
     """ """
+    conn = es_conn.raw_connection
     organization_data = _make_index_item("Organization")
     bulk_data = [
         {"index": {"_id": organization_data["uuid"], "_index": ES_INDEX_NAME_REAL}},

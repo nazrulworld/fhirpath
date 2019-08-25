@@ -24,7 +24,6 @@ from guillotina_elasticsearch.tests.fixtures import elasticsearch
 from zope.interface import implementer
 
 from fhirpath.connectors import create_connection
-from fhirpath.engine import create_engine
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.providers.guillotina_app.field import FhirField
@@ -35,6 +34,7 @@ from fhirpath.utils import proxy
 
 from ._utils import ES_INDEX_NAME_REAL
 from ._utils import FHIR_EXAMPLE_RESOURCES
+from ._utils import TestElasticsearchEngine
 from ._utils import _load_es_data
 from ._utils import _setup_es_index
 from ._utils import fhir_resource_mapping
@@ -104,14 +104,14 @@ def es_connection(es):
     host, port = es
     conn_str = "es://@{0}:{1}/".format(host, port)
     conn = create_connection(conn_str, "elasticsearch.Elasticsearch")
-    assert conn.ping()
+    assert conn.raw_connection.ping()
     yield conn
 
 
 @pytest.fixture(scope="session")
 def engine(es_connection):
     """ """
-    engine = create_engine(es_connection)
+    engine = TestElasticsearchEngine(es_connection)
     yield proxy(engine)
 
 
@@ -125,8 +125,8 @@ def es_data(es_connection):
     # es connection, meta data of fixture, i.e id
     yield es_connection, None
     try:
-        es_connection.indices.delete_alias(ES_INDEX_NAME_REAL, name="*")
-        es_connection.indices.delete(ES_INDEX_NAME_REAL)
+        es_connection.raw_connection.indices.delete_alias(ES_INDEX_NAME_REAL, name="*")
+        es_connection.raw_connection.indices.delete(ES_INDEX_NAME_REAL)
     except NotFoundError:
         pass
 
