@@ -63,8 +63,6 @@ setup_requirements = ["pytest-runner"]
 test_requirements = [
     "pytest",
     "pytest-mock",
-    "guillotina>=4.8.13",
-    "guillotina_elasticsearch",
     "pytest-docker-fixtures",
 ]
 docs_requirements = [
@@ -76,7 +74,7 @@ docs_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.1.2.dev0",
+    version="0.2.0.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
