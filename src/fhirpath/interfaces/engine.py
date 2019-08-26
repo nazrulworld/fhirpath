@@ -18,6 +18,7 @@ class IEngine(Interface):
 
     def connect(**kw):
         """Return a new Connection object."""
+
     def wrapped_with_bundle():
         """ """
 
@@ -27,7 +28,17 @@ class IElasticsearchEngine(IEngine):
 
     def get_index_name(context):
         """ """
+
     def build_security_query():
         """ """
+
     def calculate_field_index_name():
         """ """
+
+
+class IEngineFactory(Interface):
+    """Utility marker"""
+
+
+class IElasticsearchEngineFactory(IEngineFactory):
+    """ """

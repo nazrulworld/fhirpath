@@ -3,7 +3,9 @@ from zope.interface import Attribute
 from zope.interface import Interface
 
 from .engine import IElasticsearchEngine  # noqa: F401
+from .engine import IElasticsearchEngineFactory  # noqa: F401
 from .engine import IEngine  # noqa: F401
+from .engine import IEngineFactory  # noqa: F401
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -76,10 +78,6 @@ class IPathInfoContext(Interface):
     type_class = Attribute("Type Class")
     optional = Attribute("Optional")
     multiple = Attribute("Multiple")
-
-
-class IEngineFactory(Interface):
-    """Utility marker"""
 
 
 class IConnection(Interface):
