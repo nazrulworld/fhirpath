@@ -1,15 +1,14 @@
 # _*_ coding: utf-8 _*_
 
 import pytest
-from elasticsearch.exceptions import NotFoundError
 
 from fhirpath.connectors import create_connection
 from fhirpath.fhirspec import DEFAULT_SETTINGS
 from fhirpath.thirdparty import attrdict
 from fhirpath.utils import proxy
 
-from ._utils import ES_INDEX_NAME_REAL
 from ._utils import TestElasticsearchEngine
+from ._utils import _cleanup_es
 from ._utils import _load_es_data
 from ._utils import _setup_es_index
 
@@ -52,7 +51,7 @@ def engine(es_connection):
     yield proxy(engine)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def es_data(es_connection):
     """ """
     # do create index with other settings
@@ -61,8 +60,5 @@ def es_data(es_connection):
 
     # es connection, meta data of fixture, i.e id
     yield es_connection, None
-    try:
-        es_connection.raw_connection.indices.delete_alias(ES_INDEX_NAME_REAL, name="*")
-        es_connection.raw_connection.indices.delete(ES_INDEX_NAME_REAL)
-    except NotFoundError:
-        pass
+    # clean up
+    _cleanup_es(es_connection.raw_connection)

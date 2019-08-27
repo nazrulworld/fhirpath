@@ -5,7 +5,9 @@ History
 0.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Breakings
+
+- Built-in providers (``guillotina_app``and ``plone_app``) have been wiped as both becoming separate pypi project.
 
 
 0.1.1 (2019-08-15)

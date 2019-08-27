@@ -14,8 +14,8 @@ from collections import Iterable
 from urllib.parse import parse_qsl
 from urllib.parse import unquote
 
-from zope.interface import implementer
 from zope.interface import Invalid
+from zope.interface import implementer
 
 from fhirpath.utils import force_str
 

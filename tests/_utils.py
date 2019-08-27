@@ -8,6 +8,7 @@ import subprocess
 import time
 import uuid
 
+import elasticsearch
 import pytz
 import yarl
 from isodate import datetime_isoformat
@@ -240,3 +241,28 @@ def _load_es_data(es_conn):
     assert res["errors"] is False
 
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
+
+
+def _cleanup_es(conn, prefix=''):
+    """RAW ES Connection"""
+    for alias in (conn.cat.aliases()).splitlines():
+        name, index = alias.split()[:2]
+        if name[0] == '.' or index[0] == '.':
+            # ignore indexes that start with .
+            continue
+        if name.startswith(prefix):
+            try:
+                conn.indices.delete_alias(index, name)
+                conn.indices.delete(index)
+            except elasticsearch.exceptions.AuthorizationException:
+                pass
+    for index in (conn.cat.indices()).splitlines():
+        _, _, index_name = index.split()[:3]
+        if index_name[0] == '.':
+            # ignore indexes that start with .
+            continue
+        if index_name.startswith(prefix):
+            try:
+                conn.indices.delete(index_name)
+            except elasticsearch.exceptions.AuthorizationException:
+                pass
