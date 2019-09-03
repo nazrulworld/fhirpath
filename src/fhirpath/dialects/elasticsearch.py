@@ -129,6 +129,8 @@ class ElasticSearchDialect(DialectBase):
             securities = security_callable()
             self.apply_security(securities, body_structure)
 
+        self.apply_from_constraint(query, body_structure, root_replacer=root_replacer)
+
         self._clean_up(body_structure)
 
         if "should" in body_structure["query"]["bool"]:
@@ -417,6 +419,13 @@ class ElasticSearchDialect(DialectBase):
             body_structure["size"] = limit_clause.limit
         if isinstance(limit_clause.offset, int):
             body_structure["from"] = limit_clause.offset
+
+    def apply_from_constraint(self, query, body_structure, root_replacer=None):
+        """We force apply resource type boundary"""
+        for res_name, res_klass in query.get_from():
+            path_ = "{0}.resourceType".format(root_replacer or res_name)
+            term = {"term": {path_: res_name}}
+            body_structure["query"]["bool"]["filter"].append(term)
 
     def create_structure(self):
         """ """

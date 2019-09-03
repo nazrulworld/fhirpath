@@ -45,6 +45,10 @@ class Engine(object):
         """ """
         self.dialect = factory(self)
 
+    def before_execute(self, query):
+        """Hook: before execution of query"""
+        pass
+
     def __proxy__(self):
         """ """
         return EngineProxy(self)
