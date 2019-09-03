@@ -181,8 +181,10 @@ class ElasticSearchDialect(DialectBase):
 
         elif ITerm.providedBy(term):
             if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
-                if term.path.context.type_name in (
-                    "string",
+                if term.path.context.type_name == "string":
+                    resolved = self.resolve_string_term(term, root_replacer)
+
+                elif term.path.context.type_name in (
                     "uri",
                     "url",
                     "canonical",
@@ -343,6 +345,26 @@ class ElasticSearchDialect(DialectBase):
             unary_operator = operator.pos
 
         return q, unary_operator
+
+    def resolve_string_term(self, term, root_replacer=None):
+        """ """
+        # xxx: could have support for free text search
+        q = dict()
+
+        if root_replacer is not None:
+            path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
+        else:
+            path_ = term.path.path
+
+        if term.path.context.multiple and isinstance(term.value.value, (list, tuple)):
+            q = {"bool": {"should": list(), "minimum_should_match": 1}}
+            for val in term.value.value:
+                q["bool"]["should"].append({"match": {path_: val}})
+        else:
+            q = {"match": {path_: term.value.value}}
+
+        resolved = q, term.unary_operator
+        return resolved
 
     def resolve_exists_term(self, term, root_replacer=None):
         """ """
