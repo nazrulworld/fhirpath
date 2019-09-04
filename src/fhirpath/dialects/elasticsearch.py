@@ -1,7 +1,9 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
-import operator
 import logging
+import operator
+import re
+
 import isodate
 from zope.interface import Interface
 from zope.interface import alsoProvides
@@ -19,7 +21,7 @@ from .base import DialectBase
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 logger = logging.getLogger("fhirpath.dialects.elasticsearch")
-
+URI_SCHEME = re.compile(r"^https?://", re.I)
 ES_PY_OPERATOR_MAP = {
     operator.eq: None,
     operator.ne: None,
@@ -75,6 +77,19 @@ class ElasticSearchDialect(DialectBase):
             path_context = path_context.parent
 
         return qr
+
+    def _create_term(self, term, root_replacer=None):
+        """Create ES Query term"""
+        if root_replacer is not None:
+            path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
+        else:
+            path_ = term.path.path
+        if term.path.context.multiple:
+            q = {"terms": {path_: [term.value.value]}}
+        else:
+            q = {"term": {path_: term.value.value}}
+
+        return q
 
     def _clean_up(self, body_structure):
         """ """
@@ -221,19 +236,14 @@ class ElasticSearchDialect(DialectBase):
                         path_ = term.path.path
 
                     map_info = self._get_path_mapping_info(mapping, path_)
-                    freetext_analyzers = ("standard",)
-                    if (
-                        map_info.get("type", None) == "text"
-                        and map_info.get("analyzer", "standard") in freetext_analyzers
-                    ):
-                        resolved = self.resolve_string_term(term, root_replacer)
+
+                    if map_info.get("type", None) == "text":
+                        resolved = self.resolve_string_term(
+                            term, map_info, root_replacer
+                        )
 
                     else:
-                        if term.path.context.multiple:
-                            q = {"terms": {path_: [term.value.value]}}
-                        else:
-                            q = {"term": {path_: term.value.value}}
-
+                        q = self._create_term(term, root_replacer)
                         resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
@@ -374,7 +384,7 @@ class ElasticSearchDialect(DialectBase):
 
         return q, unary_operator
 
-    def resolve_string_term(self, term, root_replacer=None):
+    def resolve_string_term(self, term, map_info, root_replacer=None):
         """ """
         # xxx: could have support for free text search
         q = dict()
@@ -384,12 +394,15 @@ class ElasticSearchDialect(DialectBase):
         else:
             path_ = term.path.path
 
-        if term.path.context.multiple and isinstance(term.value.value, (list, tuple)):
-            q = {"bool": {"should": list(), "minimum_should_match": 1}}
-            for val in term.value.value:
-                q["bool"]["should"].append({"match": {path_: val}})
+        freetext_analyzers = ("standard",)
+        val = term.value.value
+        if map_info.get("analyzer", "standard") in freetext_analyzers:
+            # xxx: should handle exact match
+            q = {"match": {path_: val}}
+        elif ("/" in val or URI_SCHEME.match(val)) and ".reference" in path_:
+            q = {"match_phrase": {path_: val}}
         else:
-            q = {"match": {path_: term.value.value}}
+            q = self._create_term(term, root_replacer)
 
         resolved = q, term.unary_operator
         return resolved
