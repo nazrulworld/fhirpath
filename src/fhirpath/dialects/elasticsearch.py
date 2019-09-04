@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
 import operator
-
+import logging
 import isodate
 from zope.interface import Interface
 from zope.interface import alsoProvides
@@ -18,6 +18,7 @@ from .base import DialectBase
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+logger = logging.getLogger("fhirpath.dialects.elasticsearch")
 
 ES_PY_OPERATOR_MAP = {
     operator.eq: None,
@@ -92,6 +93,21 @@ class ElasticSearchDialect(DialectBase):
         if len(body_structure["sort"]) == 0:
             del body_structure["sort"]
 
+    def _get_path_mapping_info(self, mapping, dotted_path):
+        """ """
+        mapping_ = mapping["properties"]
+
+        for path_ in dotted_path.split(".")[1:]:
+            try:
+                info_ = mapping_[path_]
+            except KeyError:
+                logger.warn("No mapping found for {0}".format(dotted_path))
+                return {}
+            if "properties" in info_:
+                mapping_ = info_["properties"]
+            else:
+                return info_
+
     def compile(self, query, mapping, root_replacer=None, security_callable=None):
         """
         :param: query
@@ -105,7 +121,7 @@ class ElasticSearchDialect(DialectBase):
 
         for term in conditional_terms:
             """ """
-            q, unary_operator = self.resolve_term(term, root_replacer)
+            q, unary_operator = self.resolve_term(term, mapping, root_replacer)
 
             if unary_operator == operator.neg:
                 container = body_structure["query"]["bool"]["must_not"]
@@ -140,7 +156,7 @@ class ElasticSearchDialect(DialectBase):
 
         return body_structure
 
-    def resolve_term(self, term, root_replacer):
+    def resolve_term(self, term, mapping, root_replacer):
         """ """
         if IGroupTerm.providedBy(term):
             unary_operator = operator.pos
@@ -169,7 +185,7 @@ class ElasticSearchDialect(DialectBase):
                 # single term resolver should not look at this
                 alsoProvides(t_, IIgnoreNestedCheck)
 
-                resolved = self.resolve_term(t_, root_replacer)
+                resolved = self.resolve_term(t_, mapping, root_replacer)
                 container.append(resolved[0])
 
             qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
@@ -184,10 +200,9 @@ class ElasticSearchDialect(DialectBase):
 
         elif ITerm.providedBy(term):
             if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
-                if term.path.context.type_name == "string":
-                    resolved = self.resolve_string_term(term, root_replacer)
 
-                elif term.path.context.type_name in (
+                if term.path.context.type_name in (
+                    "string",
                     "uri",
                     "url",
                     "canonical",
@@ -204,12 +219,22 @@ class ElasticSearchDialect(DialectBase):
                         )
                     else:
                         path_ = term.path.path
-                    if term.path.context.multiple:
-                        q = {"terms": {path_: [term.value.value]}}
-                    else:
-                        q = {"term": {path_: term.value.value}}
 
-                    resolved = q, term.unary_operator
+                    map_info = self._get_path_mapping_info(mapping, path_)
+                    freetext_analyzers = ("standard",)
+                    if (
+                        map_info.get("type", None) == "text"
+                        and map_info.get("analyzer", "standard") in freetext_analyzers
+                    ):
+                        resolved = self.resolve_string_term(term, root_replacer)
+
+                    else:
+                        if term.path.context.multiple:
+                            q = {"terms": {path_: [term.value.value]}}
+                        else:
+                            q = {"term": {path_: term.value.value}}
+
+                        resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
                     "dateTime",
