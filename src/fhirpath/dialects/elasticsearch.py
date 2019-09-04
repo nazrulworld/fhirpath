@@ -92,9 +92,10 @@ class ElasticSearchDialect(DialectBase):
         if len(body_structure["sort"]) == 0:
             del body_structure["sort"]
 
-    def compile(self, query, root_replacer=None, security_callable=None):
+    def compile(self, query, mapping, root_replacer=None, security_callable=None):
         """
         :param: query
+        :param: mapping: Elasticsearch mapping for FHIR resources.
         :root_replacer: Path´s root replacer:
         Could be mapping name or index name in zope´s ZCatalog context
         :security_callable:

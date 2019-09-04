@@ -20,13 +20,21 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
+    def get_mapping(self, resource_type):
+        """ """
+        raise NotImplementedError
+
     def execute(self, query, unrestricted=False):
         """ """
         # for now we support single from resource
         resource_type = query.get_from()[0][1].resource_type
         field_index_name = self.calculate_field_index_name(resource_type)
 
-        params = {"query": query, "root_replacer": field_index_name}
+        params = {
+            "query": query,
+            "root_replacer": field_index_name,
+            "mapping": self.get_mapping(resource_type),
+        }
         if unrestricted is False:
             params["security_callable"] = self.build_security_query
 

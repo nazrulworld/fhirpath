@@ -56,6 +56,11 @@ class TestElasticsearchEngine(ElasticsearchEngine):
         """ """
         return "{0}_resource".format(resource_type.lower())
 
+    def get_mapping(self, resource_type):
+        """ """
+        mapping = fhir_resource_mapping(resource_type)
+        return mapping
+
     def current_url(self):
         """ """
         return yarl.URL("http://nohost/@fhir")
@@ -243,11 +248,11 @@ def _load_es_data(es_conn):
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
 
 
-def _cleanup_es(conn, prefix=''):
+def _cleanup_es(conn, prefix=""):
     """RAW ES Connection"""
     for alias in (conn.cat.aliases()).splitlines():
         name, index = alias.split()[:2]
-        if name[0] == '.' or index[0] == '.':
+        if name[0] == "." or index[0] == ".":
             # ignore indexes that start with .
             continue
         if name.startswith(prefix):
@@ -258,7 +263,7 @@ def _cleanup_es(conn, prefix=''):
                 pass
     for index in (conn.cat.indices()).splitlines():
         _, _, index_name = index.split()[:3]
-        if index_name[0] == '.':
+        if index_name[0] == ".":
             # ignore indexes that start with .
             continue
         if index_name.startswith(prefix):

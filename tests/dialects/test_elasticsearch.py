@@ -15,7 +15,7 @@ async def test_raw_es_query_generation_from_search(engine, es_data):
 
     fhir_search = Search(context, params=params)
     result = fhir_search.build()
-    engine.dialect.compile(result._query)
+    engine.dialect.compile(result._query, mapping=engine.get_mapping("Patient"))
 
 
 async def test_dialect_generated_raw_query(es_data, engine):
@@ -35,7 +35,9 @@ async def test_dialect_generated_raw_query(es_data, engine):
     result_query = search_tool.build()
 
     compiled = search_context.engine.dialect.compile(
-        result_query._query, "organization_resource"
+        result_query._query,
+        mapping=engine.get_mapping("Organization"),
+        root_replacer="organization_resource",
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     conn = engine.connection.raw_connection
@@ -59,7 +61,9 @@ async def test_dialect_generated_raw_query(es_data, engine):
     result_query = search_tool.build()
 
     compiled = search_context.engine.dialect.compile(
-        result_query._query, "patient_resource"
+        result_query._query,
+        mapping=engine.get_mapping("Patient"),
+        root_replacer="patient_resource",
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
@@ -77,7 +81,9 @@ async def test_dialect_generated_raw_query(es_data, engine):
     result_query = search_tool.build()
 
     compiled = search_context.engine.dialect.compile(
-        result_query._query, "chargeitem_resource"
+        result_query._query,
+        mapping=engine.get_mapping("ChargeItem"),
+        root_replacer="chargeitem_resource",
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
