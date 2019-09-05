@@ -10,6 +10,7 @@ from zope.interface import alsoProvides
 
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
+from fhirpath.enums import SortOrderType
 from fhirpath.enums import TermMatchType
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
@@ -462,6 +463,18 @@ class ElasticSearchDialect(DialectBase):
             body_structure["size"] = limit_clause.limit
         if isinstance(limit_clause.offset, int):
             body_structure["from"] = limit_clause.offset
+
+    def apply_sort(self, sort_terms, root_replacer=None):
+        """ """
+        for term in sort_terms:
+            if root_replacer is not None:
+                path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
+            else:
+                path_ = term.path.path
+            item = {
+                path_: {"order": term.order == SortOrderType.DESC and "desc" or "asc"}
+            }
+            self.sort.append(item)
 
     def apply_from_constraint(self, query, body_structure, root_replacer=None):
         """We force apply resource type boundary"""
