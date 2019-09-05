@@ -157,13 +157,15 @@ class ElasticSearchDialect(DialectBase):
 
             container.append(q)
 
-        self.apply_limit(query.get_limit(), body_structure)
-
         if security_callable is not None:
             securities = security_callable()
             self.apply_security(securities, body_structure)
-
+        # ResourceType bind
         self.apply_from_constraint(query, body_structure, root_replacer=root_replacer)
+        # Sorting
+        self.apply_sort(query.get_sort(), body_structure, root_replacer=root_replacer)
+        # Limit
+        self.apply_limit(query.get_limit(), body_structure)
 
         self._clean_up(body_structure)
 
@@ -464,7 +466,7 @@ class ElasticSearchDialect(DialectBase):
         if isinstance(limit_clause.offset, int):
             body_structure["from"] = limit_clause.offset
 
-    def apply_sort(self, sort_terms, root_replacer=None):
+    def apply_sort(self, sort_terms, body_structure, root_replacer=None):
         """ """
         for term in sort_terms:
             if root_replacer is not None:
@@ -474,7 +476,7 @@ class ElasticSearchDialect(DialectBase):
             item = {
                 path_: {"order": term.order == SortOrderType.DESC and "desc" or "asc"}
             }
-            self.sort.append(item)
+            body_structure["sort"].append(item)
 
     def apply_from_constraint(self, query, body_structure, root_replacer=None):
         """We force apply resource type boundary"""
