@@ -10,6 +10,7 @@ from zope.interface import alsoProvides
 
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
+from fhirpath.enums import TermMatchType
 from fhirpath.fql.interfaces import IExistsTerm
 from fhirpath.fql.interfaces import IGroupTerm
 from fhirpath.fql.interfaces import IInTerm
@@ -394,11 +395,14 @@ class ElasticSearchDialect(DialectBase):
         else:
             path_ = term.path.path
 
-        freetext_analyzers = ("standard",)
+        fulltext_analyzers = ("standard",)
         val = term.value.value
-        if map_info.get("analyzer", "standard") in freetext_analyzers:
+        if map_info.get("analyzer", "standard") in fulltext_analyzers:
             # xxx: should handle exact match
-            q = {"match": {path_: val}}
+            if term.match_type == TermMatchType.EXACT:
+                q = {"match_phrase": {path_: val}}
+            else:
+                q = {"match": {path_: val}}
         elif ("/" in val or URI_SCHEME.match(val)) and ".reference" in path_:
             q = {"match_phrase": {path_: val}}
         else:

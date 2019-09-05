@@ -33,6 +33,16 @@ class MatchType(enum.Enum):
 
 
 @enum.unique
+class TermMatchType(enum.Enum):
+    """ """
+
+    EXACT = "EXACT"
+    STARTWITH = "STARTWITH"
+    ENDWITH = "ENDWITH"
+    FULLTEXT = "FULLTEXT"
+
+
+@enum.unique
 class GroupType(enum.Enum):
     DECOUPLED = "DECOUPLED"
     COUPLED = "COUPLED"

@@ -11,6 +11,7 @@ from zope.interface import implementer_only
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
+from fhirpath.enums import TermMatchType
 from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IFhirPrimitiveType
@@ -109,8 +110,10 @@ class LimitClause(object):
 class Term(object):
     """ """
 
-    def __init__(self, path, value=EMPTY_VALUE):
+    def __init__(self, path, value=EMPTY_VALUE, match_type=None):
         """ """
+        # match type
+        self.match_type = None
         # flag
         self._finalized = False
         self._value_assigned = False
@@ -133,6 +136,9 @@ class Term(object):
 
         if self.value is not EMPTY_VALUE:
             self._value_assigned = True
+
+        if match_type is not None:
+            self.set_match_type(match_type)
 
     def _finalize(self, context):
         """ """
@@ -163,6 +169,10 @@ class Term(object):
             self.value.finalize(self.path)
 
         self._finalized = True
+
+    def set_match_type(self, type_):
+        """ """
+        self.match_type = TermMatchType[type_]
 
     def clone(self):
         """ """
@@ -218,6 +228,7 @@ class Term(object):
         # static properties
         newone._finalized = self._finalized
         newone._value_assigned = self._value_assigned
+        newone.match_type = self.match_type
 
         newone.comparison_operator = self.comparison_operator
         newone.unary_operator = self.unary_operator

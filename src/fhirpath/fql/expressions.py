@@ -34,9 +34,9 @@ __all__ = [
 ]
 
 # API functions
-def T_(path, value=EMPTY_VALUE):  # noqa: E302
+def T_(path, value=EMPTY_VALUE, match_type=None):  # noqa: E302
     """ """
-    term = Term(path=path, value=value)
+    term = Term(path=path, value=value, match_type=match_type)
     return term
 
 
