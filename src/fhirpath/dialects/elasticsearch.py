@@ -451,9 +451,10 @@ class ElasticSearchDialect(DialectBase):
                 else:
                     raise NotImplementedError
 
-        body_structure["query"]["bool"]["filter"].append(
-            {"bool": {"should": should_list, "minimum_should_match": 1}}
-        )
+        if len(should_list) > 0:
+            body_structure["query"]["bool"]["filter"].append(
+                {"bool": {"should": should_list, "minimum_should_match": 1}}
+            )
 
     def apply_limit(self, limit_clause, body_structure):
         """ """

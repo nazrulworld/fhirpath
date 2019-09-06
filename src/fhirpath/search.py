@@ -645,10 +645,16 @@ class Search(object):
         """ """
         if isinstance(param_value, tuple):
             operator_, original_value = param_value
-            if original_value == "true":
+            if (original_value == "true" and modifier == "exists") or (
+                original_value == "false" and modifier == "missing"
+            ):
                 return exists_(path_)
-            elif original_value:
+            elif (original_value == "true" and modifier == "missing") or (
+                original_value == "false" and modifier == "exists"
+            ):
                 return not_exists_(path_)
+
+            raise NotImplementedError
 
         raise NotImplementedError
 

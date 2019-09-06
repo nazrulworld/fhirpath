@@ -3,6 +3,7 @@ from fhirpath.enums import SortOrderType
 from fhirpath.fql import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
+from fhirpath.fql import exists_
 from fhirpath.fql import sort_
 
 from ._utils import load_organizations_data
@@ -29,3 +30,12 @@ def test_fetch_all(es_data, engine):
         # test fetch all
     result = builder(async_result=False).fetchall()
     result.__class__.__name__ == "EngineResult"
+
+
+def test_exists_query(es_data, engine):
+    """ enteredDate"""
+    builder = Q_(resource="ChargeItem", engine=engine)
+    builder = builder.where(exists_("ChargeItem.enteredDate"))
+
+    result = builder(async_result=False).fetchall()
+    assert result.header.total == 1

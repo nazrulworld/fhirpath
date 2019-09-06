@@ -346,3 +346,15 @@ def test_search_result(es_data, engine):
 
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_search_missing_modifier(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Organization")
+    params = (
+        ("active:missing", "false"),
+    )
+    fhir_search = Search(search_context, params=params)
+
+    bundle = fhir_search()
+    assert len(bundle.entry) == 1

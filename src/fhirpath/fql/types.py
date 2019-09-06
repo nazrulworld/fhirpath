@@ -389,7 +389,8 @@ class ExistsTerm(object):
         # xxx: find type using Context
         # May path as Resource Attribute
         # Do validation
-        self.path.finalize(context)
+        if not self.path._finalized:
+            self.path.finalize(context)
 
         if self.unary_operator is None:
             self.unary_operator = operator.pos
