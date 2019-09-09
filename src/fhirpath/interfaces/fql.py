@@ -21,7 +21,15 @@ class IFqlClause(Interface):
     empty = Attribute("Empty Flag")
 
 
-class ITerm(IBaseClass):
+class IBaseTerm(IBaseClass):
+    """ """
+
+
+class ITerm(IBaseTerm):
+    """ """
+
+
+class INonFhirTerm(IBaseTerm):
     """ """
 
 

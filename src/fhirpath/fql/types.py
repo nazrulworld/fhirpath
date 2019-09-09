@@ -1,10 +1,12 @@
 # _*_ coding: utf-8 _*_
 import ast
+import datetime
 import operator
 import re
 from collections import deque
 from copy import copy
 
+import isodate
 from zope.interface import implementer
 from zope.interface import implementer_only
 
@@ -18,18 +20,26 @@ from fhirpath.enums import TermMatchType
 from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IElementPath
-from fhirpath.interfaces import IExistsGroupTerm
-from fhirpath.interfaces import IExistsTerm
-from fhirpath.interfaces import IFhirPrimitiveType
-from fhirpath.interfaces import IFqlClause
-from fhirpath.interfaces import IGroupTerm
-from fhirpath.interfaces import IInTerm
-from fhirpath.interfaces import IPathConstraint
-from fhirpath.interfaces import ISortTerm
-from fhirpath.interfaces import ITerm
-from fhirpath.interfaces import ITermValue
-from fhirpath.interfaces import IValuedClass
+from fhirpath.interfaces.base import IFhirPrimitiveType
+from fhirpath.interfaces.fql import IBaseTerm
+from fhirpath.interfaces.fql import IExistsGroupTerm
+from fhirpath.interfaces.fql import IExistsTerm
+from fhirpath.interfaces.fql import IFqlClause
+from fhirpath.interfaces.fql import IGroupTerm
+from fhirpath.interfaces.fql import IInTerm
+from fhirpath.interfaces.fql import INonFhirTerm
+from fhirpath.interfaces.fql import IPathConstraint
+from fhirpath.interfaces.fql import ISortTerm
+from fhirpath.interfaces.fql import ITerm
+from fhirpath.interfaces.fql import ITermValue
+from fhirpath.interfaces.fql import IValuedClass
 from fhirpath.types import EMPTY_VALUE
+from fhirpath.types import FhirBoolean
+from fhirpath.types import FhirDate
+from fhirpath.types import FhirDateTime
+from fhirpath.types import FhirDecimal
+from fhirpath.types import FhirInteger
+from fhirpath.types import FhirString
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
 from fhirpath.utils import unwrap_proxy
@@ -105,8 +115,8 @@ class LimitClause(object):
         return self._limit is None
 
 
-@implementer(ITerm, IValuedClass)
-class Term(object):
+@implementer(IBaseTerm, IValuedClass)
+class BaseTerm(object):
     """ """
 
     def __init__(self, path, value=EMPTY_VALUE, match_type=None):
@@ -124,14 +134,7 @@ class Term(object):
         # and, or, xor
         self.arithmetic_operator = None
 
-        self.value = Term.ensure_term_value(value)
-
-        if ITerm.providedBy(path):
-            self.__merge__(path)
-        elif isinstance(path, str):
-            self.path = ElementPath.from_el_path(path)
-        else:
-            self.path = path
+        self.value = self.ensure_term_value(value)
 
         if self.value is not EMPTY_VALUE:
             self._value_assigned = True
@@ -163,11 +166,7 @@ class Term(object):
 
     def finalize(self, context):
         """ """
-        self._finalize(context)
-        if not self.value.is_finalized():
-            self.value.finalize(self.path)
-
-        self._finalized = True
+        raise NotImplementedError
 
     def set_match_type(self, type_):
         """ """
@@ -179,45 +178,11 @@ class Term(object):
 
     def validate(self):
         """ """
-        # xxx: required validate ```comparison_operator```
-        # lt,le,gt,ge only for Date,DateTime, Interger, Float
-        if IFhirPrimitiveType.implementedBy(self.path.context.type_class):
-            if self.path.context.type_name not in (
-                "integer",
-                "decimal",
-                "instant",
-                "date",
-                "dateTime",
-                "time",
-                "unsignedInt",
-                "positiveInt",
-            ) and self.comparison_operator in (
-                operator.lt,
-                operator.le,
-                operator.gt,
-                operator.ge,
-            ):
-                raise ValidationError(
-                    "Operator '{0!s}' is allowed for value type '{1!s}'".format(
-                        self.comparison_operator.__name__, self.path.context.type_name
-                    )
-                )
-        else:
-            # don't have usecase yet!
-            raise NotImplementedError
+        raise NotImplementedError
 
-    @staticmethod
-    def ensure_term_value(value):
+    def ensure_term_value(self, value):
         """ """
-        if value is EMPTY_VALUE or ITermValue.providedBy(value):
-            return value
-
-        if isinstance(value, list):
-            value = list([Term.ensure_term_value(val) for val in value])
-        else:
-            value = TermValue(value)
-
-        return value
+        raise NotImplementedError
 
     def __copy__(self):
         """ """
@@ -300,6 +265,103 @@ class Term(object):
 
         return self.clone()
 
+    def __compare__(self, other):
+        """ """
+        required_value_not_assigned(self)
+
+        other = self.ensure_term_value(other)
+        self.value = other
+        self._value_assigned = True
+        if other.unary_operator is not None:
+            self.unary_operator = other.unary_operator
+
+
+@implementer(ITerm)
+class Term(BaseTerm):
+    """ """
+
+    def __init__(self, path, value=EMPTY_VALUE, match_type=None):
+        """ """
+        super(Term, self).__init__(path, value, match_type)
+
+        if ITerm.providedBy(path):
+            self.__merge__(path)
+        elif isinstance(path, str):
+            self.path = ElementPath.from_el_path(path)
+        else:
+            self.path = path
+
+    def _finalize(self, context):
+        """ """
+        required_not_finalized(self)
+
+        # xxx: find type using Context
+        # May path as Resource Attribute
+        # Do validation
+        self.fhir_release = context.fhir_release
+        if not self.path.is_finalized():
+            self.path.finalize(context)
+
+        if self.arithmetic_operator is None:
+            self.arithmetic_operator = operator.and_
+
+        if self.unary_operator is None:
+            self.unary_operator = operator.pos
+
+        if self.comparison_operator is None:
+            self.comparison_operator = operator.eq
+
+        self.validate()
+
+    def finalize(self, context):
+        """ """
+        self._finalize(context)
+        if not self.value.is_finalized():
+            self.value.finalize(self.path)
+
+        self._finalized = True
+
+    def validate(self):
+        """ """
+        # xxx: required validate ```comparison_operator```
+        # lt,le,gt,ge only for Date,DateTime, Interger, Float
+        if IFhirPrimitiveType.implementedBy(self.path.context.type_class):
+            if self.path.context.type_name not in (
+                "integer",
+                "decimal",
+                "instant",
+                "date",
+                "dateTime",
+                "time",
+                "unsignedInt",
+                "positiveInt",
+            ) and self.comparison_operator in (
+                operator.lt,
+                operator.le,
+                operator.gt,
+                operator.ge,
+            ):
+                raise ValidationError(
+                    "Operator '{0!s}' is allowed for value type '{1!s}'".format(
+                        self.comparison_operator.__name__, self.path.context.type_name
+                    )
+                )
+        else:
+            # don't have usecase yet!
+            raise NotImplementedError
+
+    def ensure_term_value(self, value):
+        """ """
+        if value is EMPTY_VALUE or ITermValue.providedBy(value):
+            return value
+
+        if isinstance(value, list):
+            value = list([self.ensure_term_value(val) for val in value])
+        else:
+            value = TermValue(value)
+
+        return value
+
     # Non standard
     def __merge__(self, other):
         """ """
@@ -307,15 +369,67 @@ class Term(object):
 
         raise NotImplementedError
 
-    def __compare__(self, other):
-        """ """
-        required_value_not_assigned(self)
 
-        other = Term.ensure_term_value(other)
-        self.value = other
-        self._value_assigned = True
-        if other.unary_operator is not None:
-            self.unary_operator = other.unary_operator
+@implementer(INonFhirTerm)
+class NonFhirTerm(object):
+    """ """
+
+    def __init__(self, path, value=EMPTY_VALUE, match_type=None):
+        """ """
+        super(NonFhirTerm, self).__init__(path, value, match_type)
+        self.path = path
+
+    def ensure_term_value(self, value):
+        """ """
+        if value is EMPTY_VALUE or IFhirPrimitiveType.providedBy(value):
+            return value
+
+        if isinstance(value, list):
+            value = list([NonFhirTerm.ensure_value_type(val) for val in value])
+        else:
+            if isinstance(value, bool):
+                value = FhirBoolean(value is True and "true" or "false")
+            elif isinstance(value, int):
+                value = FhirInteger(value)
+            elif isinstance(value, float):
+                value = FhirDecimal(value)
+            elif isinstance(value, datetime.date):
+                value = FhirDate(isodate.date_isoformat(value))
+            elif isinstance(value, datetime.datetime):
+                value = FhirDateTime(isodate.datetime_isoformat(value))
+            else:
+                value = FhirString(value)
+        return value
+
+    def finalize(self, context):
+        """ """
+        self.validate()
+        self._finalized = True
+
+    def validate(self):
+        """ """
+        # xxx: required validate ```comparison_operator```
+        # lt,le,gt,ge only for Date,DateTime, Interger, Float
+        if self.value.__visit_name__ not in (
+            "integer",
+            "decimal",
+            "instant",
+            "date",
+            "dateTime",
+            "time",
+            "unsignedInt",
+            "positiveInt",
+        ) and self.comparison_operator in (
+            operator.lt,
+            operator.le,
+            operator.gt,
+            operator.ge,
+        ):
+            raise ValidationError(
+                "Operator '{0!s}' is allowed for value type '{1!s}'".format(
+                    self.comparison_operator.__name__, self.value.__name__
+                )
+            )
 
 
 @implementer(IInTerm)
@@ -340,9 +454,9 @@ class InTerm(Term):
             if isinstance(other, (tuple, set)):
                 other = list(other)
 
-            self.value.extend(Term.ensure_term_value(other))
+            self.value.extend(self.ensure_term_value(other))
         else:
-            self.value.append(Term.ensure_term_value(other))
+            self.value.append(self.ensure_term_value(other))
 
         return self.clone()
 
@@ -518,8 +632,8 @@ class GroupTerm(object):
         self.terms = list()
 
         for term in terms:
-            # could be GroupTerm | Term
-            self.terms.append(ITerm(term))
+            # could be GroupTerm | Term | NonFhirTerm
+            self.terms.append(IBaseTerm(term))
 
         if isinstance(path, str):
             self.path = ElementPath.from_el_path(path)
