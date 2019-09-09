@@ -11,3 +11,11 @@ class ConstraintNotSatisfied(Invalid):
 
 class ValidationError(ConstraintNotSatisfied):
     """ """
+
+
+class MultipleResultsFound(Invalid):
+    """ """
+
+
+class NoResultFound(Invalid):
+    """ """

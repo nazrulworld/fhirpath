@@ -9,6 +9,8 @@ Breakings
 
 - Built-in providers (``guillotina_app``and ``plone_app``) have been wiped as both becoming separate pypi project.
 
+- ``queries`` module has been moved from ``fql`` sub-package to fhirpath package and also renamed as ``query``.
+
 
 0.1.1 (2019-08-15)
 ------------------

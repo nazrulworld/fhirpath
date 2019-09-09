@@ -1,11 +1,11 @@
 # _*_ coding: utf-8 _*_
 import operator
 
+from fhirpath.interfaces.fql import IGroupTerm
+from fhirpath.interfaces.fql import ITerm
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import reraise
 
-from .interfaces import IGroupTerm
-from .interfaces import ITerm
 from .types import ExistsGroupTerm
 from .types import ExistsTerm
 from .types import GroupTerm

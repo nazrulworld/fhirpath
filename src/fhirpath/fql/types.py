@@ -8,32 +8,31 @@ from copy import copy
 from zope.interface import implementer
 from zope.interface import implementer_only
 
+from fhirpath.constraints import required_finalized
+from fhirpath.constraints import required_not_finalized
+from fhirpath.constraints import required_value_not_assigned
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.enums import TermMatchType
 from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
+from fhirpath.interfaces import IElementPath
+from fhirpath.interfaces import IExistsGroupTerm
+from fhirpath.interfaces import IExistsTerm
 from fhirpath.interfaces import IFhirPrimitiveType
+from fhirpath.interfaces import IFqlClause
+from fhirpath.interfaces import IGroupTerm
+from fhirpath.interfaces import IInTerm
+from fhirpath.interfaces import IPathConstraint
+from fhirpath.interfaces import ISortTerm
+from fhirpath.interfaces import ITerm
+from fhirpath.interfaces import ITermValue
+from fhirpath.interfaces import IValuedClass
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
 from fhirpath.utils import unwrap_proxy
-
-from .constraints import required_finalized
-from .constraints import required_not_finalized
-from .constraints import required_value_not_assigned
-from .interfaces import IElementPath
-from .interfaces import IExistsGroupTerm
-from .interfaces import IExistsTerm
-from .interfaces import IFqlClause
-from .interfaces import IGroupTerm
-from .interfaces import IInTerm
-from .interfaces import IPathConstraint
-from .interfaces import ISortTerm
-from .interfaces import ITerm
-from .interfaces import ITermValue
-from .interfaces import IValuedClass
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"

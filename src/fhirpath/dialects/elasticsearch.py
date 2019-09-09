@@ -12,11 +12,11 @@ from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.enums import TermMatchType
-from fhirpath.fql.interfaces import IExistsTerm
-from fhirpath.fql.interfaces import IGroupTerm
-from fhirpath.fql.interfaces import IInTerm
-from fhirpath.fql.interfaces import ITerm
 from fhirpath.interfaces import IFhirPrimitiveType
+from fhirpath.interfaces.fql import IExistsTerm
+from fhirpath.interfaces.fql import IGroupTerm
+from fhirpath.interfaces.fql import IInTerm
+from fhirpath.interfaces.fql import ITerm
 
 from .base import DialectBase
 

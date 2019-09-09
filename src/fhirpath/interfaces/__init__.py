@@ -1,118 +1,30 @@
 # _*_ coding: utf-8 _*_
-from zope.interface import Attribute
-from zope.interface import Interface
-
+from .base import IBaseClass  # noqa: F401
+from .base import IFhirPrimitiveType  # noqa: F401
+from .base import IFhirSearch  # noqa: F401
+from .base import IModel  # noqa: F401
+from .base import IPathInfoContext  # noqa: F401
+from .base import IQuery  # noqa: F401
+from .base import IQueryBuilder  # noqa: F401
+from .base import IQueryResult  # noqa: F401
+from .base import ISearch  # noqa: F401
+from .base import ISearchContext  # noqa: F401
+from .base import ISearchContextFactory  # noqa: F401
+from .base import IStorage  # noqa: F401
+from .connectors import IConnection  # noqa: F401
+from .dialects import IDialect  # noqa: F401
 from .engine import IElasticsearchEngine  # noqa: F401
 from .engine import IElasticsearchEngineFactory  # noqa: F401
 from .engine import IEngine  # noqa: F401
 from .engine import IEngineFactory  # noqa: F401
-
-
-__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-class IStorage(Interface):
-    """ """
-
-    _last_updated = Attribute("Last Updated")
-    _write_locked = Attribute("Write Locked")
-    _read_locaked = Attribute("Read Locked")
-
-    def get(item):
-        """ """
-
-    def set(item, value):
-        """ """
-
-    def insert(item, value):
-        """ """
-
-    def delete(item):
-        """ """
-
-    def clear():
-        """ """
-
-    def exists(item):
-        """ """
-
-    def empty():
-        """ """
-
-    def total():
-        """ """
-
-
-class ISearch(Interface):
-    """ """
-
-
-class ISearchContext(Interface):
-    """ """
-
-
-class ISearchContextFactory(Interface):
-    """ """
-
-
-class IFhirPrimitiveType(Interface):
-    """ """
-
-    __visit_name__ = Attribute("visit name")
-    __regex__ = Attribute("Regex")
-
-    def to_python():
-        """ """
-
-    def to_json():
-        """ """
-
-
-class IPathInfoContext(Interface):
-    """ """
-
-    fhir_release = Attribute("FHIR Release")
-    prop_name = Attribute("Property Name")
-    prop_original = Attribute("Original propety name")
-    type_name = Attribute("Type Name")
-    type_class = Attribute("Type Class")
-    optional = Attribute("Optional")
-    multiple = Attribute("Multiple")
-
-
-class IConnection(Interface):
-    """ """
-
-    _conn = Attribute("Raw connection underlaying DBAPI")
-
-    def raw_connection():
-        """return underlaying DBAPI, could be realtime connection from config"""
-
-    def server_info():
-        """ """
-
-    def execute(query, **kwargs):
-        """ """
-
-
-class IDialect(Interface):
-    """ """
-
-    _connection = Attribute("Connection from Engine")
-
-    def bind(connection):
-        """ """
-
-    def compile(query):
-        """ """
-
-    def pre_compile(query):
-        """ """
-
-
-class IModel(Interface):
-    """FHIR Model Class"""
-
-
-class IFhirSearch(Interface):
-    """ """
+from .fql import IElementPath  # noqa: F401
+from .fql import IExistsGroupTerm  # noqa: F401
+from .fql import IExistsTerm  # noqa: F401
+from .fql import IFqlClause  # noqa: F401
+from .fql import IGroupTerm  # noqa: F401
+from .fql import IInTerm  # noqa: F401
+from .fql import IPathConstraint  # noqa: F401
+from .fql import ISortTerm  # noqa: F401
+from .fql import ITerm  # noqa: F401
+from .fql import ITermValue  # noqa: F401
+from .fql import IValuedClass  # noqa: F401

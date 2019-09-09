@@ -2,17 +2,10 @@
 from zope.interface import Attribute
 from zope.interface import Interface
 
+from .base import IBaseClass
+
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-class IBaseClass(Interface):
-    """ """
-
-    _finalized = Attribute("Finalized Flag")
-
-    def finalize(contex):
-        """ """
 
 
 class IValuedClass(Interface):
@@ -61,56 +54,6 @@ class ISortTerm(IBaseClass):
 
     order = Attribute("Sort Order")
     path = Attribute("Element Path")
-
-
-class IQuery(IBaseClass):
-    """ """
-
-    fhir_release = Attribute("FHIR Release Name")
-
-
-class ISearchContext(Interface):
-    """ """
-
-
-class IQueryBuilder(IBaseClass):
-    """ """
-
-    context = Attribute("Fhir Query Context")
-
-    def bind(context):
-        """ """
-
-
-class IQueryResult(Interface):
-    """ """
-
-    def fetchall():
-        """ """
-
-    def single():
-        """ """
-
-    def first():
-        """ """
-
-    def last():
-        """ """
-
-    def tail():
-        """ """
-
-    def skip():
-        """ """
-
-    def take():
-        """ """
-
-    def count():
-        """ """
-
-    def empty():
-        """ """
 
 
 class IPathConstraint(Interface):

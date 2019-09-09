@@ -15,7 +15,7 @@ from fhirpath.enums import SortOrderType
 from fhirpath.enums import WhereConstraintType
 from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
-from fhirpath.fql import Q_
+from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_

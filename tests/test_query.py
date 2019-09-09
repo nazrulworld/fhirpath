@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
 from fhirpath.enums import SortOrderType
-from fhirpath.fql import Q_
+from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_

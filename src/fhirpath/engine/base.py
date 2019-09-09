@@ -5,8 +5,8 @@ from collections import deque
 from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
-from fhirpath.fql.query import Query
 from fhirpath.interfaces import IEngine
+from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
 
 

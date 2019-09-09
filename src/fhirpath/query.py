@@ -14,9 +14,15 @@ from fhirpath.utils import builder
 from .constraints import required_finalized
 from .constraints import required_from_resource
 from .constraints import required_not_finalized
-from .expressions import and_
-from .expressions import fql
-from .expressions import sort_
+from .fql.expressions import and_
+from .fql.expressions import fql
+from .fql.expressions import sort_
+from .fql.types import ElementPath
+from .fql.types import FromClause
+from .fql.types import LimitClause
+from .fql.types import SelectClause
+from .fql.types import SortClause
+from .fql.types import WhereClause
 from .interfaces import IElementPath
 from .interfaces import IGroupTerm
 from .interfaces import IQuery
@@ -24,12 +30,6 @@ from .interfaces import IQueryBuilder
 from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
-from .types import ElementPath
-from .types import FromClause
-from .types import LimitClause
-from .types import SelectClause
-from .types import SortClause
-from .types import WhereClause
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
