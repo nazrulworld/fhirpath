@@ -10,6 +10,7 @@ from .types import ExistsGroupTerm
 from .types import ExistsTerm
 from .types import GroupTerm
 from .types import InTerm
+from .types import NonFhirTerm
 from .types import SortTerm
 from .types import Term
 from .types import TermValue
@@ -34,9 +35,17 @@ __all__ = [
 ]
 
 # API functions
-def T_(path, value=EMPTY_VALUE, match_type=None):  # noqa: E302
+def T_(path, value=EMPTY_VALUE, match_type=None, non_fhir=False):  # noqa: E302
     """ """
-    term = Term(path=path, value=value, match_type=match_type)
+    params = {
+        "path": path,
+        "value": value,
+        "match_type": match_type
+    }
+    if non_fhir is False:
+        term = Term(**params)
+    else:
+        term = NonFhirTerm(**params)
     return term
 
 
