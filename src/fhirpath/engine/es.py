@@ -27,16 +27,18 @@ class ElasticsearchEngine(Engine):
     def execute(self, query, unrestricted=False):
         """ """
         # for now we support single from resource
+        query_copy = query.clone()
         resource_type = query.get_from()[0][1].resource_type
         field_index_name = self.calculate_field_index_name(resource_type)
 
+        if unrestricted is False:
+            self.build_security_query(query_copy)
+
         params = {
-            "query": query,
+            "query": query_copy,
             "root_replacer": field_index_name,
             "mapping": self.get_mapping(resource_type),
         }
-        if unrestricted is False:
-            params["security_callable"] = self.build_security_query
 
         compiled = self.dialect.compile(**params)
         raw_result = self.connection.fetch(compiled)
@@ -47,9 +49,9 @@ class ElasticsearchEngine(Engine):
 
         return result
 
-    def build_security_query(self):
+    def build_security_query(self, query):
         """ """
-        return {}
+        pass
 
     def calculate_field_index_name(self, resource_type):
         raise NotImplementedError

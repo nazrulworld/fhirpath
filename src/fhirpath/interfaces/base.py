@@ -15,6 +15,16 @@ class IBaseClass(Interface):
         """ """
 
 
+class ICloneable(Interface):
+    """ """
+
+    def clone():
+        """ """
+
+    def __copy__():
+        """"""
+
+
 class IStorage(Interface):
     """ """
 

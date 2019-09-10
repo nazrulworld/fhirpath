@@ -139,13 +139,12 @@ class ElasticSearchDialect(DialectBase):
             else:
                 return info_
 
-    def compile(self, query, mapping, root_replacer=None, security_callable=None):
+    def compile(self, query, mapping, root_replacer=None):
         """
         :param: query
         :param: mapping: Elasticsearch mapping for FHIR resources.
         :root_replacer: Path´s root replacer:
         Could be mapping name or index name in zope´s ZCatalog context
-        :security_callable:
         """
         body_structure = self.create_structure()
         conditional_terms = query.get_where()
@@ -171,9 +170,6 @@ class ElasticSearchDialect(DialectBase):
 
             container.append(q)
 
-        if security_callable is not None:
-            securities = security_callable()
-            self.apply_security(securities, body_structure)
         # ResourceType bind
         self.apply_from_constraint(query, body_structure, root_replacer=root_replacer)
         # Sorting
@@ -460,37 +456,6 @@ class ElasticSearchDialect(DialectBase):
             qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
         return qr, term.unary_operator
-
-    def apply_security(self, securities, body_structure):
-        """ """
-        should_list = list()
-        for field in securities:
-            values = securities[field]
-            if isinstance(values, (str, bytes)):
-                values = [values]
-            for val in values:
-                if IFhirPrimitiveType.providedBy(val):
-                    if val.__visit_name__ == "dateTime":
-                        # just validation
-                        val.to_python()
-                        range_ = {
-                            field: {
-                                ES_PY_OPERATOR_MAP[operator.ge]: val,
-                                ES_PY_OPERATOR_MAP[operator.le]: val,
-                            }
-                        }
-                        should_list.append({"range": range_})
-                    else:
-                        raise NotImplementedError
-                elif isinstance(val, (str, bytes)):
-                    should_list.append({"match": {field: val}})
-                else:
-                    raise NotImplementedError
-
-        if len(should_list) > 0:
-            body_structure["query"]["bool"]["filter"].append(
-                {"bool": {"should": should_list, "minimum_should_match": 1}}
-            )
 
     def apply_limit(self, limit_clause, body_structure):
         """ """

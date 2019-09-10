@@ -23,6 +23,7 @@ from .fql.types import LimitClause
 from .fql.types import SelectClause
 from .fql.types import SortClause
 from .fql.types import WhereClause
+from .interfaces import ICloneable
 from .interfaces import IElementPath
 from .interfaces import IGroupTerm
 from .interfaces import IQuery
@@ -35,7 +36,7 @@ from .interfaces import ITerm
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
-@implementer(IQuery)
+@implementer(IQuery, ICloneable)
 class Query(object):
     """ """
 
@@ -98,6 +99,25 @@ class Query(object):
     def get_limit(self):
         """ """
         return self._limit
+
+    def clone(self):
+        """ """
+        return self.__copy__()
+
+    def __copy__(self):
+        """ """
+        newone = type(self).__new__(type(self))
+        newone.__dict__.update(self.__dict__)
+
+        newone.fhir_relase = self.fhir_relase
+
+        newone._from = copy(self._from)
+        newone._select = copy(self._select)
+        newone._where = copy(self._where)
+        newone._sort = copy(self._sort)
+        newone._limit = copy(self._limit)
+
+        return newone
 
     def __proxy__(self):
         """ """
