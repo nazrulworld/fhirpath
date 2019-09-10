@@ -16,6 +16,7 @@ from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.interfaces.fql import IExistsTerm
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import IInTerm
+from fhirpath.interfaces.fql import INonFhirTerm
 from fhirpath.interfaces.fql import ITerm
 
 from .base import DialectBase
@@ -82,16 +83,29 @@ class ElasticSearchDialect(DialectBase):
 
     def _create_term(self, term, root_replacer=None):
         """Create ES Query term"""
+        path_ = self._create_dotted_path(term, root_replacer)
+        value = term.get_real_value()
+        if not INonFhirTerm.providedBy(term):
+            multiple = term.path.context.multiple
+        else:
+            multiple = False
+        if multiple:
+            q = {"terms": {path_: [value]}}
+        else:
+            q = {"term": {path_: value}}
+
+        return q
+
+    def _create_dotted_path(self, term, root_replacer=None):
+        """ """
+        if INonFhirTerm.providedBy(term):
+            return term.path
+
         if root_replacer is not None:
             path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
         else:
             path_ = term.path.path
-        if term.path.context.multiple:
-            q = {"terms": {path_: [term.value.value]}}
-        else:
-            q = {"term": {path_: term.value.value}}
-
-        return q
+        return path_
 
     def _clean_up(self, body_structure):
         """ """
@@ -232,14 +246,9 @@ class ElasticSearchDialect(DialectBase):
                     "boolean",
                 ):
                     # xxx: may do something special?
-                    if root_replacer is not None:
-                        path_ = ".".join(
-                            [root_replacer] + list(term.path.path.split(".")[1:])
-                        )
-                    else:
-                        path_ = term.path.path
+                    dotted_path_ = self._create_dotted_path(term, root_replacer)
 
-                    map_info = self._get_path_mapping_info(mapping, path_)
+                    map_info = self._get_path_mapping_info(mapping, dotted_path_)
 
                     if map_info.get("type", None) == "text":
                         resolved = self.resolve_string_term(
@@ -278,7 +287,41 @@ class ElasticSearchDialect(DialectBase):
                 qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
                 return qr, unary_operator
             else:
-                raise NotImplementedError("Line 85")
+                raise NotImplementedError("Line 288")
+
+        elif INonFhirTerm.providedBy(term):
+            assert IFhirPrimitiveType.alsoProvides(term.value)
+            if term.value.__visit_name__ in (
+                "string",
+                "uri",
+                "url",
+                "canonical",
+                "code",
+                "oid",
+                "id",
+                "uuid",
+                "boolean",
+            ):
+                if term.match_type not in (TermMatchType.FULLTEXT, None):
+                    resolved = self.resolve_string_term(term, {}, None)
+                else:
+                    q = self._create_term(term, None)
+                    resolved = q, term.unary_operator
+
+            elif term.value.__visit_name__ in ("dateTime", "date", "time", "instant"):
+
+                resolved = self.resolve_datetime_term(term, None)
+
+            elif term.value.__visit_name__ in (
+                "integer",
+                "decimal",
+                "unsignedInt",
+                "positiveInt",
+            ):
+
+                resolved = self.resolve_numeric_term(term, None)
+            else:
+                raise NotImplementedError
 
         else:
             raise NotImplementedError
@@ -287,11 +330,13 @@ class ElasticSearchDialect(DialectBase):
         """TODO: 1.) Value Conversion(stringify) based of context.type_name
         i.e date or dateTime or Time """
         q = dict()
-        type_name = term.path.context.type_name
-        if root_replacer is not None:
-            path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
+        if INonFhirTerm.providedBy(term):
+            type_name = term.value.__visit_name__
         else:
-            path_ = term.path.path
+            type_name = term.path.context.type_name
+
+        value = term.get_real_value()
+        path_ = self._create_dotted_path(term, root_replacer)
 
         if type_name in ("dateTime", "instant"):
             value_formatter = (
@@ -308,10 +353,10 @@ class ElasticSearchDialect(DialectBase):
             q["range"] = {
                 path_: {
                     ES_PY_OPERATOR_MAP[operator.ge]: isodate.strftime(
-                        term.value.value, value_formatter
+                        value, value_formatter
                     ),
                     ES_PY_OPERATOR_MAP[operator.le]: isodate.strftime(
-                        term.value.value, value_formatter
+                        value, value_formatter
                     ),
                 }
             }
@@ -325,13 +370,13 @@ class ElasticSearchDialect(DialectBase):
             q["range"] = {
                 path_: {
                     ES_PY_OPERATOR_MAP[term.comparison_operator]: isodate.strftime(
-                        term.value.value, value_formatter
+                        value, value_formatter
                     )
                 }
             }
 
-        if type_name in ("dateTime", "instant", "time") and term.value.value.tzinfo:
-            timezone = isodate.tz_isoformat(term.value.value)
+        if type_name in ("dateTime", "instant", "time") and value.tzinfo:
+            timezone = isodate.tz_isoformat(value)
             if timezone not in ("", "Z"):
                 q["range"][path_]["time_zone"] = timezone
 
@@ -351,17 +396,14 @@ class ElasticSearchDialect(DialectBase):
     def resolve_numeric_term(self, term, root_replacer=None):
         """ """
         q = dict()
-
-        if root_replacer is not None:
-            path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
-        else:
-            path_ = term.path.path
+        path_ = self._create_dotted_path(term, root_replacer)
+        value = term.get_real_value()
 
         if term.comparison_operator in (operator.eq, operator.ne):
             q["range"] = {
                 path_: {
-                    ES_PY_OPERATOR_MAP[operator.ge]: term.value.value,
-                    ES_PY_OPERATOR_MAP[operator.le]: term.value.value,
+                    ES_PY_OPERATOR_MAP[operator.ge]: value,
+                    ES_PY_OPERATOR_MAP[operator.le]: value,
                 }
             }
 
@@ -371,9 +413,7 @@ class ElasticSearchDialect(DialectBase):
             operator.ge,
             operator.gt,
         ):
-            q["range"] = {
-                path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: term.value.value}
-            }
+            q["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
 
         if (
             term.comparison_operator != operator.ne
@@ -392,22 +432,18 @@ class ElasticSearchDialect(DialectBase):
         """ """
         # xxx: could have support for free text search
         q = dict()
-
-        if root_replacer is not None:
-            path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
-        else:
-            path_ = term.path.path
+        path_ = self._create_dotted_path(term, root_replacer)
 
         fulltext_analyzers = ("standard",)
-        val = term.value.value
+        value = term.get_real_value()
         if map_info.get("analyzer", "standard") in fulltext_analyzers:
             # xxx: should handle exact match
             if term.match_type == TermMatchType.EXACT:
-                q = {"match_phrase": {path_: val}}
+                q = {"match_phrase": {path_: value}}
             else:
-                q = {"match": {path_: val}}
-        elif ("/" in val or URI_SCHEME.match(val)) and ".reference" in path_:
-            q = {"match_phrase": {path_: val}}
+                q = {"match": {path_: value}}
+        elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:
+            q = {"match_phrase": {path_: value}}
         else:
             q = self._create_term(term, root_replacer)
 
@@ -417,11 +453,11 @@ class ElasticSearchDialect(DialectBase):
     def resolve_exists_term(self, term, root_replacer=None):
         """ """
         qr = dict()
-        path_ = self._apply_path_replacement(term.path.path, root_replacer)
+        path_ = self._create_dotted_path(term, root_replacer)
 
         qr = {"exists": {"field": path_}}
-
-        qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+        if not INonFhirTerm.providedBy(term):
+            qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
         return qr, term.unary_operator
 

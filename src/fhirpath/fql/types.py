@@ -168,6 +168,10 @@ class BaseTerm(object):
         """ """
         raise NotImplementedError
 
+    def get_real_value(self):
+        """ """
+        raise NotImplementedError
+
     def set_match_type(self, type_):
         """ """
         self.match_type = TermMatchType[type_]
@@ -321,6 +325,13 @@ class Term(BaseTerm):
 
         self._finalized = True
 
+    def get_real_value(self):
+        """ """
+        if self.value is None:
+            return None
+        required_finalized(self.value)
+        return self.value.value
+
     def validate(self):
         """ """
         # xxx: required validate ```comparison_operator```
@@ -370,8 +381,8 @@ class Term(BaseTerm):
         raise NotImplementedError
 
 
-@implementer(INonFhirTerm)
-class NonFhirTerm(object):
+@implementer_only(INonFhirTerm, IValuedClass)
+class NonFhirTerm(BaseTerm):
     """ """
 
     def __init__(self, path, value=EMPTY_VALUE, match_type=None):
@@ -405,6 +416,13 @@ class NonFhirTerm(object):
         """ """
         self.validate()
         self._finalized = True
+
+    def get_real_value(self):
+        """ """
+        if self.value is None:
+            return None
+
+        return self.value
 
     def validate(self):
         """ """
