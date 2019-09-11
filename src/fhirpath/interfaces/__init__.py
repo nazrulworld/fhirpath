@@ -5,6 +5,7 @@ from .base import IFhirPrimitiveType  # noqa: F401
 from .base import IFhirSearch  # noqa: F401
 from .base import IModel  # noqa: F401
 from .base import IPathInfoContext  # noqa: F401
+from .base import IPrimitiveTypeCollection  # noqa: F401
 from .base import IQuery  # noqa: F401
 from .base import IQueryBuilder  # noqa: F401
 from .base import IQueryResult  # noqa: F401

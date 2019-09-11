@@ -13,6 +13,7 @@ from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.enums import TermMatchType
 from fhirpath.interfaces import IFhirPrimitiveType
+from fhirpath.interfaces import IPrimitiveTypeCollection
 from fhirpath.interfaces.fql import IExistsTerm
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import IInTerm
@@ -286,41 +287,8 @@ class ElasticSearchDialect(DialectBase):
                 raise NotImplementedError("Line 288")
 
         elif INonFhirTerm.providedBy(term):
-            assert IFhirPrimitiveType.alsoProvides(term.value)
-            if term.value.__visit_name__ in (
-                "string",
-                "uri",
-                "url",
-                "canonical",
-                "code",
-                "oid",
-                "id",
-                "uuid",
-                "boolean",
-            ):
-                if term.match_type not in (TermMatchType.FULLTEXT, None):
-                    resolved = self.resolve_string_term(term, {}, None)
-                else:
-                    q = self._create_term(term, None)
-                    resolved = q, term.unary_operator
-
-            elif term.value.__visit_name__ in ("dateTime", "date", "time", "instant"):
-
-                resolved = self.resolve_datetime_term(term, None)
-
-            elif term.value.__visit_name__ in (
-                "integer",
-                "decimal",
-                "unsignedInt",
-                "positiveInt",
-            ):
-
-                resolved = self.resolve_numeric_term(term, None)
-            else:
-                raise NotImplementedError
-
-        else:
-            raise NotImplementedError
+            assert IFhirPrimitiveType.providedBy(term.value)
+            return self.resolve_nonfhir_term(term)
 
     def resolve_datetime_term(self, term, root_replacer=None):
         """TODO: 1.) Value Conversion(stringify) based of context.type_name
@@ -456,6 +424,48 @@ class ElasticSearchDialect(DialectBase):
             qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
         return qr, term.unary_operator
+
+    def resolve_nonfhir_term(self, term):
+        """ """
+        if IPrimitiveTypeCollection.providedBy(term.value):
+            visit_name = term.value.registered_visit
+            value = list(term.value)
+        else:
+            visit_name = term.value.__visit_name__
+            value = term.value
+
+        if visit_name in (
+            "string",
+            "uri",
+            "url",
+            "canonical",
+            "code",
+            "oid",
+            "id",
+            "uuid",
+            "boolean",
+        ):
+            if term.match_type not in (TermMatchType.FULLTEXT, None):
+                resolved = self.resolve_string_term(term, {}, None)
+            else:
+                q = self._create_term(term, None)
+                resolved = q, term.unary_operator
+
+        elif visit_name in ("dateTime", "date", "time", "instant"):
+
+            resolved = self.resolve_datetime_term(term, None)
+
+        elif visit_name in (
+            "integer",
+            "decimal",
+            "unsignedInt",
+            "positiveInt",
+        ):
+
+            resolved = self.resolve_numeric_term(term, None)
+        else:
+            raise NotImplementedError
+        return resolved
 
     def apply_limit(self, limit_clause, body_structure):
         """ """

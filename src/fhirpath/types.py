@@ -7,10 +7,12 @@ import re
 
 import isodate
 from zope.interface import implementer
+from collections import deque
 
 from fhirpath.thirdparty import ImmutableDict
 
 from .interfaces import IFhirPrimitiveType
+from .interfaces import IPrimitiveTypeCollection
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -525,7 +527,68 @@ class Empty:
     __slots__ = ()
 
     def __repr__(self):
-        return '<NO_VALUE>'
+        return "<NO_VALUE>"
 
 
 EMPTY_VALUE = Empty()
+
+
+@implementer(IFhirPrimitiveType, IPrimitiveTypeCollection)
+class PrimitiveTypeCollection(object):
+    """ """
+
+    __visit_name__ = "collection"
+    __regex__ = None
+    __slots__ = ("_container", "_registered_visit")
+
+    def __init__(self, *members):
+        """ """
+        object.__setattr__(self, "_container", deque())
+        object.__setattr__(self, "_registered_visit", None)
+
+        for member in members:
+            self.add(members)
+
+    def add(self, item, position=None):
+        """ """
+        member = IFhirPrimitiveType(item)
+        if self._registered_visit is None:
+            self._registered_visit = member.__visit_name__
+
+        if member.__visit_name__ != self._registered_visit:
+            raise ValueError
+
+        if position is None:
+            self._container.append(member)
+        else:
+            self._container.insert(position, member)
+
+    def remove(self, item=None, position=None):
+        """ """
+        if item is None:
+            try:
+                item = self._container[position]
+            except IndexError:
+                raise
+
+        self._container.remove(item)
+
+    @property
+    def registered_visit(self):
+        """ """
+        return self._registered_visit
+
+    def to_python(self):
+        """ """
+        return [member.to_python() for member in self._container]
+
+    def __len__(self):
+        """ """
+        return len(self._container)
+
+    def __iter__(self):
+        """ """
+        for member in self._container:
+            # validation purpose
+            member.to_python()
+            yield member
