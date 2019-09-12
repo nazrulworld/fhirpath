@@ -15,6 +15,7 @@ from .base import ISearchContextFactory  # noqa: F401
 from .base import IStorage  # noqa: F401
 from .connectors import IConnection  # noqa: F401
 from .dialects import IDialect  # noqa: F401
+from .dialects import IIgnoreNestedCheck  # noqa: F401
 from .engine import IElasticsearchEngine  # noqa: F401
 from .engine import IElasticsearchEngineFactory  # noqa: F401
 from .engine import IEngine  # noqa: F401

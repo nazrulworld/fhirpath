@@ -19,3 +19,7 @@ class IDialect(Interface):
 
     def pre_compile(query):
         """ """
+
+
+class IIgnoreNestedCheck(Interface):
+    """Marker interface"""

@@ -5,7 +5,6 @@ import operator
 import re
 
 import isodate
-from zope.interface import Interface
 from zope.interface import alsoProvides
 
 from fhirpath.enums import GroupType
@@ -14,6 +13,7 @@ from fhirpath.enums import SortOrderType
 from fhirpath.enums import TermMatchType
 from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.interfaces import IPrimitiveTypeCollection
+from fhirpath.interfaces.dialects import IIgnoreNestedCheck
 from fhirpath.interfaces.fql import IExistsTerm
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import IInTerm
@@ -34,10 +34,6 @@ ES_PY_OPERATOR_MAP = {
     operator.ge: "gte",
     operator.le: "lte",
 }
-
-
-class IIgnoreNestedCheck(Interface):
-    """Marker interface"""
 
 
 class ElasticSearchDialect(DialectBase):
