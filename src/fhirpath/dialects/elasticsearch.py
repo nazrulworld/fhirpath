@@ -219,7 +219,8 @@ class ElasticSearchDialect(DialectBase):
                 resolved = self.resolve_term(t_, mapping, root_replacer)
                 container.append(resolved[0])
 
-            qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+            if not IIgnoreNestedCheck.providedBy(term):
+                qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
 
             return qr, unary_operator
 
