@@ -4,10 +4,10 @@ https://www.hl7.org/fhir/datatypes.html#primitive
 """
 import base64
 import re
+from collections import deque
 
 import isodate
 from zope.interface import implementer
-from collections import deque
 
 from fhirpath.thirdparty import ImmutableDict
 

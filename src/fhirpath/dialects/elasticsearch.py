@@ -82,18 +82,19 @@ class ElasticSearchDialect(DialectBase):
 
         return qr
 
-    def _create_term(self, term, root_replacer=None):
-        """Create ES Query term"""
-        path_ = self._create_dotted_path(term, root_replacer)
-        value = term.get_real_value()
-        if not INonFhirTerm.providedBy(term):
-            multiple = term.path.context.multiple
-        else:
-            multiple = False
+    def _create_term(self, path, value, multiple=False):
+        """Create ES Query term
+        term.path.context.multiple"""
+        multiple_ = isinstance(value, (list, tuple)) or multiple is True
+        if multiple_ is True and not isinstance(value, (list, tuple)):
+            value = [value]
+
+        if IFhirPrimitiveType.providedBy(value) and value.__visit_name__ == "boolean":
+            value = value.to_python()
         if multiple:
-            q = {"terms": {path_: [value]}}
+            q = {"terms": {path: value}}
         else:
-            q = {"term": {path_: value}}
+            q = {"term": {path: value}}
 
         return q
 
@@ -229,6 +230,7 @@ class ElasticSearchDialect(DialectBase):
             return self.resolve_exists_term(term, root_replacer=root_replacer)
 
         elif ITerm.providedBy(term):
+
             if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
 
                 if term.path.context.type_name in (
@@ -243,9 +245,11 @@ class ElasticSearchDialect(DialectBase):
                     "boolean",
                 ):
                     # xxx: may do something special?
-                    dotted_path_ = self._create_dotted_path(term, root_replacer)
+                    multiple = term.path.context.multiple
+                    dotted_path = self._create_dotted_path(term, root_replacer)
+                    value = term.get_real_value()
 
-                    map_info = self._get_path_mapping_info(mapping, dotted_path_)
+                    map_info = self._get_path_mapping_info(mapping, dotted_path)
 
                     if map_info.get("type", None) == "text":
                         resolved = self.resolve_string_term(
@@ -253,7 +257,7 @@ class ElasticSearchDialect(DialectBase):
                         )
 
                     else:
-                        q = self._create_term(term, root_replacer)
+                        q = self._create_term(dotted_path, value, multiple=multiple)
                         resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
@@ -409,7 +413,7 @@ class ElasticSearchDialect(DialectBase):
         elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:
             q = {"match_phrase": {path_: value}}
         else:
-            q = self._create_term(term, root_replacer)
+            q = self._create_term(path_, value, term.path.context.multiple)
 
         resolved = q, term.unary_operator
         return resolved
@@ -428,8 +432,19 @@ class ElasticSearchDialect(DialectBase):
     def resolve_nonfhir_term(self, term):
         """ """
         if IPrimitiveTypeCollection.providedBy(term.value):
-            visit_name = term.value.registered_visit
-            value = list(term.value)
+            if term.value.__visit_name__ in ("string", "code", "oid", "id", "uuid"):
+                if term.value.__visit_name__ == "string" and term.match_type not in (
+                    None,
+                    TermMatchType.EXACT,
+                ):
+                    raise ValueError(
+                        "PrimitiveTypeCollection instance is not "
+                        "allowed if match type not exact"
+                    )
+                visit_name = term.value.registered_visit
+                value = list(term.value)
+            else:
+                raise NotImplementedError
         else:
             visit_name = term.value.__visit_name__
             value = term.value
@@ -448,19 +463,14 @@ class ElasticSearchDialect(DialectBase):
             if term.match_type not in (TermMatchType.FULLTEXT, None):
                 resolved = self.resolve_string_term(term, {}, None)
             else:
-                q = self._create_term(term, None)
+                q = self._create_term(term.path, value)
                 resolved = q, term.unary_operator
 
         elif visit_name in ("dateTime", "date", "time", "instant"):
 
             resolved = self.resolve_datetime_term(term, None)
 
-        elif visit_name in (
-            "integer",
-            "decimal",
-            "unsignedInt",
-            "positiveInt",
-        ):
+        elif visit_name in ("integer", "decimal", "unsignedInt", "positiveInt"):
 
             resolved = self.resolve_numeric_term(term, None)
         else:
