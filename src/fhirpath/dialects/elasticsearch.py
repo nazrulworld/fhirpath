@@ -429,8 +429,9 @@ class ElasticSearchDialect(DialectBase):
     def resolve_nonfhir_term(self, term):
         """ """
         if IPrimitiveTypeCollection.providedBy(term.value):
-            if term.value.__visit_name__ in ("string", "code", "oid", "id", "uuid"):
-                if term.value.__visit_name__ == "string" and term.match_type not in (
+            visit_name = term.value.registered_visit
+            if visit_name in ("string", "code", "oid", "id", "uuid"):
+                if visit_name == "string" and term.match_type not in (
                     None,
                     TermMatchType.EXACT,
                 ):
@@ -438,7 +439,6 @@ class ElasticSearchDialect(DialectBase):
                         "PrimitiveTypeCollection instance is not "
                         "allowed if match type not exact"
                     )
-                visit_name = term.value.registered_visit
                 value = list(term.value)
             else:
                 raise NotImplementedError

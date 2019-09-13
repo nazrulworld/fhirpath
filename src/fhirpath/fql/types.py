@@ -415,6 +415,16 @@ class NonFhirTerm(BaseTerm):
     def finalize(self, context):
         """ """
         self.validate()
+
+        if self.arithmetic_operator is None:
+            self.arithmetic_operator = operator.and_
+
+        if self.unary_operator is None:
+            self.unary_operator = operator.pos
+
+        if self.comparison_operator is None:
+            self.comparison_operator = operator.eq
+
         self._finalized = True
 
     def get_real_value(self):
