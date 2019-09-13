@@ -87,7 +87,7 @@ class ElasticSearchDialect(DialectBase):
 
         if IFhirPrimitiveType.providedBy(value) and value.__visit_name__ == "boolean":
             value = value.to_python()
-        if multiple:
+        if multiple_:
             q = {"terms": {path: value}}
         else:
             q = {"term": {path: value}}
