@@ -547,7 +547,7 @@ class PrimitiveTypeCollection(object):
         object.__setattr__(self, "_registered_visit", None)
 
         for member in members:
-            self.add(members)
+            self.add(member)
 
     def add(self, item, position=None):
         """ """
