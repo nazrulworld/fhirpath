@@ -31,6 +31,7 @@ from .interfaces import IQueryBuilder
 from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
+from .exceptions import MultipleResultsFound
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -348,11 +349,25 @@ class QueryResult(object):
         If there are multiple items, an error is signaled to the evaluation environment.
         This operation is useful for ensuring that an error is returned
         if an assumption about cardinality is violated at run-time."""
+        result = self.fetchall()
+        if result.header.total == 0:
+            return None
+        if result.header.total > 1:
+            raise MultipleResultsFound
+        model_class = self._query.get_from()[0][1]
+        return model_class(result.body[0])
 
     def first(self):
         """Returns a collection containing only the first item in the input collection.
         This function is equivalent to item(0), so it will return an empty collection
         if the input collection has no items."""
+        query = self._query.clone()
+        query._limit.limit = 1
+        result = self._engine.execute(query, self._unrestricted)
+        if result.header.total > 0:
+            model_class = self._query.get_from()[0][1]
+            return model_class(result.body[0])
+        return None
 
     def last(self):
         """Returns a collection containing only the last item in the input collection.

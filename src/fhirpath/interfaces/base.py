@@ -136,25 +136,43 @@ class IQueryResult(Interface):
         """ """
 
     def single():
-        """ """
+        """Will return the single item in the input if there is just one item.
+        If the input collection is empty ({ }), the result is empty.
+        If there are multiple items, an error is signaled to the evaluation environment.
+        This operation is useful for ensuring that an error is returned
+        if an assumption about cardinality is violated at run-time."""
 
     def first():
-        """ """
+        """Returns a collection containing only the first item in the input collection.
+        This function is equivalent to item(0), so it will return an empty collection
+        if the input collection has no items."""
 
     def last():
-        """ """
+        """Returns a collection containing only the last item in the input collection.
+        Will return an empty collection if the input collection has no items."""
 
     def tail():
-        """ """
+        """Returns a collection containing all but the first item in the input
+        collection. Will return an empty collection
+        if the input collection has no items, or only one item."""
 
-    def skip():
-        """ """
+    def skip(num: int):
+        """Returns a collection containing all but the first num items
+        in the input collection. Will return an empty collection
+        if there are no items remaining after the indicated number of items have
+        been skipped, or if the input collection is empty.
+        If num is less than or equal to zero, the input collection
+        is simply returned."""
 
-    def take():
-        """ """
+    def take(num: int):
+        """Returns a collection containing the first num items in the input collection,
+        or less if there are less than num items. If num is less than or equal to 0, or
+        if the input collection is empty ({ }), take returns an empty collection."""
 
     def count():
-        """ """
+        """Returns a collection with a single value which is the integer count of
+        the number of items in the input collection.
+        Returns 0 when the input collection is empty."""
 
     def empty():
-        """ """
+        """Returns true if the input collection is empty ({ }) and false otherwise."""

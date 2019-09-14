@@ -5,7 +5,9 @@ from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_
 from fhirpath.fql import sort_
-
+from fhirpath.fql import not_
+from fhirpath.exceptions import MultipleResultsFound
+import pytest
 from ._utils import load_organizations_data
 
 
@@ -39,3 +41,48 @@ def test_exists_query(es_data, engine):
 
     result = builder(async_result=False).fetchall()
     assert result.header.total == 1
+
+
+def test_single_query(es_data, engine):
+    """ """
+    builder = Q_(resource="ChargeItem", engine=engine)
+    builder = builder.where(exists_("ChargeItem.enteredDate"))
+
+    result = builder(async_result=False).single()
+    assert result is not None
+    assert isinstance(result, builder._from[0][1])
+    # test empty result
+    builder = Q_(resource="ChargeItem", engine=engine)
+    builder = builder.where(not_(exists_("ChargeItem.enteredDate")))
+
+    result = builder(async_result=False).single()
+    assert result is None
+
+    # Test Multiple Result error
+    conn, meta_info = es_data
+    load_organizations_data(conn, 2)
+
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active", "true"))
+
+    with pytest.raises(MultipleResultsFound) as excinfo:
+        builder(async_result=False).single()
+    assert excinfo.type == MultipleResultsFound
+
+
+def test_first_query(es_data, engine):
+    """ """
+    conn, meta_info = es_data
+    load_organizations_data(conn, 5)
+
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active", "true"))
+
+    result = builder(async_result=False).first()
+    assert isinstance(result, builder._from[0][1])
+
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active", "false"))
+
+    result = builder(async_result=False).first()
+    assert result is None
