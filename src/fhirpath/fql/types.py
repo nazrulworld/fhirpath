@@ -276,7 +276,7 @@ class BaseTerm(object):
         other = self.ensure_term_value(other)
         self.value = other
         self._value_assigned = True
-        if other.unary_operator is not None:
+        if ITermValue.providedBy(other) and other.unary_operator is not None:
             self.unary_operator = other.unary_operator
 
 
