@@ -14,6 +14,7 @@ from fhirpath.utils import builder
 from .constraints import required_finalized
 from .constraints import required_from_resource
 from .constraints import required_not_finalized
+from .exceptions import MultipleResultsFound
 from .fql.expressions import and_
 from .fql.expressions import fql
 from .fql.expressions import sort_
@@ -31,7 +32,6 @@ from .interfaces import IQueryBuilder
 from .interfaces import IQueryResult
 from .interfaces import ISortTerm
 from .interfaces import ITerm
-from .exceptions import MultipleResultsFound
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"

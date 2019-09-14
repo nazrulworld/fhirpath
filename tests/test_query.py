@@ -1,13 +1,15 @@
 # _*_ coding: utf-8 _*_
+import pytest
+
 from fhirpath.enums import SortOrderType
+from fhirpath.exceptions import MultipleResultsFound
 from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_
-from fhirpath.fql import sort_
 from fhirpath.fql import not_
-from fhirpath.exceptions import MultipleResultsFound
-import pytest
+from fhirpath.fql import sort_
+
 from ._utils import load_organizations_data
 
 
