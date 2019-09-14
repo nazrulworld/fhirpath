@@ -478,6 +478,26 @@ class AsyncQueryResult(QueryResult):
         for item in result.body:
             yield model_class(item)
 
+    async def single(self):
+        """ """
+        result = await self.fetchall()
+        if result.header.total == 0:
+            return None
+        if result.header.total > 1:
+            raise MultipleResultsFound
+        model_class = self._query.get_from()[0][1]
+        return model_class(result.body[0])
+
+    async def first(self):
+        """ """
+        query = self._query.clone()
+        query._limit.limit = 1
+        result = await self._engine.execute(query, self._unrestricted)
+        if result.header.total > 0:
+            model_class = self._query.get_from()[0][1]
+            return model_class(result.body[0])
+        return None
+
 
 def Q_(resource=None, engine=None):
     """ """
