@@ -12,10 +12,10 @@ fhirpath.engine.base module
    :undoc-members:
    :show-inheritance:
 
-fhirpath.engine.connection module
----------------------------------
+fhirpath.engine.es module
+-------------------------
 
-.. automodule:: fhirpath.engine.connection
+.. automodule:: fhirpath.engine.es
    :members:
    :undoc-members:
    :show-inheritance:

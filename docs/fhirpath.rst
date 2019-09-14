@@ -11,7 +11,7 @@ Subpackages
    fhirpath.engine
    fhirpath.fhirspec
    fhirpath.fql
-   fhirpath.providers
+   fhirpath.interfaces
    fhirpath.thirdparty
 
 Submodules
@@ -21,6 +21,14 @@ fhirpath.cli module
 -------------------
 
 .. automodule:: fhirpath.cli
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fhirpath.constraints module
+---------------------------
+
+.. automodule:: fhirpath.constraints
    :members:
    :undoc-members:
    :show-inheritance:
@@ -49,18 +57,18 @@ fhirpath.fhirpath module
    :undoc-members:
    :show-inheritance:
 
-fhirpath.interfaces module
---------------------------
-
-.. automodule:: fhirpath.interfaces
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 fhirpath.navigator module
 -------------------------
 
 .. automodule:: fhirpath.navigator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fhirpath.query module
+---------------------
+
+.. automodule:: fhirpath.query
    :members:
    :undoc-members:
    :show-inheritance:

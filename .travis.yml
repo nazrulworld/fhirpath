@@ -1,29 +1,49 @@
 # Config file for automatic testing at travis-ci.org
-
+dist: bionic
 language: python
-python:
-  - 3.6
-  - 3.5
-  - 3.4
-  - 2.7
+sudo: required
+services:
+  - docker
+matrix:
+  include:
+    - name: Python 3.5
+      python: 3.5
+      env: python_version=3.5
 
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+    - name: Python 3.6
+      python: 3.6
+      env: python_version=3.6
 
-# Command to run tests, e.g. python setup.py test
-script: tox
+    - name: Python 3.7
+      python: 3.7
+      env: python_version=3.7
 
-# Assuming you have installed the travis-ci CLI tool, after you
-# create the Github repo and add it to Travis, run the
-# following command to finish PyPI deployment setup:
-# $ travis encrypt --add deploy.password
-deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: nazrulworld
-  password:
-    secure: PLEASE_REPLACE_ME
-  on:
-    tags: true
-    repo: nazrulworld/fhirpath
-    python: 3.6
+    - name: Python 3.8
+      python: 3.8
+      env: python_version=3.8
+
+  allow_failures:
+    - python: 3.8
+
+env:
+  global:
+    - ES_VERSION=7.3.1
+
+cache:
+  directories:
+    - eggs
+
+install:
+  - pip install -U pipenv
+  - pipenv install --dev
+  - pip install codecov
+  - sleep 1
+
+before_script:
+  - sleep 1
+
+script:
+  - make clean
+  - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
+after_success:
+  - codecov

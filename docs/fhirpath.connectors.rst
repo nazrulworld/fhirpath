@@ -1,21 +1,36 @@
 fhirpath.connectors package
 ===========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+   fhirpath.connectors.factory
+
 Submodules
 ----------
 
-fhirpath.connectors.conn\_elasticserach module
-----------------------------------------------
+fhirpath.connectors.connection module
+-------------------------------------
 
-.. automodule:: fhirpath.connectors.conn_elasticserach
+.. automodule:: fhirpath.connectors.connection
    :members:
    :undoc-members:
    :show-inheritance:
 
-fhirpath.connectors.factory module
-----------------------------------
+fhirpath.connectors.interfaces module
+-------------------------------------
 
-.. automodule:: fhirpath.connectors.factory
+.. automodule:: fhirpath.connectors.interfaces
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fhirpath.connectors.url module
+------------------------------
+
+.. automodule:: fhirpath.connectors.url
    :members:
    :undoc-members:
    :show-inheritance:
