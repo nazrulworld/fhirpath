@@ -389,6 +389,7 @@ class NonFhirTerm(BaseTerm):
         """ """
         super(NonFhirTerm, self).__init__(path, value, match_type)
         self.path = path
+        self._value = EMPTY_VALUE
 
     def ensure_term_value(self, value):
         """ """
@@ -425,14 +426,16 @@ class NonFhirTerm(BaseTerm):
         if self.comparison_operator is None:
             self.comparison_operator = operator.eq
 
+        self._value = self.value.to_python()
+
         self._finalized = True
 
     def get_real_value(self):
         """ """
-        if self.value is None:
+        if self._value == EMPTY_VALUE:
             return None
 
-        return self.value
+        return self._value
 
     def validate(self):
         """ """

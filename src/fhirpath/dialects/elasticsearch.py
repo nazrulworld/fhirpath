@@ -85,8 +85,6 @@ class ElasticSearchDialect(DialectBase):
         if multiple_ is True and not isinstance(value, (list, tuple)):
             value = [value]
 
-        if IFhirPrimitiveType.providedBy(value) and value.__visit_name__ == "boolean":
-            value = value.to_python()
         if multiple_:
             q = {"terms": {path: value}}
         else:
@@ -439,12 +437,10 @@ class ElasticSearchDialect(DialectBase):
                         "PrimitiveTypeCollection instance is not "
                         "allowed if match type not exact"
                     )
-                value = list(term.value)
             else:
                 raise NotImplementedError
         else:
             visit_name = term.value.__visit_name__
-            value = term.value
 
         if visit_name in (
             "string",
@@ -460,6 +456,7 @@ class ElasticSearchDialect(DialectBase):
             if term.match_type not in (TermMatchType.FULLTEXT, None):
                 resolved = self.resolve_string_term(term, {}, None)
             else:
+                value = term.get_real_value()
                 q = self._create_term(term.path, value)
                 resolved = q, term.unary_operator
 
