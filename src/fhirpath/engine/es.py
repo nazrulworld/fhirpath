@@ -24,7 +24,7 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
-    def execute(self, query, unrestricted=False):
+    def _execute(self, query, unrestricted=False):
         """ """
         # for now we support single from resource
         query_copy = query.clone()
@@ -42,6 +42,12 @@ class ElasticsearchEngine(Engine):
 
         compiled = self.dialect.compile(**params)
         raw_result = self.connection.fetch(compiled)
+
+        return raw_result, field_index_name, compiled
+
+    def execute(self, query, unrestricted=False):
+        """ """
+        raw_result, field_index_name, compiled = self._execute(query, unrestricted)
 
         # xxx: process result
         result = self.process_raw_result(raw_result, field_index_name)
