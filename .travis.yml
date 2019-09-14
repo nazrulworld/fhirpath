@@ -1,49 +1,16 @@
-# Config file for automatic testing at travis-ci.org
-dist: bionic
 language: python
-sudo: required
-services:
-  - docker
-matrix:
-  include:
-    - name: Python 3.5
-      python: 3.5
-      env: python_version=3.5
-
-    - name: Python 3.6
-      python: 3.6
-      env: python_version=3.6
-
-    - name: Python 3.7
-      python: 3.7
-      env: python_version=3.7
-
-    - name: Python 3.8
-      python: 3.8
-      env: python_version=3.8
-
-  allow_failures:
-    - python: 3.8
-
-env:
-  global:
-    - ES_VERSION=7.3.1
-
-cache:
-  directories:
-    - eggs
-
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"      # current default Python on Travis CI
+  - "3.7"
+  - "3.7-dev"  # 3.7 development branch
+  - "3.8-dev"  # 3.8 development branch
+  - "nightly"  # nightly build
+# command to install dependencies
 install:
-  - pip install -U pipenv
-  - pipenv install --dev
-  - pip install codecov
-  - sleep 1
-
-before_script:
-  - sleep 1
-
+  - pip install -r requirements.txt
+# command to run tests
 script:
-  - make clean
-  - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
-after_success:
-  - codecov
+  - pytest
