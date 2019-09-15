@@ -62,6 +62,7 @@ setup_requirements = ["pytest-runner"]
 
 test_requirements = [
     "pytest",
+    "pytest-cov",
     "pytest-mock",
     "pytest-docker-fixtures",
 ]
