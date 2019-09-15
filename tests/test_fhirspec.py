@@ -48,7 +48,7 @@ def test_load_spec_json(fhir_spec_settings):
     if not ensure_spec_jsons(release):
         pytest.skip("Internet Connection is required")
 
-    source = "${fhirpath}/fhirpath/fhirspec/" + release
+    source = str(spec_directory / release)
     settings = attrdict() + fhir_spec_settings
     spec = FHIRSpec(source, settings)
     assert spec.info.version == "4.0.0-a53ec6ee1b"
