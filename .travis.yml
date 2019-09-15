@@ -37,6 +37,7 @@ cache:
 install:
   - pip install -U pip
   - pip install -r requirements_dev.txt
+  - pip install -e .[test]
   - pip install codecov
   - sleep 1
 
