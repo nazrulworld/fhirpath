@@ -5,25 +5,27 @@ verify_ssl = true
 
 [dev-packages]
 fhirpath = {editable = true,extras = ["test"],path = "."}
-black = "*"
-isort = "*"
-flake8 = "*"
-flake8-isort = "*"
-zc-buildout = "*"
-setuptools = "*"
+elasticsearch = {version = "==6.4.0"}
+aioelasticsearch = {version = "==0.5.2"}
+black = {version = "==19.3b0"}
+isort = {version = "==4.3.21"}
+flake8 = {version = "==3.7.8"}
+flake8-isort = {version = "==2.7.0"}
+zc-buildout = {version = "==2.13.1"}
+setuptools = {version = "==41.2.0"}
 [packages]
-fhir-resources = {version = ">=5.0.1"}
-zope-interface = "*"
-zope-component = "*"
-multidict = "*"
-decorator = "*"
-sphinx = "*"
-sphinx-rtd-theme = "*"
-sphinxcontrib-httpdomain = "*"
-sphinxcontrib-httpexample = "*"
-tox = "*"
-certifi = "*"
-zest-releaser = {extras = ["recommended"],version = "*"}
+fhir-resources = {version = "==5.0.1"}
+zope-interface = {version = "==4.6.0"}
+zope-component = {version = "==4.5"}
+multidict = {version = "==4.5.2"}
+decorator = {version = "==4.4.0"}
+sphinx = {version = "==2.2.0"}
+sphinx-rtd-theme = {version = "==0.4.3"}
+sphinxcontrib-httpdomain = {version = "==1.7.0"}
+sphinxcontrib-httpexample = {version = "==0.10.3"}
+tox = {version = "==3.14.0"}
+certifi = {version = "==2019.9.11"}
+zest-releaser = {extras = ["recommended"],version = "==6.19.0"}
 
 [requires]
 python_version = "3.7"
