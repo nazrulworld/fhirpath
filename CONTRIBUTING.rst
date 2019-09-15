@@ -4,7 +4,8 @@
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
+`fhirpath`_ specification is really big job to be done completely, quite impossible to done for single person effort. This library currently
+is in very early stage! but have solid starting point. Contributions are needed and welcome, and they are greatly appreciated! Every little bit
 helps, and credit will always be given.
 
 You can contribute in many ways:
@@ -127,3 +128,5 @@ $ git push
 $ git push --tags
 
 Travis will then deploy to PyPI if tests pass.
+
+.. _`fhirpath`: http://hl7.org/fhirpath/

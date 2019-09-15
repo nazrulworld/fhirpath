@@ -151,18 +151,18 @@ class FhirDecimal(FhirPrimitiveType):
     The precision of the decimal value has significance:
 
     - e.g. 0.010 is regarded as different to 0.01, and the original precision
-    should be preserved
+      should be preserved
     - Implementations SHALL handle decimal values in ways that preserve and respect
-    the precision of the value as represented for presentation purposes
+      the precision of the value as represented for presentation purposes
     - Implementations are not required to perform calculations with these
-    numbers differently, though they may choose to do so (i.e. preserve significance)
+      numbers differently, though they may choose to do so (i.e. preserve significance)
     - In object code, implementations that might meet this constraint are
-    GMP implementations or equivalents to Java BigDecimal that implement arbitrary
-    precision, or a combination of a (64 bit)
-    floating point value with a precision field
+      GMP implementations or equivalents to Java BigDecimal that implement arbitrary
+      precision, or a combination of a (64 bit) floating point value with a
+      precision field
     - Note that large and/or highly precise values are extremely rare in medicine.
-    One element where highly precise decimals may be encountered is the Location
-    coordinates. Irrespective of this, the limits documented in XML Schema apply
+      One element where highly precise decimals may be encountered is the Location
+      coordinates. Irrespective of this, the limits documented in XML Schema apply
 
     XML Representation: union of xs:decimal and xs:double (see below for limitations)
     JSON representation: A JSON number (see below for limitations)

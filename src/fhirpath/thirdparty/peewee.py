@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
 """Copied from
-`peewee https://github.com/coleifer/peewee/blob/3.9.4/peewee.py>`_
+`peewee <https://github.com/coleifer/peewee/blob/3.9.4/peewee.py>`_
 with little customization"""
 
 

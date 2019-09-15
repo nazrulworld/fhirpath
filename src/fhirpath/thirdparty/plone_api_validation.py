@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """Copied from
-`plone.api.validation <https://raw.githubusercontent.com/plone/
-plone.api/1.9.2/src/plone/api/validation.py>`_
-with little customization
-
-Decorators for validating parameters"""
+`plone.api.validation
+<https://raw.githubusercontent.com/plone/plone.api/1.9.2/src/plone/api/validation.py>`_
+with little customization Decorators for validating parameters"""
 import inspect
 
 from decorator import decorator
@@ -62,8 +60,7 @@ def required_parameters(*required_params):
     Usage:
     @required_parameters('a', 'b')
     def foo(a=None, b=None, c=None):
-        pass
-    """
+        pass"""
 
     def _required_parameters(func):
         """The actual decorator"""
@@ -95,8 +92,7 @@ def mutually_exclusive_parameters(*exclusive_params):
     Usage:
     @mutually_exclusive_parameters('a', 'b')
     def foo(a=None, b=None, c=None):
-        pass
-    """
+        pass"""
 
     def _mutually_exclusive_parameters(func):
         """The actual decorator."""
@@ -130,8 +126,7 @@ def at_least_one_of(*candidate_params):
     Usage:
     @at_least_one_of('a', 'b')
     def foo(a=None, b=None, c=None):
-        pass
-    """
+        pass"""
 
     def _at_least_one_of(func):
         """The actual decorator."""

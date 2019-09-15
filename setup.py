@@ -86,7 +86,6 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
@@ -108,7 +107,7 @@ setup(
         "docs": docs_requirements,
     },
     url="https://nazrul.me/fhirpath/",
-    python_requires=", ".join((">=3.5", "<=3.8.*")),
+    python_requires=", ".join((">=3.5", )),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",

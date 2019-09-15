@@ -410,7 +410,8 @@ class QueryResult(object):
         We store the results in buckets of what the bulk size is.
         This is so you can skip around in the indexes without needing
         to load all the data.
-        Example(all zero based indexing here remember):
+        Example(all zero based indexing here remember)::
+
             (525 results with bulk size 50)
             - self[0]: 0 bucket, 0 item
             - self[10]: 0 bucket, 10 item

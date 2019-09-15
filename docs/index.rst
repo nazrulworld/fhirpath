@@ -8,10 +8,10 @@ Welcome to fhirpath's documentation!
    readme
    installation
    usage
-   modules
    contributing
    authors
    history
+   modules
 
 Indices and tables
 ==================

@@ -134,10 +134,13 @@ def lookup_fhir_class_path(
     return dotted path string.
 
     :arg resource_type: the resource type name (required). i.e Organization
+
     :arg cache: (default True) the flag which indicates should query fresh or
-    serve from cache if available.
+        serve from cache if available.
+
     :arg fhir_release: FHIR Release (version) name.
-    i.e FHIR_VERSION.STU3, FHIR_VERSION.R4
+        i.e FHIR_VERSION.STU3, FHIR_VERSION.R4
+
     :return dotted full string path. i.e fhir.resources.organization.Organization
 
     Example::

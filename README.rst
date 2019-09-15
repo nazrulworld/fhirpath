@@ -1,10 +1,6 @@
-========
-fhirpath
-========
-
-
-.. image:: https://img.shields.io/pypi/v/fhirpath.svg
-        :target: https://pypi.python.org/pypi/fhirpath
+==========
+Background
+==========
 
 .. image:: https://img.shields.io/travis/nazrulworld/fhirpath.svg
         :target: https://travis-ci.org/nazrulworld/fhirpath
@@ -13,104 +9,126 @@ fhirpath
         :target: https://fhirpath.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
+.. image:: https://codecov.io/gh/nazrulworld/fhirpath/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/nazrulworld/fhirpath/branch/master
+   :alt: Test Coverage
 
-.. image:: https://pyup.io/repos/github/nazrulworld/fhirpath/shield.svg
-     :target: https://pyup.io/repos/github/nazrulworld/fhirpath/
-     :alt: Updates
+.. image:: https://img.shields.io/pypi/pyversions/fhirpath.svg
+   :target: https://pypi.python.org/pypi/fhirpath/
+   :alt: Python Versions
+
+.. image:: https://img.shields.io/pypi/v/fhirpath.svg
+   :target: https://pypi.python.org/pypi/fhirpath
+
+.. image:: https://img.shields.io/pypi/l/fhirpath.svg
+   :target: https://pypi.python.org/pypi/fhirpath/
+   :alt: License
 
 .. image:: https://fire.ly/wp-content/themes/fhir/images/fhir.svg
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
-fhirpath_ implementation in Python. This library is built in ORM_ like approach.
+fhirpath_ implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
+fhirpath_ specification compliance products.
 
-* Supports multiple provider´s engine. Now Plone_ & guillotina_ are supported and more coming soon.
+* Supports multiple provider´s engine. Now Plone_ & guillotina_ framework powered providers `fhirpath-guillotina`_ and `collective.fhirpath`_ respectively are supported and more coming soon.
 * Supports multiple dialects, for example elasticsearch_, GraphQL_,PostgreSQL_. Although now elasticsearch_ has been supported.
 * Provide full support of `FHIR Search <https://www.hl7.org/fhir/search.html>`_ with easy to use API.
 
 
-Quickstart (guillotina_)
-------------------------
+Usages
+------
 
-This quickstarter guide is based on guillotina_ and elasticsearch_ with extra ``guillotina_elasticsearch`` dependency.
-If don´t know about guillotina_, have a `look at their nice document <https://guillotina.readthedocs.io/en/latest/>`_.
-Add ``fhirpath`` and `guillotina_elasticsearch <https://pypi.org/project/guillotina-elasticsearch/>`_ in your project dependencies.
-Install ``fhirpath.providers.guillotina_app`` from `your app configuration file <https://guillotina.readthedocs.io/en/latest/training/configuration.html#installing-applications>`_.
+This library is kind of abstract type, where all specifications from fhirpath_ are implemented rather than completed solution (ready to go).
+The main reason behind this design pattern, to support multiple database systems as well as well as any framework, there is no dependency.
 
-
-**we assume you configure elasticsearch_ service properly and have FHIR_ content types and latstly of course you know about FHIR_**
-
-Example: Add Contents::
-
-    class IOrganization(IFhirContent, IContentIndex):
-        index_field(
-            "organization_resource",
-            type="object",
-            field_mapping=fhir_resource_mapping("Organization"),
-            fhirpath_enabled=True,
-            resource_type="Organization",
-            fhir_version=FHIR_VERSION.DEFAULT,
-        )
-        index_field("org_type", type="keyword")
-        org_type = TextLine(title="Organization Type", required=False)
-        organization_resource = FhirField(
-            title="Organization Resource", resource_type="Organization", fhir_version="R4"
-        )
+``fhirpath`` never taking care of creating indexes, mappings (elasticsearch) and storing data, if you want to use this library, you have to go
+through any of existing providers (see list bellow) or make your own provider (should not too hard work).
 
 
-    @configure.contenttype(type_name="Organization", schema=IOrganization)
-    class Organization(Folder):
-        """ """
+Simple example
+~~~~~~~~~~~~~~
 
-        index(schemas=[IOrganization], settings={})
-        resource_type = "Organization"
+Assumption:
+
+1. Elasticsearch server 7.x.x Installed.
+
+2. Mappings and indexes are handled manually.
+
+3. Data (document) also are stored manually.
 
 
-Example Search::
+Create Connection and Engine::
 
-    >>> from guillotina.component import query_utility
-    >>> from fhirpath.interfaces import ISearchContextFactory
-    >>> from fhirpath.providers.guillotina_app.interfaces import IFhirSearch
-    >>> search_context = query_utility(ISearchContextFactory).get(
-    ...    resource_type="Organization"
-    ... )
-    >>> search_tool = query_utility(IFhirSearch)
+    >>> from fhirpath.connectors import create_connection
+    >>> from fhirpath.engine.es import ElasticsearchEngine
+    >>> from fhirpath.engine import dialect_factory
+    >>> from fhirpath.enums import FHIR_VERSION
+
+    >>> host, port = "127.0.0.1", 9200
+    >>> conn_str = "es://@{0}:{1}/".format(host, port)
+    >>> connection = create_connection(conn_str, "elasticsearch.Elasticsearch")
+    >>> connection.raw_connection.ping()
+    True
+    >>> engine = ElasticsearchEngine(FHIR_VERSION.R4, lambda x: connection, dialect_factory)
+
+
+Basic Search::
+
+    >>> from fhirpath.search import Search
+    >>> from fhirpath.search import SearchContext
+
+    >>> search_context = SearchContext(engine, "Organization")
     >>> params = (
-    ...     ("active", "true"),
-    ...     ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
-    ...     ("_profile", "http://hl7.org/fhir/Organization"),
-    ...     ("identifier", "urn:oid:2.16.528.1|91654"),
-    ...     ("type", "http://hl7.org/fhir/organization-type|prov"),
-    ...     ("address-postalcode", "9100 AA")
-    ... )
-    >>> fhir_bundle = await search_tool(params, context=search_context)
-    >>> fhir_bundle.total == len(fhir_bundle.entry)
+    ....    ("active", "true"),
+    ....    ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+    ....    ("_profile", "http://hl7.org/fhir/Organization"),
+    ....    ("identifier", "urn:oid:2.16.528.1|91654"),
+    ....    ("type", "http://hl7.org/fhir/organization-type|prov"),
+    ....    ("address-postalcode", "9100 AA"),
+    ....    ("address", "Den Burg"),
+    .... )
+    >>> fhir_search = Search(search_context, params=params)
+    >>> bundle = fhir_search()
+    >>> len(bundle.entry) == 0
+    True
 
-Example FhirPath Query::
+Basic Query::
 
-    >>> from fhirpath.providers.guillotina_app.interfaces import IElasticsearchEngineFactory
-    >>> from guillotina.component import query_utility
     >>> from fhirpath.enums import SortOrderType
-    >>> from fhirpath.fql import Q_
+    >>> from fhirpath.query import Q_
     >>> from fhirpath.fql import T_
     >>> from fhirpath.fql import V_
-    >>> from fhirpath.fql import sort_
-    >>> engine = query_utility(IElasticsearchEngineFactory).get()
+    >>> from fhirpath.fql import exists_
     >>> query_builder = Q_(resource="Organization", engine=engine)
-    >>> query_builder = (
-    ...        query_builder.where(T_("Organization.active") == V_("true"))
-    ...        .where(T_("Organization.meta.lastUpdated", "2010-05-28T05:35:56+00:00"))
-    ...        .sort(sort_("Organization.meta.lastUpdated", SortOrderType.DESC))
-    ...        .limit(20)
-    ...    )
-    >>> query_result = query_builder(async_result=True)
+    >>>  query_builder = (
+    ....    query_builder.where(T_("Organization.active") == V_("true"))
+    ....    .where(T_("Organization.meta.lastUpdated", "2010-05-28T05:35:56+00:00"))
+    ....    .sort(sort_("Organization.meta.lastUpdated", SortOrderType.DESC))
+    .... )
+    >>> query_result = query_builder(async_result=False)
+    >>> for resource in query_result:
+    ....    assert resource.__class__.__name__ == "OrganizationModel"
+    >>> # test fetch all
     >>> result = query_result.fetchall()
-    >>> result.header.total == 100
+    >>> result.__class__.__name__ == "EngineResult"
     True
-    >>> len(result.body) == 20
+
+    >>> query_builder = Q_(resource="ChargeItem", engine=engine)
+    >>> query_builder = query_builder.where(exists_("ChargeItem.enteredDate"))
+    >>> result = query_builder(async_result=False).single()
+    >>> result is not None
     True
-    >>> async for resource in query_result:
-    ...     assert resource.resource_type == "Organization"
+    >>> isinstance(result, builder._from[0][1])
+    True
+
+    >>> query_builder = Q_(resource="ChargeItem", engine=engine)
+    >>> query_builder = query_builder.where(exists_("ChargeItem.enteredDate"))
+    >>> result = query_builder(async_result=False).first()
+    >>> result is not None
+    True
+    >>> isinstance(result, builder._from[0][1])
+    True
 
 
 Credits
@@ -128,6 +146,8 @@ This package skeleton was created with Cookiecutter_ and the `audreyr/cookiecutt
 .. _`elasticsearch`: https://www.elastic.co/products/elasticsearch
 .. _`GraphQL`: https://graphql.org/
 .. _`PostgreSQL`: https://www.postgresql.org/
+.. _`fhirpath-guillotina`: https://pypi.org/project/fhirpath-guillotina/
+.. _`collective.fhirpath`: https://pypi.org/project/collective.fhirpath/
 
 
 © Copyright HL7® logo, FHIR® logo and the flaming fire are registered trademarks

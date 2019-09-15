@@ -79,8 +79,7 @@ class ElasticSearchDialect(DialectBase):
         return qr
 
     def _create_term(self, path, value, multiple=False):
-        """Create ES Query term
-        term.path.context.multiple"""
+        """Create ES Query term"""
         multiple_ = isinstance(value, (list, tuple)) or multiple is True
         if multiple_ is True and not isinstance(value, (list, tuple)):
             value = [value]
@@ -138,9 +137,11 @@ class ElasticSearchDialect(DialectBase):
     def compile(self, query, mapping, root_replacer=None):
         """
         :param: query
+
         :param: mapping: Elasticsearch mapping for FHIR resources.
+
         :root_replacer: Path´s root replacer:
-        Could be mapping name or index name in zope´s ZCatalog context
+            Could be mapping name or index name in zope´s ZCatalog context
         """
         body_structure = self.create_structure()
         conditional_terms = query.get_where()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Copied from
-`django.utils.functional https://github.com/django/django/blob/2.2/
-django/utils/functional.py>`_
+`django.utils.functional <https://github.com/django/django/blob/2.2/
+django/utils/functional.py>_
 with little customization"""
 import copy
 import operator

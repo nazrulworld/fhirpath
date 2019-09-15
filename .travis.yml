@@ -6,10 +6,6 @@ services:
   - docker
 matrix:
   include:
-    - name: Python 3.5
-      python: 3.5
-      env: python_version=3.5
-
     - name: Python 3.6
       python: 3.6
       env: python_version=3.6
@@ -24,7 +20,6 @@ matrix:
 
   allow_failures:
     - python: 3.8-dev
-    - python: 3.5
 
 env:
   global:
