@@ -57,10 +57,12 @@ def required_parameters(*required_params):
 
     Todo: add an optional flag to allow None values through as valid parameters
 
-    Usage:
-    @required_parameters('a', 'b')
-    def foo(a=None, b=None, c=None):
-        pass"""
+    Usage::
+
+        @required_parameters('a', 'b')
+        def foo(a=None, b=None, c=None):
+            pass
+    """
 
     def _required_parameters(func):
         """The actual decorator"""
@@ -89,10 +91,12 @@ def mutually_exclusive_parameters(*exclusive_params):
     """A decorator that raises an exception if more than one
     of the specified parameters has been supplied and is not None
 
-    Usage:
-    @mutually_exclusive_parameters('a', 'b')
-    def foo(a=None, b=None, c=None):
-        pass"""
+    Usage::
+
+        @mutually_exclusive_parameters('a', 'b')
+        def foo(a=None, b=None, c=None):
+            pass
+    """
 
     def _mutually_exclusive_parameters(func):
         """The actual decorator."""
@@ -119,14 +123,16 @@ def mutually_exclusive_parameters(*exclusive_params):
 
 
 def at_least_one_of(*candidate_params):
-    """A decorator that raises an exception if none of the
-    specified parameters has been supplied.  Can be used in conjunction with
+    """A decorator that raises an exception if none of the specified parameters
+    has been supplied. Can be used in conjunction with
     mutually_exclusive_parameters to enforce exactly one.
 
-    Usage:
-    @at_least_one_of('a', 'b')
-    def foo(a=None, b=None, c=None):
-        pass"""
+    Usage::
+
+        @at_least_one_of('a', 'b')
+        def foo(a=None, b=None, c=None):
+            pass
+    """
 
     def _at_least_one_of(func):
         """The actual decorator."""

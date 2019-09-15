@@ -41,6 +41,8 @@ before_script:
 
 script:
   - make clean
+  - make docs
+  - make lint
   - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
 after_success:
   - codecov

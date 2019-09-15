@@ -4,14 +4,6 @@ fhirpath.thirdparty package
 Submodules
 ----------
 
-fhirpath.thirdparty.django\_utils\_functional module
-----------------------------------------------------
-
-.. automodule:: fhirpath.thirdparty.django_utils_functional
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 fhirpath.thirdparty.peewee module
 ---------------------------------
 
