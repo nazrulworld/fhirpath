@@ -34,8 +34,8 @@ cache:
     - eggs
 
 install:
-  - pip install -U pipenv
-  - pipenv install --dev
+  - pip install -U pip
+  - pip install -r requirements_dev.txt
   - pip install codecov
   - sleep 1
 
