@@ -5,11 +5,26 @@ History
 0.2.0 (unreleased)
 ------------------
 
-Breakings
+Breakings:
 
-- Built-in providers (``guillotina_app``and ``plone_app``) have been wiped as both becoming separate pypi project.
+- Built-in providers ( ``guillotina_app`` and ``plone_app`` ) have been wiped as both becoming separate pypi project.
 
 - ``queries`` module has been moved from ``fql`` sub-package to fhirpath package and also renamed as ``query``.
+
+
+Improvements:
+
+- There are so many improvements made for almost all most modules.
+
+- FhirSearch coverages are increased.
+
+- Sort, Limit facilities added in Query as well in FhirSearch.
+
+
+Bugfixes:
+
+- numbers of bugs fixed.
+
 
 
 0.1.1 (2019-08-15)
