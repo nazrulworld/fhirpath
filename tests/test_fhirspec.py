@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+import os
 import pathlib
 import shutil
 
@@ -11,12 +12,20 @@ from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.fhirspec.downloader import download_and_extract
 from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 from fhirpath.thirdparty import attrdict
-from fhirpath.utils import expand_path
 
 from ._utils import has_internet_connection
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+spec_directory = (
+    pathlib.Path(os.path.dirname(os.path.abspath(__file__))).parent
+    / "src"
+    / "fhirpath"
+    / "fhirspec"
+)
+
 
 internet_conn_required = pytest.mark.skipif(
     not has_internet_connection(), reason="Internet Connection is required"
@@ -25,10 +34,9 @@ internet_conn_required = pytest.mark.skipif(
 
 def ensure_spec_jsons(release):
     """ """
-    directory = pathlib.Path(expand_path("${fhirpath}/fhirpath/fhirspec"))
-    if not (directory / release).exists():
+    if not (spec_directory / release).exists():
         if has_internet_connection():
-            download_and_extract(FHIR_VERSION[release], str(directory))
+            download_and_extract(FHIR_VERSION[release], str(spec_directory))
         else:
             return False
     return True
@@ -59,10 +67,9 @@ def test_fhirspec_creation_using_factory(fhir_spec_settings):
 @internet_conn_required
 def test_fhir_spec_download_and_load():
     """ """
-    directory = pathlib.Path(expand_path("${fhirpath}/fhirpath/fhirspec"))
     release = "STU3"
-    if (directory / release).exists():
-        shutil.rmtree((directory / release))
+    if (spec_directory / release).exists():
+        shutil.rmtree((spec_directory / release))
 
     spec = FhirSpecFactory.from_release(release)
 
