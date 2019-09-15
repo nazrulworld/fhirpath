@@ -50,7 +50,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = u"fhirpath"
+project = u"FHIRPath®"
 copyright = u"2019, Md Nazrul Islam"
 author = u"Md Nazrul Islam"
 

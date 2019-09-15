@@ -1,6 +1,6 @@
-==========
-Background
-==========
+============
+Introduction
+============
 
 .. image:: https://img.shields.io/travis/nazrulworld/fhirpath.svg
         :target: https://travis-ci.org/nazrulworld/fhirpath
