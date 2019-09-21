@@ -677,6 +677,9 @@ class Search(object):
 
     def single_valued_money_term(self, path_, value, modifier):
         """ """
+        if self.context.engine.fhir_release == FHIR_VERSION.STU3:
+            # make legacy
+            return self._single_valued_money_term_stu3(path_, value, modifier)
         operator_, original_value = value
         operator_eq = "eq"
         has_pipe = "|" in original_value
@@ -715,6 +718,11 @@ class Search(object):
         else:
             path_1 = path_ / "value"
             return self.create_term(path_1, value, modifier)
+
+    def _single_valued_money_term_stu3(self, path_, value, modifier):
+        """ """
+        assert self.context.engine.fhir_release == FHIR_VERSION.STU3
+        return self.single_valued_quantity_term(path_, value, modifier)
 
     def validate_pre_term(self, path_, value, modifier):
         """ """

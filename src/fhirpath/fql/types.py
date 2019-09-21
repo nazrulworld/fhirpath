@@ -503,6 +503,30 @@ class InTerm(Term):
 
         self._finalized = True
 
+    def __iter__(self):
+        """ """
+        required_finalized(self)
+
+        for val in self.value:
+            term = self.create_term(val)
+            yield term
+
+    def create_term(self, value):
+        """" """
+        # !important to copy
+        value = copy(value)
+        path = copy(self.path)
+        term = Term(path, value=value)
+        # static properties
+        term._finalized = self._finalized
+        term._value_assigned = self._value_assigned
+        term.match_type = self.match_type
+
+        term.comparison_operator = self.comparison_operator
+        term.unary_operator = self.unary_operator
+        term.arithmetic_operator = self.arithmetic_operator
+        return term
+
 
 @implementer_only(IExistsTerm)
 class ExistsTerm(object):

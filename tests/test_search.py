@@ -351,10 +351,22 @@ def test_search_result(es_data, engine):
 def test_search_missing_modifier(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Organization")
-    params = (
-        ("active:missing", "false"),
-    )
+    params = (("active:missing", "false"),)
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search()
     assert len(bundle.entry) == 1
+
+
+def test_in_search(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Organization")
+    params = (
+        ("active", "true"),
+        ("address", "Den Burg,Fake Lane"),
+        ("_profile", "http://hl7.org/fhir/Organization, http://another"),
+    )
+    fhir_search = Search(search_context, params=params)
+
+    bundle = fhir_search()
+    assert bundle.total == 1

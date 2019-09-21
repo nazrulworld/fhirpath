@@ -201,6 +201,8 @@ class ElasticSearchDialect(DialectBase):
                     qr = {"bool": {"must_not": list()}}
                     container = qr["bool"]["must_not"]
 
+                alsoProvides(term, IIgnoreNestedCheck)
+
             elif term.type == GroupType.COUPLED:
                 qr = {"bool": {"filter": list()}}
                 container = qr["bool"]["filter"]
@@ -209,7 +211,8 @@ class ElasticSearchDialect(DialectBase):
 
             for t_ in term.terms:
                 # single term resolver should not look at this
-                alsoProvides(t_, IIgnoreNestedCheck)
+                if term.type == GroupType.COUPLED:
+                    alsoProvides(t_, IIgnoreNestedCheck)
 
                 resolved = self.resolve_term(t_, mapping, root_replacer)
                 container.append(resolved[0])
@@ -220,7 +223,17 @@ class ElasticSearchDialect(DialectBase):
             return qr, unary_operator
 
         elif IInTerm.providedBy(term):
-            raise NotImplementedError
+
+            unary_operator = term.unary_operator
+            qr = {"bool": {"should": list()}}
+            container = qr["bool"]["should"]
+
+            for t_ in term:
+                resolved = self.resolve_term(t_, mapping, root_replacer)
+                container.append(resolved[0])
+            if len(container) > 0:
+                qr["bool"]["minimum_should_match"] = 1
+            return qr, unary_operator
 
         elif IExistsTerm.providedBy(term):
             return self.resolve_exists_term(term, root_replacer=root_replacer)

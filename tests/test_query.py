@@ -7,7 +7,9 @@ from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_
+from fhirpath.fql import in_
 from fhirpath.fql import not_
+from fhirpath.fql import not_in_
 from fhirpath.fql import sort_
 
 from ._utils import load_organizations_data
@@ -88,3 +90,35 @@ def test_first_query(es_data, engine):
 
     result = builder(async_result=False).first()
     assert result is None
+
+
+def test_in_query(es_data, engine):
+    """ """
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active") == V_("true")).where(
+        in_(
+            "Organization.meta.lastUpdated",
+            (
+                "2010-05-28T05:35:56+00:00",
+                "2001-05-28T05:35:56+00:00",
+                "2018-05-28T05:35:56+00:00",
+            ),
+        )
+    )
+    result = builder(async_result=False).fetchall()
+    assert result.header.total == 1
+
+    # Test NOT IN
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active") == V_("true")).where(
+        not_in_(
+            "Organization.meta.lastUpdated",
+            (
+                "2010-05-28T05:35:56+00:00",
+                "2001-05-28T05:35:56+00:00",
+                "2018-05-28T05:35:56+00:00",
+            ),
+        )
+    )
+    result = builder(async_result=False).fetchall()
+    assert result.header.total == 0

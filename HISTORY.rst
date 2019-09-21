@@ -5,7 +5,11 @@ History
 0.2.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Improvements
+
+- Add support FHIR version ``STU3`` compability for Money type search.[nazrulworld]
+
+- IN Query support added.[nazrulworld]
 
 
 0.2.0 (2019-09-15)
