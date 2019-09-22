@@ -364,7 +364,7 @@ def test_in_search(es_data, engine):
     params = (
         ("active", "true"),
         ("address", "Den Burg,Fake Lane"),
-        ("_profile", "http://hl7.org/fhir/Organization, http://another"),
+        ("_profile", "http://hl7.org/fhir/Organization,http://another"),
     )
     fhir_search = Search(search_context, params=params)
 

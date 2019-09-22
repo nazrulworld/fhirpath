@@ -772,7 +772,7 @@ class Search(object):
                 term = self.create_term(path_, val, modifier)
                 terms.append(term)
 
-            g_term = G_(*terms, path=path_)
+            g_term = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
             return g_term
 
     def normalize_param_value(self, raw_value, container):
@@ -790,31 +790,18 @@ class Search(object):
             value_parts = param_value.split(",")
             comparison_operator = "eq"
 
-            if len(value_parts) == 1:
+            for val in value_parts:
                 if escape_:
-                    value = value_parts[0].replace(escape_comma_replacer, "\\,")
+                    val_ = val.replace(escape_comma_replacer, "\\,")
                 else:
-                    value = value_parts[0]
+                    val_ = val
 
                 for prefix in value_prefixes:
-                    if value.startswith(prefix):
+                    if val_.startswith(prefix):
                         comparison_operator = prefix
-                        value = value[2:]
+                        val_ = val_[2:]
                         break
-            else:
-                value = list()
-                for val in value_parts:
-                    if escape_:
-                        val = val.replace(escape_comma_replacer, "\\,")
-                    for prefix in value_prefixes:
-                        if val.startswith(prefix):
-                            # should not come here, may be pre validated!
-                            # Just cleanup, for IN term only equal or not equal allowed
-                            val = val[2:]
-                            break
-                    value.append(val)
-
-            container.append((comparison_operator, value))
+                container.append((comparison_operator, val_))
 
     def normalize_param(self, param_name):
         """ """
