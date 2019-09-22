@@ -361,10 +361,11 @@ class Search(object):
             parts = original_value.split("|")
 
             if len(parts) == 3:
-                path_1 = path_ / "value"
-                new_value = (operator_, parts[0])
-                term = self.create_term(path_1, new_value, modifier)
-                terms.append(term)
+                if parts[0]:
+                    path_1 = path_ / "value"
+                    new_value = (operator_, parts[0])
+                    term = self.create_term(path_1, new_value, modifier)
+                    terms.append(term)
 
                 if parts[1]:
                     # check if val||unit or code
@@ -383,6 +384,18 @@ class Search(object):
                     term = self.create_term(path_2, new_value, modifier)
                     terms.append(term)
 
+            elif len(parts) == 2:
+                if parts[0]:
+                    path_1 = path_ / "value"
+                    new_value = (operator_, parts[0])
+                    term = self.create_term(path_1, new_value, modifier)
+                    terms.append(term)
+
+                if parts[1]:
+                    path_2 = path_ / "unit"
+                    new_value = (operator_eq, parts[1])
+                    term = self.create_term(path_2, new_value, modifier)
+                    terms.append(term)
             else:
                 # may be validation error
                 raise NotImplementedError
@@ -516,6 +529,7 @@ class Search(object):
             return self.create_term(path_ / "text", value, None)
 
         terms = [
+            self.create_term(path_ / "text", value, None),
             self.create_term(path_ / "city", value, None),
             self.create_term(path_ / "country", value, None),
             self.create_term(path_ / "postalCode", value, None),
@@ -595,6 +609,7 @@ class Search(object):
             return self.create_term(path_ / "text", value, None)
 
         terms = [
+            self.create_term(path_ / "text", value, None),
             self.create_term(path_ / "family", value, None),
             self.create_term(path_ / "given", value, None),
             self.create_term(path_ / "prefix", value, None),
