@@ -101,3 +101,7 @@ run-es:
 	-p 127.0.0.1:9200:9200 \
 	-p 9300:9300 \
 	docker.elastic.co/elasticsearch/elasticsearch:$(es_version)
+
+run-marklogic:
+
+# https://hub.docker.com/u/nazrulworld/content/sub-1e1d0737-2638-457f-817b-3c099f464ba0

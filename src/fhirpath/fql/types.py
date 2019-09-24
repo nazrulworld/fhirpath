@@ -47,7 +47,7 @@ from fhirpath.utils import unwrap_proxy
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
-has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I | re.U)
+has_dot_as = re.compile(r"\.as\((?P<type_name>[a-z]+)\)$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)\s\-]+\)", re.I | re.U)
 
@@ -887,7 +887,6 @@ class ElementPath(object):
         self._path = None
         self._where = None
         self._is = None
-        self._as = None
         self._raw = dotted_path
 
         self.parse()
@@ -935,8 +934,13 @@ class ElementPath(object):
             return
         # xxx: more things soon
         if has_dot_as.search(self._raw):
-            raise NotImplementedError
-        elif has_dot_as.search(self._raw):
+            match = has_dot_as.search(self._raw)
+            replacer = match.group()
+            type_name = match.group("type_name")
+            type_name = type_name[0].upper() + type_name[1:]
+            self._path = self._raw.replace(replacer, type_name)
+
+        elif has_dot_is.search(self._raw):
             raise NotImplementedError
         elif has_dot_where.search(self._raw):
             pos = self._raw.lower().find("where(")
@@ -987,7 +991,6 @@ class ElementPath(object):
 
         newone._where = copy(self._where)
         newone._is = copy(self._is)
-        newone._as = copy(self._as)
         # already proxied, no need copy
         newone.context = self.context
 

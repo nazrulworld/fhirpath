@@ -18,7 +18,6 @@ from fhirpath.fql import G_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import exists_
-from fhirpath.fql import in_
 from fhirpath.fql import not_
 from fhirpath.fql import not_exists_
 from fhirpath.fql import sort_
@@ -228,8 +227,6 @@ class Search(object):
                 raise NotImplementedError
         elif path_._is is not None:
             raise NotImplementedError
-        elif path_._as is not None:
-            raise NotImplementedError
 
         if modifier in ("missing", "exists"):
             term = self.create_exists_term(path_, param_value, modifier)
@@ -242,7 +239,7 @@ class Search(object):
                 term_factory = self.create_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
-            elif klass_name == "Quantity":
+            elif klass_name in ("Quantity", "Duration"):
                 term_factory = self.create_quantity_term
             elif klass_name == "CodeableConcept":
                 term_factory = self.create_codeableconcept_term
@@ -272,8 +269,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_identifier_term(path_, value, modifier)
                 terms.append(term)
-            # IN Like Group
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -284,6 +280,15 @@ class Search(object):
     def single_valued_identifier_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_identifier_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         has_pipe = "|" in original_value
         terms = list()
 
@@ -341,7 +346,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_quantity_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
 
             return group
 
@@ -353,6 +358,16 @@ class Search(object):
     def single_valued_quantity_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_quantity_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         operator_eq = "eq"
         has_pipe = "|" in original_value
         # modifier = text, no impact
@@ -416,7 +431,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_coding_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -427,6 +442,16 @@ class Search(object):
     def single_valued_coding_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_coding_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         has_pipe = "|" in original_value
         terms = list()
 
@@ -482,7 +507,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_codeableconcept_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -493,6 +518,16 @@ class Search(object):
     def single_valued_codeableconcept_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_codeableconcept_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         has_pipe = "|" in original_value
 
         if modifier == "text" and not has_pipe:
@@ -515,7 +550,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_address_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -525,6 +560,16 @@ class Search(object):
 
     def single_valued_address_term(self, path_, value, modifier):
         """ """
+        operator_, original_value = value
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_address_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         if modifier == "text":
             return self.create_term(path_ / "text", value, None)
 
@@ -551,7 +596,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_contactpoint_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -561,6 +606,17 @@ class Search(object):
 
     def single_valued_contactpoint_term(self, path_, value, modifier):
         """ """
+        operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_contactpoint_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         if path_._where:
             if path_._where.type != WhereConstraintType.T1:
                 raise NotImplementedError
@@ -595,7 +651,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_humanname_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -605,6 +661,17 @@ class Search(object):
 
     def single_valued_humanname_term(self, path_, value, modifier):
         """ """
+        operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_humanname_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         if modifier == "text":
             return self.create_term(path_ / "text", value, None)
 
@@ -631,7 +698,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_reference_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return group
 
         elif isinstance(param_value, tuple):
@@ -639,6 +706,17 @@ class Search(object):
 
     def single_valued_reference_term(self, path_, value, modifier):
         """ """
+        operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_reference_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         if path_._where:
             if path_._where.type != WhereConstraintType.T2:
                 raise NotImplementedError
@@ -681,7 +759,7 @@ class Search(object):
                 # Term or Group
                 term = self.create_money_term(path_, value, modifier)
                 terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
 
             return group
 
@@ -692,10 +770,21 @@ class Search(object):
 
     def single_valued_money_term(self, path_, value, modifier):
         """ """
+        operator_, original_value = value
+
+        if isinstance(original_value, list):
+            terms_ = list()
+            for val in original_value:
+                term_ = self.single_valued_money_term(path_, val, modifier)
+                terms_.append(term_)
+            # IN Like Group
+            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            return group
+
         if self.context.engine.fhir_release == FHIR_VERSION.STU3:
             # make legacy
             return self._single_valued_money_term_stu3(path_, value, modifier)
-        operator_, original_value = value
+
         operator_eq = "eq"
         has_pipe = "|" in original_value
         # modifier = text, no impact
@@ -752,10 +841,13 @@ class Search(object):
             if isinstance(original_value, list):
                 # we force IN will have equal or not equal operator_
                 # xxx: should be validated already
-                term = in_(path_, original_value)
-                if modifier == "not":
-                    term = not_(term)
-                return term
+                terms_ = list()
+                for val in original_value:
+                    term_ = self.create_term(path_, val, modifier)
+                    terms_.append(term_)
+                # IN Like Group
+                group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+                return group
 
             term = T_(path_)
             if modifier == "not":
@@ -787,14 +879,20 @@ class Search(object):
                 term = self.create_term(path_, val, modifier)
                 terms.append(term)
 
-            g_term = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            g_term = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return g_term
 
     def normalize_param_value(self, raw_value, container):
         """ """
         if isinstance(raw_value, list):
+            bucket = list()
             for rv in raw_value:
-                self.normalize_param_value(rv, container)
+                self.normalize_param_value(rv, bucket)
+            if len(bucket) == 1:
+                container.append(bucket[0])
+            else:
+                container.append(bucket)
+
         else:
             escape_ = has_escape_comma(raw_value)
             if escape_:
@@ -804,7 +902,7 @@ class Search(object):
 
             value_parts = param_value.split(",")
             comparison_operator = "eq"
-
+            bucket_ = list()
             for val in value_parts:
                 if escape_:
                     val_ = val.replace(escape_comma_replacer, "\\,")
@@ -816,7 +914,11 @@ class Search(object):
                         comparison_operator = prefix
                         val_ = val_[2:]
                         break
-                container.append((comparison_operator, val_))
+                bucket_.append((comparison_operator, val_))
+            if len(bucket_) == 1:
+                container.append(bucket_[0])
+            else:
+                container.append((None, bucket_))
 
     def normalize_param(self, param_name):
         """ """

@@ -226,9 +226,20 @@ def test_type_path_constraint():
     assert path_._where.type == WhereConstraintType.T2
 
     path_ = ElementPath(
-        "ActivityDefinition.relatedArtifact."
-        "where(type='composed-of').resource")
+        "ActivityDefinition.relatedArtifact.where(type='composed-of').resource"
+    )
     assert path_._where.value == "composed-of"
     assert path_._where.name is None
     assert path_._where.subpath == "resource"
     assert path_._where.type == WhereConstraintType.T3
+
+
+def test_path_constraint_as():
+    """Condition.​abatement.​as(Range)
+    Condition.​abatement.​as(dateTime)
+    Condition.​abatement.​as(Period)
+    """
+    path_ = ElementPath("Condition.abatement.as(Range)")
+    assert path_._path == "Condition.abatementRange"
+    path_ = ElementPath("Condition.abatement.as(dateTime)")
+    assert path_._path == "Condition.abatementDateTime"

@@ -70,8 +70,11 @@ def test_parameter_normalization(engine):
         ("probability", "gt0.8"),
         ("date", "ge2010-01-01"),
         ("date", "le2011-12-31"),
+        ("_lastUpdated", "le2019-09-12T13:20:44+0000,2018-09-12T13:20:44+0000"),
         ("code", "http://loinc.org|1\\,234-5&subject.name=peter"),
         ("_sort", "status,-date,category"),
+        ("_id", "567890"),
+        ("_id", "998765555554678,45555555555567"),
         ("_count", "1"),
     )
 
@@ -103,6 +106,20 @@ def test_parameter_normalization(engine):
     assert value_pack[1][0] == "eq"
     # actual value
     assert value_pack[1][1] == "http://loinc.org|1\\,234-5&subject.name=peter"
+
+    # Test IN Operator
+    field_name, value_pack, modifier = fhir_search.normalize_param("_lastUpdated")
+    assert isinstance(value_pack, tuple)
+    operator_, values = value_pack
+    assert operator_ is None
+    assert len(values) == 2
+    assert values[0][1] == "2019-09-12T13:20:44+0000"
+
+    # Test AND+IN Operator
+    field_name, value_pack, modifier = fhir_search.normalize_param("_id")
+    assert isinstance(value_pack, list)
+    assert isinstance(value_pack[0], tuple)
+    assert isinstance(value_pack[1][1], list)
 
 
 def test_create_term(engine):

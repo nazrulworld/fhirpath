@@ -7,9 +7,23 @@ History
 
 Improvements
 
+- Supports Multiple AND values for same search parameter!.
+
 - Add support FHIR version ``STU3`` compability for Money type search.[nazrulworld]
 
 - IN Query support added.[nazrulworld]
+
+- Support PathElement that contains string path with .as(), thus suports for Search also.
+
+- Supports ``Duration`` type in Search.
+
+
+Bugfixes
+
+- Multiple search values (IN search)
+
+- Missing ``text`` for HumanName and Address search.
+
 
 
 0.2.0 (2019-09-15)
