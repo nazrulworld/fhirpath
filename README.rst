@@ -17,6 +17,10 @@ Introduction
    :target: https://pypi.python.org/pypi/fhirpath/
    :alt: Python Versions
 
+.. image:: https://img.shields.io/lgtm/grade/python/g/nazrulworld/fhirpath.svg?logo=lgtm&logoWidth=18
+    :target: https://lgtm.com/projects/g/nazrulworld/fhirpath/context:python
+    :alt: Language grade: Python
+
 .. image:: https://img.shields.io/pypi/v/fhirpath.svg
    :target: https://pypi.python.org/pypi/fhirpath
 

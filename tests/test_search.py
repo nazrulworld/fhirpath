@@ -68,11 +68,11 @@ def test_parameter_normalization(engine):
         ("status", "active"),
         ("code", "http://acme.org/conditions/codes|ha125"),
         ("probability", "gt0.8"),
-        ("date", "ge2010-01-01"),
-        ("date", "le2011-12-31"),
+        ("authored-on", "ge2010-01-01"),
+        ("authored-on", "le2011-12-31"),
         ("_lastUpdated", "le2019-09-12T13:20:44+0000,2018-09-12T13:20:44+0000"),
         ("code", "http://loinc.org|1\\,234-5&subject.name=peter"),
-        ("_sort", "status,-date,category"),
+        ("_sort", "status,-authored-on,category"),
         ("_id", "567890"),
         ("_id", "998765555554678,45555555555567"),
         ("_count", "1"),
@@ -80,8 +80,7 @@ def test_parameter_normalization(engine):
 
     fhir_search = Search(context, params=params)
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("status:not")
-    assert field_name == "status"
+    path_, value_pack, modifier = fhir_search.normalize_param("status:not")
     # single valued
     assert isinstance(value_pack, tuple)
     # operator
@@ -89,7 +88,7 @@ def test_parameter_normalization(engine):
     # actual value
     assert value_pack[1] == "completed"
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("date")
+    field_name, value_pack, modifier = fhir_search.normalize_param("authored-on")
     assert modifier is None
     assert isinstance(value_pack, list)
     assert len(value_pack) == 2
@@ -139,8 +138,7 @@ def test_create_term(engine):
 
     fhir_search = Search(context, params=params)
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("status:not")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("status:not")
     term = fhir_search.create_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
@@ -148,8 +146,7 @@ def test_create_term(engine):
     assert term.arithmetic_operator == operator.and_
     assert term.value.value == "completed"
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("authored-on")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("authored-on")
     term = fhir_search.create_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
@@ -174,8 +171,7 @@ def test_create_codeableconcept_term(engine):
 
     fhir_search = Search(context, params=params)
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("code")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("code")
     term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
@@ -193,8 +189,7 @@ def test_create_codeableconcept_term(engine):
     code3_group = term.terms[2]
     assert code3_group.terms[0].path.path == "Task.code.coding.code"
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("code:text")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("code:text")
 
     term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
@@ -213,8 +208,7 @@ def test_create_identifier_term(engine):
     )
 
     fhir_search = Search(context, params=params)
-    field_name, value_pack, modifier = fhir_search.normalize_param("identifier")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("identifier")
     term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
@@ -226,15 +220,13 @@ def test_create_identifier_term(engine):
     assert term.terms[1].terms[0].path.path == "Task.identifier.system"
     assert term.terms[2].terms[0].path.path == "Task.identifier.value"
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("identifier:text")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("identifier:text")
     term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
     assert term.terms[0].path.path == "Task.identifier.type.text"
 
-    field_name, value_pack, modifier = fhir_search.normalize_param("identifier:not")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("identifier:not")
     term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
@@ -251,8 +243,7 @@ def test_create_quantity_term(engine):
         ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg"),
     )
     fhir_search = Search(context, params=params)
-    field_name, value_pack, modifier = fhir_search.normalize_param("quantity")
-    path_ = fhir_search.resolve_path_context(field_name)
+    path_, value_pack, modifier = fhir_search.normalize_param("quantity")
     term = fhir_search.create_quantity_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 

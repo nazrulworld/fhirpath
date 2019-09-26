@@ -206,7 +206,10 @@ class Search(object):
         for param_name in set(self.search_params):
             """ """
             normalized_data = self.normalize_param(param_name)
-            self.add_term(normalized_data, terms_container)
+            if isinstance(normalized_data, tuple):
+                normalized_data = [normalized_data]
+            for nd in normalized_data:
+                self.add_term(nd, terms_container)
 
         result = self.attach_limit_terms(
             self.attach_sort_terms(builder.where(*terms_container))
@@ -218,8 +221,7 @@ class Search(object):
 
     def add_term(self, normalized_data, terms_container):
         """ """
-        param_name, param_value, modifier = normalized_data
-        path_ = self.resolve_path_context(param_name)
+        path_, param_value, modifier = normalized_data
 
         if path_._where is not None:
             if path_._where.type == WhereConstraintType.T3:
@@ -922,18 +924,22 @@ class Search(object):
 
     def normalize_param(self, param_name):
         """ """
-        raw_value = list(self.search_params.getall(param_name, []))
-        if len(raw_value) == 0:
-            raw_value = None
-        elif len(raw_value) == 1:
-            raw_value = raw_value[0]
-
         try:
             parts = param_name.split(":")
             param_name_ = parts[0]
             modifier_ = parts[1]
         except IndexError:
             modifier_ = None
+        # Let's look at for any composite or combo type parameter
+        search_param = self._get_search_param_definition(param_name_)
+        if search_param.type == "composite":
+            raise NotImplementedError
+
+        raw_value = list(self.search_params.getall(param_name, []))
+        if len(raw_value) == 0:
+            raw_value = None
+        elif len(raw_value) == 1:
+            raw_value = raw_value[0]
 
         values = list()
         self.normalize_param_value(raw_value, values)
@@ -944,8 +950,8 @@ class Search(object):
             param_value_ = values
 
         self.validate_normalized_value(param_name_, param_value_, modifier_)
-
-        return param_name_, param_value_, modifier_
+        _path = self.resolve_path_context(param_name_)
+        return (_path, param_value_, modifier_)
 
     def validate(self):
         """ """
@@ -982,15 +988,20 @@ class Search(object):
 
     def resolve_path_context(self, param_name):
         """ """
-        search_param = getattr(self.definition, param_name, None)
-        if search_param is None:
-            raise ValidationError(
-                "No search definition is available for search parameter "
-                f"``{param_name}`` on Resource ``{self.context.resource_name}``."
-            )
+        search_param = self._get_search_param_definition(param_name)
 
         if search_param.expression is None:
             raise NotImplementedError
+
+        # Some Safegurds
+        if search_param.type == "composite":
+            raise NotImplementedError
+
+        if search_param.type in ("token", "composite") and search_param.code.startswith(
+            "combo-"
+        ):
+            raise NotImplementedError
+
         path_ = ElementPath.from_el_path(search_param.expression)
         path_.finalize(self.context.engine)
 
@@ -1028,6 +1039,16 @@ class Search(object):
     def response(self, result):
         """ """
         return self.context.engine.wrapped_with_bundle(result)
+
+    def _get_search_param_definition(self, param_name):
+        """ """
+        search_param = getattr(self.definition, param_name, None)
+        if search_param is None:
+            raise ValidationError(
+                "No search definition is available for search parameter "
+                f"``{param_name}`` on Resource ``{self.context.resource_name}``."
+            )
+        return search_param
 
     def __call__(self):
         """ """

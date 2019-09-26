@@ -1301,6 +1301,7 @@ class SearchParameterDefinition(object):
         "xpath",
         "multiple_or",
         "multiple_and",
+        "component"
     )
 
     @classmethod
@@ -1319,6 +1320,7 @@ class SearchParameterDefinition(object):
         self.target = dict_value.get("target", None)
         self.multiple_or = dict_value.get("multipleOr", None)
         self.multiple_and = dict_value.get("multipleAnd", None)
+        self.component = dict_value.get("component", None)
 
         # Make expression map combined with base and expression
         self.expression_map = dict()
@@ -1359,6 +1361,7 @@ class SearchParameter(object):
         "xpath",
         "multiple_or",
         "multiple_and",
+        "component"
     )
 
     @classmethod
@@ -1374,6 +1377,7 @@ class SearchParameter(object):
         self.target = definition.target
         self.multiple_or = definition.multiple_or
         self.multiple_and = definition.multiple_and
+        self.component = definition.component
         self.expression = self.get_expression(resource_type, definition)
 
         return self

@@ -7,7 +7,7 @@ History
 
 Improvements
 
-- Supports Multiple AND values for same search parameter!.
+- Supports multiple AND values for same search parameter!.
 
 - Add support FHIR version ``STU3`` compability for Money type search.[nazrulworld]
 
