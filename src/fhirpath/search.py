@@ -221,6 +221,16 @@ class Search(object):
 
     def add_term(self, normalized_data, terms_container):
         """ """
+        if isinstance(normalized_data, list):
+            if len(normalized_data) > 1:
+                terms = list()
+                for nd in normalized_data:
+                    self.add_term(nd, terms)
+                return G_(*terms, path=None, type_=GroupType.DECOUPLED)
+
+            else:
+                normalized_data = normalized_data[0]
+
         path_, param_value, modifier = normalized_data
 
         if path_._where is not None:
@@ -930,12 +940,14 @@ class Search(object):
             modifier_ = parts[1]
         except IndexError:
             modifier_ = None
+        raw_value = list(self.search_params.getall(param_name, []))
         # Let's look at for any composite or combo type parameter
         search_param = self._get_search_param_definition(param_name_)
         if search_param.type == "composite":
-            raise NotImplementedError
+            return self._normalize_composite_param(
+                raw_value, param_def=search_param, modifier=modifier_
+            )
 
-        raw_value = list(self.search_params.getall(param_name, []))
         if len(raw_value) == 0:
             raw_value = None
         elif len(raw_value) == 1:
@@ -1002,10 +1014,7 @@ class Search(object):
         ):
             raise NotImplementedError
 
-        path_ = ElementPath.from_el_path(search_param.expression)
-        path_.finalize(self.context.engine)
-
-        return path_
+        return self._dotted_path_to_path_context(search_param.expression)
 
     def attach_sort_terms(self, builder):
         """ """
@@ -1049,6 +1058,60 @@ class Search(object):
                 f"``{param_name}`` on Resource ``{self.context.resource_name}``."
             )
         return search_param
+
+    def _dotted_path_to_path_context(self, dotted_path):
+        """ """
+        if len(dotted_path.split(".")) == 1:
+            raise ValidationError("Invalid dotted path ´{0}´".format(dotted_path))
+
+        path_ = ElementPath.from_el_path(dotted_path)
+        path_.finalize(self.context.engine)
+
+        return path_
+
+    def _normalize_composite_param(self, raw_value, param_def, modifier):
+        """ """
+        if len(raw_value) < 1:
+            raise NotImplementedError(
+                "Currently duplicate composite type "
+                "params are not allowed or supported"
+            )
+        value_parts = raw_value[0].split("&")
+        assert len(value_parts) == 2
+
+        composite_bucket = list()
+
+        part1 = [
+            ".".join([param_def.expression, param_def.component[0]["expression"]]),
+            value_parts[0],
+        ]
+        part1_param_value = list()
+        self.normalize_param_value(part1[1], part1_param_value)
+        if len(part1_param_value) == 1:
+            part1_param_value = part1_param_value[0]
+        composite_bucket.append(
+            (self._dotted_path_to_path_context(part1[0]), part1_param_value, modifier)
+        )
+        part2 = list()
+        for expr in param_def.component[1]["expression"].split("|"):
+            part_ = [".".join([param_def.expression, expr.strip()]), value_parts[1]]
+            part2.append(part_)
+        part2_param_value = list()
+        self.normalize_param_value(part2[0][1], part2_param_value)
+
+        if len(part2_param_value) == 1:
+            part1_param_value = part2_param_value[0]
+        part2_temp = list()
+        for pr in part2:
+            part2_temp.append(
+                (self._dotted_path_to_path_context(pr[0]), part2_param_value, modifier)
+            )
+        if len(part2_temp) == 1:
+            part2_temp = part2_temp[0]
+
+        composite_bucket.append(part2_temp)
+
+        return composite_bucket
 
     def __call__(self):
         """ """

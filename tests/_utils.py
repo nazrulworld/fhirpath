@@ -127,11 +127,17 @@ def _setup_es_index(es_conn):
     body = {
         "settings": {
             "analysis": {
-                "analyzer": {"path_analyzer": {"tokenizer": "path_tokenizer"}},
+                "analyzer": {
+                    "path_analyzer": {"tokenizer": "path_tokenizer"},
+                    "fhir_reference_analyzer": {
+                        "tokenizer": "fhir_reference_tokenizer"
+                    },
+                },
                 "char_filter": {},
                 "filter": {},
                 "tokenizer": {
-                    "path_tokenizer": {"delimiter": "/", "type": "path_hierarchy"}
+                    "path_tokenizer": {"delimiter": "/", "type": "path_hierarchy"},
+                    "fhir_reference_tokenizer": {"type": "pattern", "pattern": "/"},
                 },
             }
         },
@@ -158,10 +164,12 @@ def _setup_es_index(es_conn):
     org_mapping = fhir_resource_mapping("Organization")
     patient_mapping = fhir_resource_mapping("Patient")
     chargeitem_mapping = fhir_resource_mapping("ChargeItem")
+    observation_mapping = fhir_resource_mapping("Observation")
 
     body["mappings"]["properties"]["organization_resource"] = org_mapping
     body["mappings"]["properties"]["patient_resource"] = patient_mapping
     body["mappings"]["properties"]["chargeitem_resource"] = chargeitem_mapping
+    body["mappings"]["properties"]["observation_resource"] = observation_mapping
 
     conn.indices.create(ES_INDEX_NAME_REAL, body=body)
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
@@ -212,6 +220,8 @@ def _make_index_item(resource_type):
         tpl["title"] = "Task-" + tpl["id"]
     elif resource_type == "ChargeItem":
         tpl["title"] = "ChargeItem-" + tpl["id"]
+    elif resource_type == "Observation":
+        tpl["title"] = "Observation-" + tpl["id"]
     else:
         raise NotImplementedError
 
@@ -241,6 +251,14 @@ def _load_es_data(es_conn):
     bulk_data = [
         {"index": {"_id": chargeitem_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
         chargeitem_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    observation_data = _make_index_item("Observation")
+    bulk_data = [
+        {"index": {"_id": observation_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        observation_data,
     ]
     res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
     assert res["errors"] is False

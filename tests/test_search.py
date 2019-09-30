@@ -121,6 +121,27 @@ def test_parameter_normalization(engine):
     assert isinstance(value_pack[1][1], list)
 
 
+def test_composite_parameter_normalization(engine):
+    """ """
+    context = SearchContext(engine, "ChargeItemDefinition")
+    params = (("context-type-quantity", "HL7&99"),)
+
+    fhir_search = Search(context, params=params)
+    normalize_value = fhir_search.normalize_param("context-type-quantity")
+    assert len(normalize_value) == 2
+    assert normalize_value[0][0].path.endswith(".code")
+    # value.as(Quantity) | value.as(Range)
+    assert len(normalize_value[1]) == 2
+    assert normalize_value[1][1][0].path.endswith(".valueRange") is True
+
+    context = SearchContext(engine, "Observation")
+    params = (("code-value-quantity", "http://loinc.org|11557-6&6.2"),)
+
+    fhir_search = Search(context, params=params)
+    normalize_value = fhir_search.normalize_param("code-value-quantity")
+    assert isinstance(normalize_value[1], tuple)
+
+
 def test_create_term(engine):
     """ """
     context = SearchContext(engine, "Task")
@@ -374,6 +395,16 @@ def test_in_search(es_data, engine):
         ("address", "Den Burg,Fake Lane"),
         ("_profile", "http://hl7.org/fhir/Organization,http://another"),
     )
+    fhir_search = Search(search_context, params=params)
+
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+
+def test_composite_param_search(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Observation")
+    params = (("code-value-quantity", "http://loinc.org|718-7&7.2"),)
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search()

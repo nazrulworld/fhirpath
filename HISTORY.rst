@@ -17,6 +17,8 @@ Improvements
 
 - Supports ``Duration`` type in Search.
 
+- Add support ``composite`` type search param.
+
 
 Bugfixes
 
