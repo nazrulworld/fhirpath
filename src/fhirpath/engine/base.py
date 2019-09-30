@@ -35,7 +35,7 @@ class Engine(object):
 
     def create_query(self):
         """ """
-        return Query.with_engine(self.__proxy__(self))
+        return Query.with_engine(self.__proxy__())
 
     def create_connection(self, factory):
         """ """

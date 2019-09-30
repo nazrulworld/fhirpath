@@ -306,7 +306,7 @@ class ElasticSearchDialect(DialectBase):
     def resolve_datetime_term(self, term, root_replacer=None):
         """TODO: 1.) Value Conversion(stringify) based of context.type_name
         i.e date or dateTime or Time """
-        q = dict()
+        qr = dict()
         if INonFhirTerm.providedBy(term):
             type_name = term.value.__visit_name__
         else:
@@ -327,7 +327,7 @@ class ElasticSearchDialect(DialectBase):
             raise NotImplementedError
 
         if term.comparison_operator in (operator.eq, operator.ne):
-            q["range"] = {
+            qr["range"] = {
                 path_: {
                     ES_PY_OPERATOR_MAP[operator.ge]: isodate.strftime(
                         value, value_formatter
@@ -344,7 +344,7 @@ class ElasticSearchDialect(DialectBase):
             operator.ge,
             operator.gt,
         ):
-            q["range"] = {
+            qr["range"] = {
                 path_: {
                     ES_PY_OPERATOR_MAP[term.comparison_operator]: isodate.strftime(
                         value, value_formatter
@@ -355,7 +355,7 @@ class ElasticSearchDialect(DialectBase):
         if type_name in ("dateTime", "instant", "time") and value.tzinfo:
             timezone = isodate.tz_isoformat(value)
             if timezone not in ("", "Z"):
-                q["range"][path_]["time_zone"] = timezone
+                qr["range"][path_]["time_zone"] = timezone
 
         if (
             term.comparison_operator != operator.ne
@@ -368,16 +368,16 @@ class ElasticSearchDialect(DialectBase):
         else:
             unary_operator = operator.pos
 
-        return q, unary_operator
+        return qr, unary_operator
 
     def resolve_numeric_term(self, term, root_replacer=None):
         """ """
-        q = dict()
+        qr = dict()
         path_ = self._create_dotted_path(term, root_replacer)
         value = term.get_real_value()
 
         if term.comparison_operator in (operator.eq, operator.ne):
-            q["range"] = {
+            qr["range"] = {
                 path_: {
                     ES_PY_OPERATOR_MAP[operator.ge]: value,
                     ES_PY_OPERATOR_MAP[operator.le]: value,
@@ -390,7 +390,7 @@ class ElasticSearchDialect(DialectBase):
             operator.ge,
             operator.gt,
         ):
-            q["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
+            qr["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
 
         if (
             term.comparison_operator != operator.ne
@@ -403,12 +403,11 @@ class ElasticSearchDialect(DialectBase):
         else:
             unary_operator = operator.pos
 
-        return q, unary_operator
+        return qr, unary_operator
 
     def resolve_string_term(self, term, map_info, root_replacer=None):
         """ """
         # xxx: could have support for free text search
-        q = dict()
         path_ = self._create_dotted_path(term, root_replacer)
 
         fulltext_analyzers = ("standard",)
@@ -416,20 +415,19 @@ class ElasticSearchDialect(DialectBase):
         if map_info.get("analyzer", "standard") in fulltext_analyzers:
             # xxx: should handle exact match
             if term.match_type == TermMatchType.EXACT:
-                q = {"match_phrase": {path_: value}}
+                qr = {"match_phrase": {path_: value}}
             else:
-                q = {"match": {path_: value}}
+                qr = {"match": {path_: value}}
         elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:
-            q = {"match_phrase": {path_: value}}
+            qr = {"match_phrase": {path_: value}}
         else:
-            q = self._create_term(path_, value, term.path.context.multiple)
+            qr = self._create_term(path_, value, term.path.context.multiple)
 
-        resolved = q, term.unary_operator
+        resolved = qr, term.unary_operator
         return resolved
 
     def resolve_exists_term(self, term, root_replacer=None):
         """ """
-        qr = dict()
         path_ = self._create_dotted_path(term, root_replacer)
 
         qr = {"exists": {"field": path_}}

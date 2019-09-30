@@ -109,21 +109,21 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
         host_info = list()
 
         for url in urls:
-            item = {"host": self.url.host, "port": self.url.port or 9200}
-            if self.url.username:
+            item = {"host": url.host, "port": url.port or 9200}
+            if url.username:
                 item["http_auth"] = "{0}:{1}".format(
-                    self.url.username, self.url.password or ""
+                    url.username, url.password or ""
                 )
-            if "use_ssl" in self.url.query:
-                item["use_ssl"] = self.url.query.get("use_ssl").lower() in (
+            if "use_ssl" in url.query:
+                item["use_ssl"] = url.query.get("use_ssl").lower() in (
                     "true",
                     "t",
                     "yes",
                     "y",
                     "1",
                 )
-            if "url_prefix" in self.url.query:
-                item["url_prefix"] = self.url.query.get("url_prefix")
+            if "url_prefix" in url.query:
+                item["url_prefix"] = url.query.get("url_prefix")
             host_info.append(item)
 
         return {"hosts": host_info}

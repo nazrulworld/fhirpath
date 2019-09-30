@@ -20,7 +20,7 @@ class DialectBase(object):
         """ """
         self._connection = IConnection(connection)
 
-    def compile(self, query):
+    def compile(self, query, **kwargs):
         """ """
         raise NotImplementedError
 
