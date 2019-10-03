@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 _*_
-import math
 from copy import copy
 
 from zope.interface import implementer
@@ -422,39 +421,39 @@ class QueryResult(object):
             - self[-2]: 500 bucket: 23 item
             - self[-55]: 450 bucket: 19 item
         """
-        if isinstance(key, slice):
-            return [self[i] for i in range(key.start, key.end)]
-        else:
-            if key + 1 > self.count:
-                raise IndexError
-            elif key < 0 and abs(key) > self.count:
-                raise IndexError
+        # if isinstance(key, slice):
+        #     return [self[i] for i in range(key.start, key.end)]
+        # else:
+        #     if key + 1 > self.count:
+        #         raise IndexError
+        #     elif key < 0 and abs(key) > self.count:
+        #         raise IndexError
 
-            if key >= 0:
-                result_key = (key / self.bulk_size) * self.bulk_size
-                start = result_key
-                result_index = key % self.bulk_size
-            elif key < 0:
-                last_key = (
-                    int(math.floor(float(self.count) / float(self.bulk_size)))
-                    * self.bulk_size
-                )
-                start = result_key = last_key - (
-                    (abs(key) / self.bulk_size) * self.bulk_size
-                )
-                if last_key == result_key:
-                    result_index = key
-                else:
-                    result_index = (key % self.bulk_size) - (
-                        self.bulk_size - (self.count % last_key)
-                    )
+        #     if key >= 0:
+        #         result_key = (key / self.bulk_size) * self.bulk_size
+        #         start = result_key
+        #         result_index = key % self.bulk_size
+        #     elif key < 0:
+        #         last_key = (
+        #             int(math.floor(float(self.count) / float(self.bulk_size)))
+        #             * self.bulk_size
+        #         )
+        #         start = result_key = last_key - (
+        #             (abs(key) / self.bulk_size) * self.bulk_size
+        #         )
+        #         if last_key == result_key:
+        #             result_index = key
+        #         else:
+        #             result_index = (key % self.bulk_size) - (
+        #                 self.bulk_size - (self.count % last_key)
+        #             )
 
-            if result_key not in self.results:
-                self.results[result_key] = self.es._search(
-                    self.query, sort=self.sort, start=start, **self.query_params
-                )["hits"]["hits"]
+        #     if result_key not in self.results:
+        #         self.results[result_key] = self.es._search(
+        #             self.query, sort=self.sort, start=start, **self.query_params
+        #         )["hits"]["hits"]
 
-            return self.results[result_key][result_index]
+        #     return self.results[result_key][result_index]
 
     def __iter__(self):
         """ """

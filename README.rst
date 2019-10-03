@@ -32,18 +32,18 @@ Introduction
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
-fhirpath_ implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
-fhirpath_ specification compliance products.
+FHIRPath_ (STU1) implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
+FHIRPath_ (STU1) specification compliance product.
 
 * Supports multiple provider´s engine. Now Plone_ & guillotina_ framework powered providers `fhirpath-guillotina`_ and `collective.fhirpath`_ respectively are supported and more coming soon.
-* Supports multiple dialects, for example elasticsearch_, GraphQL_,PostgreSQL_. Although now elasticsearch_ has been supported.
+* Supports multiple dialects, for example elasticsearch_, GraphQL_, PostgreSQL_. Although now elasticsearch_ has been supported.
 * Provide full support of `FHIR Search <https://www.hl7.org/fhir/search.html>`_ with easy to use API.
 
 
 Usages
 ------
 
-This library is kind of abstract type, where all specifications from fhirpath_ are implemented rather than completed solution (ready to go).
+This library is kind of abstract type, where all specifications from FHIRPath_ (STU1) are implemented rather than completed solution (ready to go).
 The main reason behind this design pattern, to support multiple database systems as well as well as any framework, there is no dependency.
 
 ``fhirpath`` never taking care of creating indexes, mappings (elasticsearch) and storing data, if you want to use this library, you have to go
@@ -178,7 +178,7 @@ This package skeleton was created with Cookiecutter_ and the `audreyr/cookiecutt
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
-.. _`fhirpath`: http://hl7.org/fhirpath/
+.. _`FHIRPath`: http://hl7.org/fhirpath/
 .. _`FHIR`: http://hl7.org/fhir/
 .. _`ORM`: https://en.wikipedia.org/wiki/Object-relational_mapping
 .. _`Plone`: https://plone.org
@@ -193,3 +193,6 @@ This package skeleton was created with Cookiecutter_ and the `audreyr/cookiecutt
 
 © Copyright HL7® logo, FHIR® logo and the flaming fire are registered trademarks
 owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks.cfm?ref=https://pypi.org/project/fhir-resources/>`_
+
+**"FHIR® is the registered trademark of HL7 and is used with the permission of HL7.
+Use of the FHIR trademark does not constitute endorsement of this product by HL7"**

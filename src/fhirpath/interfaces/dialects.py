@@ -11,13 +11,13 @@ class IDialect(Interface):
 
     _connection = Attribute("Connection from Engine")
 
-    def bind(connection):
+    def bind(connection):  # lgtm[py/not-named-self]
         """ """
 
-    def compile(query):
+    def compile(query):  # lgtm[py/not-named-self]
         """ """
 
-    def pre_compile(query):
+    def pre_compile(query):  # lgtm[py/not-named-self]
         """ """
 
 

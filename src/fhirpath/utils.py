@@ -60,10 +60,7 @@ def force_str(value, allow_non_str=True):
         return value.decode("utf8", "strict")
 
     if not isinstance(value, str) and allow_non_str:
-        if not allow_non_str:
-            return value
-        else:
-            value = str(value)
+        value = str(value)
     return value
 
 
@@ -83,12 +80,11 @@ def force_bytes(string, encoding="utf8", errors="strict"):
 
 def import_string(dotted_path: str) -> type:
     """Shameless hack from django utils, please don't mind!"""
-    module_path, class_name = None, None
     try:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except (ValueError, AttributeError):
         msg = f"{dotted_path} doesn't look like a module path"
-        return reraise(ImportError, msg)
+        reraise(ImportError, msg)
 
     module = import_module(module_path)
 
@@ -96,7 +92,7 @@ def import_string(dotted_path: str) -> type:
         return getattr(module, class_name)
     except AttributeError:
         msg = f'Module "{module_path}" does not define a "{class_name}" attribute/class'
-        return reraise(ImportError, msg)
+        reraise(ImportError, msg)
 
 
 def builder(func):

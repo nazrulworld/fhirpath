@@ -964,7 +964,7 @@ class ElementPath(object):
         context = PathInfoContext.context_from_path(self._path, fhir_release)
         if context is None:
             raise ValidationError(
-                "'{0}' is valid path for FHIR Release ''".format(
+                "'{0}' is not valid path for FHIR Release '{1}'".format(
                     self._raw, fhir_release.value
                 )
             )
