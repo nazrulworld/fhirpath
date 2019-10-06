@@ -72,8 +72,10 @@ class IFhirPrimitiveType(Interface):
 
 class IPrimitiveTypeCollection(Interface):
     """ """
+
     def add(item):
         """ """
+
     def remove(item=None, index=None):
         """ """
 
@@ -176,3 +178,11 @@ class IQueryResult(Interface):
 
     def empty():  # lgtm[py/not-named-self]
         """Returns true if the input collection is empty ({ }) and false otherwise."""
+
+
+class IIgnoreModifierCheck(Interface):
+    """ """
+
+
+class IIgnoreNotModifierCheck(IIgnoreModifierCheck):
+    """ """

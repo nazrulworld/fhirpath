@@ -23,6 +23,7 @@ from fhirpath.fql import not_exists_
 from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IFhirPrimitiveType
+from fhirpath.interfaces import IGroupTerm
 from fhirpath.interfaces import ISearch
 from fhirpath.interfaces import ISearchContext
 from fhirpath.query import Q_
@@ -452,7 +453,9 @@ class Search(object):
 
         raise NotImplementedError
 
-    def single_valued_coding_term(self, path_, value, modifier):
+    def single_valued_coding_term(
+        self, path_, value, modifier, ignore_not_modifier=False
+    ):
         """ """
         operator_, original_value = value
 
@@ -511,7 +514,7 @@ class Search(object):
             terms.append(self.create_term(path_1, value, modifier))
 
         group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-        if modifier == "not":
+        if modifier == "not" and ignore_not_modifier is False:
             group.match_operator = MatchType.NONE
         return group
 
@@ -539,9 +542,15 @@ class Search(object):
             terms_ = list()
             for val in original_value:
                 term_ = self.single_valued_codeableconcept_term(path_, val, modifier)
+                if IGroupTerm.providedBy(term_):
+                    if term_.match_operator == MatchType.NONE:
+                        # important!
+                        term_.match_operator = None
                 terms_.append(term_)
             # IN Like Group
             group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
+            if modifier == "not":
+                group.match_operator = MatchType.NONE
             return group
 
         has_pipe = "|" in original_value

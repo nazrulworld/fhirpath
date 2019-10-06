@@ -3,6 +3,8 @@ from .base import IBaseClass  # noqa: F401
 from .base import ICloneable  # noqa: F401
 from .base import IFhirPrimitiveType  # noqa: F401
 from .base import IFhirSearch  # noqa: F401
+from .base import IIgnoreModifierCheck  # noqa: F401
+from .base import IIgnoreNotModifierCheck  # noqa: F401
 from .base import IModel  # noqa: F401
 from .base import IPathInfoContext  # noqa: F401
 from .base import IPrimitiveTypeCollection  # noqa: F401
