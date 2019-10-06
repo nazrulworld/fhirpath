@@ -510,7 +510,10 @@ class Search(object):
             path_1 = path_ / "code"
             terms.append(self.create_term(path_1, value, modifier))
 
-        return G_(*terms, path=path_, type_=GroupType.COUPLED)
+        group = G_(*terms, path=path_, type_=GroupType.COUPLED)
+        if modifier == "not":
+            group.match_operator = MatchType.NONE
+        return group
 
     def create_codeableconcept_term(self, path_, param_value, modifier):
         """ """

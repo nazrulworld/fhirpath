@@ -19,6 +19,7 @@
       "coding": [
         {
           "code": "01510",
+          "system": "http://snomed.info/sct",
           "display": "Zusatzpauschale für Beobachtung nach diagnostischer Koronarangiografie"
         }
       ]

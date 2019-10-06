@@ -204,8 +204,12 @@ class ElasticSearchDialect(DialectBase):
                 alsoProvides(term, IIgnoreNestedCheck)
 
             elif term.type == GroupType.COUPLED:
-                qr = {"bool": {"filter": list()}}
-                container = qr["bool"]["filter"]
+                if term.match_operator == MatchType.NONE:
+                    qr = {"bool": {"must_not": list()}}
+                    container = qr["bool"]["must_not"]
+                else:
+                    qr = {"bool": {"filter": list()}}
+                    container = qr["bool"]["filter"]
             else:
                 raise NotImplementedError
 

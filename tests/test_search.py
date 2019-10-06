@@ -422,3 +422,13 @@ def test_composite_param_search(es_data, engine):
 
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_codeableconcept_with_not_modifier(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "ChargeItem")
+    params = (("code:not", "http://snomed.info/sct|01510"),)
+    fhir_search = Search(search_context, params=params)
+
+    bundle = fhir_search()
+    assert bundle.total == 0

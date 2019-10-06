@@ -11,6 +11,8 @@ Improvements
 
 Bugfixes
 
+- ``not`` modifier is now working for ``Coding``and ``CodeableConcept``.
+
 - "ignore_unmapped" now always True in case of nested query.
 
 - "unmapped_type" now set explicitly long value. See related issue https://stackoverflow.com/questions/17051709/no-mapping-found-for-field-in-order-to-sort-on-in-elasticsearch
