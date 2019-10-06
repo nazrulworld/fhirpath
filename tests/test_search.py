@@ -142,6 +142,19 @@ def test_composite_parameter_normalization(engine):
     assert isinstance(normalize_value[1], tuple)
 
 
+def test_parameter_normalization_with_space_as(engine):
+    """ """
+    context = SearchContext(engine, "MedicationRequest")
+    params = (("code", "http://acme.org/conditions/codes|ha125"),)
+
+    fhir_search = Search(context, params=params)
+
+    path_, value_pack, modifier = fhir_search.normalize_param("code")
+    # single valued
+    assert isinstance(value_pack, tuple)
+    assert path_.path == "MedicationRequest.medicationCodeableConcept"
+
+
 def test_create_term(engine):
     """ """
     context = SearchContext(engine, "Task")

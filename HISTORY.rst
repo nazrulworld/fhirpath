@@ -5,7 +5,15 @@ History
 0.3.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Improvements
+
+- Add support for search parameter expression that contains with space+as (``MedicationRequest.medication as CodeableConcept``)
+
+Bugfixes
+
+- "ignore_unmapped" now always True in case of nested query.
+
+- "unmapped_type" now set explicitly long value. See related issue https://stackoverflow.com/questions/17051709/no-mapping-found-for-field-in-order-to-sort-on-in-elasticsearch
 
 
 0.3.0 (2019-09-30)

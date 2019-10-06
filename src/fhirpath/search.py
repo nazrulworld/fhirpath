@@ -39,6 +39,7 @@ value_prefixes = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
+parentheses_wrapped = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 
@@ -1014,7 +1015,12 @@ class Search(object):
         ):
             raise NotImplementedError
 
-        return self._dotted_path_to_path_context(search_param.expression)
+        dotted_path = search_param.expression
+
+        if parentheses_wrapped.match(dotted_path):
+            dotted_path = dotted_path[1:-1]
+
+        return self._dotted_path_to_path_context(dotted_path)
 
     def attach_sort_terms(self, builder):
         """ """

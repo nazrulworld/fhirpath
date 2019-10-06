@@ -243,3 +243,9 @@ def test_path_constraint_as():
     assert path_._path == "Condition.abatementRange"
     path_ = ElementPath("Condition.abatement.as(dateTime)")
     assert path_._path == "Condition.abatementDateTime"
+
+
+def test_path_constraint_as_complex():
+    """ """
+    path_ = ElementPath("MedicationRequest.medication as CodeableConcept")
+    assert path_._path == "MedicationRequest.medicationCodeableConcept"

@@ -48,6 +48,7 @@ from fhirpath.utils import unwrap_proxy
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 has_dot_as = re.compile(r"\.as\((?P<type_name>[a-z]+)\)$", re.I | re.U)
+has_space_as = re.compile(r"^[a-z\.0-9]+ +as +[a-z0-9]+$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)\s\-]+\)", re.I | re.U)
 
@@ -939,7 +940,9 @@ class ElementPath(object):
             type_name = match.group("type_name")
             type_name = type_name[0].upper() + type_name[1:]
             self._path = self._raw.replace(replacer, type_name)
-
+        elif has_space_as.match(self._raw):
+            parts = list(map(lambda x: x.strip(), self._raw.split(" as ")))
+            self._path = parts[0] + parts[1][0].upper() + parts[1][1:]
         elif has_dot_is.search(self._raw):
             raise NotImplementedError
         elif has_dot_where.search(self._raw):

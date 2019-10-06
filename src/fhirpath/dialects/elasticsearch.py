@@ -45,7 +45,7 @@ class ElasticSearchDialect(DialectBase):
             "nested": {
                 "path": dotted_path,
                 "query": query,
-                "ignore_unmapped": False,
+                "ignore_unmapped": True,
                 "score_mode": "min",
             }
         }
@@ -502,7 +502,12 @@ class ElasticSearchDialect(DialectBase):
             else:
                 path_ = term.path.path
             item = {
-                path_: {"order": term.order == SortOrderType.DESC and "desc" or "asc"}
+                # https://www.elastic.co/guide/en/elasticsearch/\
+                # reference/current/search-request-body.html#_ignoring_unmapped_fields
+                path_: {
+                    "order": term.order == SortOrderType.DESC and "desc" or "asc",
+                    "unmapped_type": "long",
+                }
             }
             body_structure["sort"].append(item)
 
