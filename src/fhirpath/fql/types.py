@@ -126,7 +126,7 @@ class BaseTerm(object):
         self.match_type = None
         # flag
         self._finalized = False
-        self._value_assigned = False
+        self._value_assigned = value is not EMPTY_VALUE
 
         # eq, ne, lt, le, gt, ge
         self.comparison_operator = None
@@ -134,11 +134,6 @@ class BaseTerm(object):
         self.unary_operator = None
         # and, or, xor
         self.arithmetic_operator = None
-
-        self.value = self.ensure_term_value(value)
-
-        if self.value is not EMPTY_VALUE:
-            self._value_assigned = True
 
         if match_type is not None:
             self.set_match_type(match_type)
@@ -289,6 +284,8 @@ class Term(BaseTerm):
         """ """
         super(Term, self).__init__(path, value, match_type)
 
+        self.value = self.ensure_term_value(value)
+
         if ITerm.providedBy(path):
             self.__merge__(path)
         elif isinstance(path, str):
@@ -374,6 +371,10 @@ class Term(BaseTerm):
 
         return value
 
+    def __eq__(self, other):
+        """ """
+        return BaseTerm.__eq__(self, other)
+
     # Non standard
     def __merge__(self, other):
         """ """
@@ -389,6 +390,7 @@ class NonFhirTerm(BaseTerm):
     def __init__(self, path, value=EMPTY_VALUE, match_type=None):
         """ """
         super(NonFhirTerm, self).__init__(path, value, match_type)
+        self.value = self.ensure_term_value(value)
         self.path = path
         self._value = EMPTY_VALUE
 
@@ -462,6 +464,10 @@ class NonFhirTerm(BaseTerm):
                     self.comparison_operator.__name__, self.value.__name__
                 )
             )
+
+    def __eq__(self, other):
+        """ """
+        return BaseTerm.__eq__(self, other)
 
 
 @implementer(IInTerm)

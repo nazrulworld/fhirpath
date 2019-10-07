@@ -390,11 +390,11 @@ class FHIRCodeSystem(object):
                 return None
 
             cd = c["code"]
-            name = (  # noqa: 841
-                "{0}-{1}".format(prefix, cd)
-                if prefix and not cd.startswith(prefix)
-                else cd
-            )
+            # name = (
+            #     "{0}-{1}".format(prefix, cd)
+            #     if prefix and not cd.startswith(prefix)
+            #     else cd
+            # )
             c["name"] = self.spec.safe_enum_name(cd)
             c["definition"] = c.get("definition") or c["name"]
             found.append(c)
@@ -733,7 +733,7 @@ class FHIRStructureDefinitionElement(object):
         if not self.represents_class:
             return None, None
 
-        class_name = self.name_if_class()  # noqa: F841
+        # class_name = self.name_if_class()  # noqa: F841
         subs = []
         cls, did_create = FHIRClass.for_element(self)
         if did_create:

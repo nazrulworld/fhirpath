@@ -1118,7 +1118,7 @@ class Search(object):
         self.normalize_param_value(part2[0][1], part2_param_value)
 
         if len(part2_param_value) == 1:
-            part1_param_value = part2_param_value[0]
+            part2_param_value = part2_param_value[0]
         part2_temp = list()
         for pr in part2:
             part2_temp.append(
