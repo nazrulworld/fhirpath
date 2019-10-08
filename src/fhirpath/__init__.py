@@ -2,5 +2,5 @@
 """Top-level package for fhirpath."""
 
 __author__ = """Md Nazrul Islam"""
-__email__ = 'email2nazrul@gmail.com'
-__version__ = '0.3.0'
+__email__ = "email2nazrul@gmail.com"
+__version__ = "0.3.1"

@@ -35,6 +35,7 @@ Introduction
 FHIRPath_ (STU1) implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
 FHIRPath_ (STU1) specification compliance product.
 
+* Supports FHIR® ``STU3`` and ``R4``.
 * Supports multiple provider´s engine. Now Plone_ & guillotina_ framework powered providers `fhirpath-guillotina`_ and `collective.fhirpath`_ respectively are supported and more coming soon.
 * Supports multiple dialects, for example elasticsearch_, GraphQL_, PostgreSQL_. Although now elasticsearch_ has been supported.
 * Provide full support of `FHIR Search <https://www.hl7.org/fhir/search.html>`_ with easy to use API.
