@@ -7,6 +7,7 @@ from .base import Engine
 from .base import EngineResult
 from .base import EngineResultBody
 from .base import EngineResultHeader
+from .base import EngineResultRow
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -16,7 +17,8 @@ __all__ = [
     "Engine",
     "EngineResult",
     "EngineResultHeader",
-    "EngineResultBody"
+    "EngineResultBody",
+    "EngineResultRow"
 ]
 
 

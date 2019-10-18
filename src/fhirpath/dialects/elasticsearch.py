@@ -119,6 +119,15 @@ class ElasticSearchDialect(DialectBase):
         if len(body_structure["sort"]) == 0:
             del body_structure["sort"]
 
+        if len(body_structure["_source"]["includes"]) == 0:
+            del body_structure["_source"]["includes"]
+
+        if len(body_structure["_source"]["excludes"]) == 0:
+            del body_structure["_source"]["excludes"]
+
+        if len(body_structure["_source"]) == 0:
+            del body_structure["_source"]
+
     def _get_path_mapping_info(self, mapping, dotted_path):
         """ """
         mapping_ = mapping["properties"]
@@ -173,6 +182,8 @@ class ElasticSearchDialect(DialectBase):
         self.apply_sort(query.get_sort(), body_structure, root_replacer=root_replacer)
         # Limit
         self.apply_limit(query.get_limit(), body_structure)
+        # ES source_
+        self.apply_source_filter(query, body_structure, root_replacer=root_replacer)
 
         self._clean_up(body_structure)
 
@@ -522,6 +533,43 @@ class ElasticSearchDialect(DialectBase):
             term = {"term": {path_: res_name}}
             body_structure["query"]["bool"]["filter"].append(term)
 
+    def apply_source_filter(self, query, body_structure, root_replacer=None):
+        """https://www.elastic.co/guide/en/elasticsearch/reference/\
+            current/search-request-body.html#request-body-search-source-filtering
+            ---------------------------------------------------------------------
+            1.) we are using FHIR field data from ES server directly, unlike collective.
+                elasticsearch, where only path is retrieve, then using that set
+                zcatalog brain, this patternt might good for
+                general puporse but here we exclusively need fhir
+                resource only which is already stored in ES.
+                Our approach will be definately performance optimized!
+
+            2.) We might loose minor security (only zope specific),
+                because here permission is not checking while getting full object.
+        """
+
+        def replace(path_):
+            if root_replacer is None:
+                return path_
+            parts = path_.split(".")
+            if len(parts) > 1:
+                path_ = ".".join([root_replacer] + list(parts.split(".")[1:]))
+            else:
+                return root_replacer
+
+        includes = list()
+        if len(query.get_select()) == 1 and query.get_select()[0].star:
+            if root_replacer is None:
+                includes.append(replace(query.get_from()[0][0]))
+            else:
+                includes.append(root_replacer)
+        elif len(query.get_select()) > 0:
+            for path_el in query.get_select():
+                includes.append(replace(path_el.path))
+
+        if len(includes) > 0:
+            body_structure["_source"]["includes"].extend(includes)
+
     def create_structure(self):
         """ """
         return {
@@ -536,4 +584,5 @@ class ElasticSearchDialect(DialectBase):
             "size": 100,
             "from": 0,
             "sort": list(),
+            "_source": {"includes": [], "excludes": []},
         }

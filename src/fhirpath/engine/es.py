@@ -1,10 +1,10 @@
 # _*_ coding: utf-8 _*_
 from zope.interface import implementer
 
-from fhirpath.engine import Engine
-from fhirpath.engine import EngineResult
-from fhirpath.engine import EngineResultBody
-from fhirpath.engine import EngineResultHeader
+from fhirpath.engine.base import Engine
+from fhirpath.engine.base import EngineResult
+from fhirpath.engine.base import EngineResultBody
+from fhirpath.engine.base import EngineResultHeader
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
@@ -48,10 +48,27 @@ class ElasticsearchEngine(Engine):
     def execute(self, query, unrestricted=False):
         """ """
         raw_result, field_index_name, compiled = self._execute(query, unrestricted)
+        selects = compiled.get("_source", {}).get("includes", [])
 
         # xxx: process result
-        result = self.process_raw_result(raw_result, field_index_name)
+        result = self.process_raw_result(raw_result, selects)
+
+        # Process additional meta
         result.header.raw_query = self.connection.finalize_search_params(compiled)
+        if len(selects) == 0:
+            return result
+
+        resource_type = query.get_from()[0][0]
+        finalized_selects = list()
+        for path_ in selects:
+            parts = path_.split(".")
+            if len(parts) == 1:
+                finalized_selects.append(resource_type)
+            else:
+                finalized_selects.append(
+                    ".".join([resource_type] + parts[1:])
+                )
+        result.selects = finalized_selects
 
         return result
 
@@ -66,7 +83,7 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
-    def process_raw_result(self, rawresult, fieldname):
+    def process_raw_result(self, rawresult, selects):
         """ """
         # let´s make some compabilities
         if isinstance(rawresult["hits"]["total"], dict):
@@ -77,8 +94,11 @@ class ElasticsearchEngine(Engine):
         header = EngineResultHeader(total=total)
         body = EngineResultBody()
 
+        if len(selects) == 0:
+            # Nothing would be in body
+            return body
         # extract primary data
-        self.extract_hits(fieldname, rawresult["hits"]["hits"], body)
+        self.extract_hits(selects, rawresult["hits"]["hits"], body)
 
         if "_scroll_id" in rawresult and header.total > len(rawresult["hits"]["hits"]):
             # we need to fetch all!
@@ -90,7 +110,7 @@ class ElasticsearchEngine(Engine):
                 if len(raw_res["hits"]["hits"]) == 0:
                     break
 
-                self.extract_hits(fieldname, raw_res["hits"]["hits"], body)
+                self.extract_hits(selects, raw_res["hits"]["hits"], body)
 
                 consumed += len(raw_res["hits"]["hits"])
 

@@ -42,3 +42,27 @@ class IEngineFactory(Interface):
 
 class IElasticsearchEngineFactory(IEngineFactory):
     """ """
+
+
+class IEngineResult(Interface):
+    """ """
+
+    header = Attribute("Header")
+    body = Attribute("Body")
+
+
+class IEngineResultHeader(Interface):
+    """ """
+
+    total = Attribute("Total")
+    raw_query = Attribute("RawQuery")
+    generated_on = Attribute("GeneratedOn")
+    selects = Attribute("Selects")
+
+
+class IEngineResultBody(Interface):
+    """ """
+
+
+class IEngineResultRow(Interface):
+    """ """

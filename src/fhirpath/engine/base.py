@@ -6,6 +6,10 @@ from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.interfaces import IEngine
+from fhirpath.interfaces.engine import IEngineResult
+from fhirpath.interfaces.engine import IEngineResultBody
+from fhirpath.interfaces.engine import IEngineResultHeader
+from fhirpath.interfaces.engine import IEngineResultRow
 from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
 
@@ -65,6 +69,7 @@ class EngineProxy(Proxy):
         self.initialize(obj)
 
 
+@implementer(IEngineResult)
 class EngineResult(object):
     """ """
 
@@ -76,12 +81,14 @@ class EngineResult(object):
         object.__setattr__(self, "body", body)
 
 
+@implementer(IEngineResultHeader)
 class EngineResultHeader(object):
     """ """
 
     total = None
     raw_query = None
     generated_on = None
+    selects = None
 
     def __init__(self, total, raw_query=None):
         """ """
@@ -90,5 +97,19 @@ class EngineResultHeader(object):
         self.generated_on = time.time()
 
 
+@implementer(IEngineResultBody)
 class EngineResultBody(deque):
+    """ """
+    def append(self, value):
+        """ """
+        row = IEngineResultRow(value)
+        deque.append(self, row)
+
+    def add(self, value):
+        """ """
+        self.append(value)
+
+
+@implementer(IEngineResultRow)
+class EngineResultRow(list):
     """ """

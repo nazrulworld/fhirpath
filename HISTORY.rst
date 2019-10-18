@@ -2,10 +2,21 @@
 History
 =======
 
-0.3.2 (unreleased)
+0.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Improvements
+
+- Now full select features are accepted, mean you can provide multiple path in select section. for example ``select(Patient.name, Patient.gender)``.
+
+
+Breakings
+
+- ``QueryResult.first`` and ``QueryResult.single`` are no longer return FHIR Model instance instead returning ``fhirpath.engine.EngineResultRow``.
+
+- ``QueryResult.fetchall`` returning list of ``fhirpath.engine.EngineResultRow`` instead of FHIR JSON.
+
+- ``QueryResult`` iteration returning list of FHIR Model instance on condition (if select is `*`), other than returning list of ``fhirpath.engine.EngineResultRow``.
 
 
 0.3.1 (2019-10-08)
@@ -17,7 +28,7 @@ Improvements
 
 Bugfixes
 
-- ``not`` modifier is now working for ``Coding``and ``CodeableConcept``.
+- ``not`` modifier is now working for ``Coding`` and ``CodeableConcept``.
 
 - "ignore_unmapped" now always True in case of nested query.
 

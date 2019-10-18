@@ -1,6 +1,7 @@
 # _*_ coding: utf-8 _*_
 import pytest
 
+from fhirpath.engine import EngineResultRow
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import MultipleResultsFound
 from fhirpath.fhirpath import Q_
@@ -54,7 +55,7 @@ def test_single_query(es_data, engine):
 
     result = builder(async_result=False).single()
     assert result is not None
-    assert isinstance(result, builder._from[0][1])
+    assert isinstance(result, EngineResultRow)
     # test empty result
     builder = Q_(resource="ChargeItem", engine=engine)
     builder = builder.where(not_(exists_("ChargeItem.enteredDate")))
@@ -83,7 +84,7 @@ def test_first_query(es_data, engine):
     builder = builder.where(T_("Organization.active", "true"))
 
     result = builder(async_result=False).first()
-    assert isinstance(result, builder._from[0][1])
+    assert isinstance(result, EngineResultRow)
 
     builder = Q_(resource="Organization", engine=engine)
     builder = builder.where(T_("Organization.active", "false"))

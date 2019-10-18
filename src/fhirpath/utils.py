@@ -496,7 +496,8 @@ class BundleWrapper:
         if not self.bundle.entry:
             self.bundle.entry = list()
 
-        for entry in result.body:
+        for row in result.body:
+            entry = row[0]
             resource = lookup_fhir_class(
                 entry["resourceType"], fhir_release=self.fhir_version
             )(entry)

@@ -22,6 +22,10 @@ from .engine import IElasticsearchEngine  # noqa: F401
 from .engine import IElasticsearchEngineFactory  # noqa: F401
 from .engine import IEngine  # noqa: F401
 from .engine import IEngineFactory  # noqa: F401
+from .engine import IEngineResult  # noqa: F401
+from .engine import IEngineResultBody  # noqa: F401
+from .engine import IEngineResultHeader  # noqa: F401
+from .engine import IEngineResultRow  # noqa: F401
 from .fql import IElementPath  # noqa: F401
 from .fql import IExistsGroupTerm  # noqa: F401
 from .fql import IExistsTerm  # noqa: F401
