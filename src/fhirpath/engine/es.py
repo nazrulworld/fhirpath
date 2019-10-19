@@ -24,6 +24,31 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
+    def _add_result_headers(self, query, result, source_filters, compiled):
+        """ """
+        # Process additional meta
+        result.header.raw_query = self.connection.finalize_search_params(compiled)
+        if len(source_filters) == 0:
+            return
+
+        resource_type = query.get_from()[0][0]
+        selects = list()
+        for path_ in source_filters:
+            parts = path_.split(".")
+            if len(parts) == 1:
+                selects.append(resource_type)
+            else:
+                selects.append(".".join([resource_type] + parts[1:]))
+        result.selects = selects
+
+    def _get_source_filters(self, compiled):
+        """ """
+        source_filters = compiled.get("_source", {})
+        if source_filters is False:
+            return []
+        else:
+            return source_filters.get("includes", [])
+
     def _traverse_for_value(self, source, path_):
         """Looks path_ is innocent string key, but may content expression, function"""
         if isinstance(source, dict):
@@ -58,27 +83,14 @@ class ElasticsearchEngine(Engine):
     def execute(self, query, unrestricted=False):
         """ """
         raw_result, field_index_name, compiled = self._execute(query, unrestricted)
-        selects = compiled.get("_source", {}).get("includes", [])
+
+        source_filters = self._get_source_filters(compiled)
 
         # xxx: process result
-        result = self.process_raw_result(raw_result, selects)
+        result = self.process_raw_result(raw_result, source_filters)
 
         # Process additional meta
-        result.header.raw_query = self.connection.finalize_search_params(compiled)
-        if len(selects) == 0:
-            return result
-
-        resource_type = query.get_from()[0][0]
-        finalized_selects = list()
-        for path_ in selects:
-            parts = path_.split(".")
-            if len(parts) == 1:
-                finalized_selects.append(resource_type)
-            else:
-                finalized_selects.append(
-                    ".".join([resource_type] + parts[1:])
-                )
-        result.selects = finalized_selects
+        self._add_result_headers(query, result, source_filters, compiled)
 
         return result
 
@@ -101,33 +113,35 @@ class ElasticsearchEngine(Engine):
         else:
             total = rawresult["hits"]["total"]
 
-        header = EngineResultHeader(total=total)
-        body = EngineResultBody()
-
+        result = EngineResult(
+            header=EngineResultHeader(total=total), body=EngineResultBody()
+        )
         if len(selects) == 0:
             # Nothing would be in body
-            return body
+            return result
         # extract primary data
-        self.extract_hits(selects, rawresult["hits"]["hits"], body)
+        self.extract_hits(selects, rawresult["hits"]["hits"], result.body)
 
-        if "_scroll_id" in rawresult and header.total > len(rawresult["hits"]["hits"]):
+        if "_scroll_id" in rawresult and result.header.total > len(
+            rawresult["hits"]["hits"]
+        ):
             # we need to fetch all!
             consumed = len(rawresult["hits"]["hits"])
 
-            while header.total > consumed:
+            while result.header.total > consumed:
                 # xxx: dont know yet, if from_, size is better solution
                 raw_res = self.connection.scroll(rawresult["_scroll_id"])
                 if len(raw_res["hits"]["hits"]) == 0:
                     break
 
-                self.extract_hits(selects, raw_res["hits"]["hits"], body)
+                self.extract_hits(selects, raw_res["hits"]["hits"], result.body)
 
                 consumed += len(raw_res["hits"]["hits"])
 
-                if header.total <= consumed:
+                if result.header.total <= consumed:
                     break
 
-        return EngineResult(header=header, body=body)
+        return result
 
     def current_url(self):
         """

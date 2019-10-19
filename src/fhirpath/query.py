@@ -393,6 +393,10 @@ class QueryResult(object):
         """Returns a collection with a single value which is the integer count of
         the number of items in the input collection.
         Returns 0 when the input collection is empty."""
+        query = self._query.clone()
+        query.get_select().clear()
+        result = self._engine.execute(query, self._unrestricted)
+        return result.header.total
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""

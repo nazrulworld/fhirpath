@@ -119,14 +119,16 @@ class ElasticSearchDialect(DialectBase):
         if len(body_structure["sort"]) == 0:
             del body_structure["sort"]
 
-        if len(body_structure["_source"]["includes"]) == 0:
-            del body_structure["_source"]["includes"]
+        if body_structure["_source"] is not False:
 
-        if len(body_structure["_source"]["excludes"]) == 0:
-            del body_structure["_source"]["excludes"]
+            if len(body_structure["_source"]["includes"]) == 0:
+                del body_structure["_source"]["includes"]
 
-        if len(body_structure["_source"]) == 0:
-            del body_structure["_source"]
+            if len(body_structure["_source"]["excludes"]) == 0:
+                del body_structure["_source"]["excludes"]
+
+            if len(body_structure["_source"]) == 0:
+                del body_structure["_source"]
 
     def _get_path_mapping_info(self, mapping, dotted_path):
         """ """
@@ -547,6 +549,11 @@ class ElasticSearchDialect(DialectBase):
             2.) We might loose minor security (only zope specific),
                 because here permission is not checking while getting full object.
         """
+
+        if len(query.get_select()) == 0:
+            # No select no source!
+            body_structure["_source"] = False
+            return
 
         def replace(path_):
             if root_replacer is None:
