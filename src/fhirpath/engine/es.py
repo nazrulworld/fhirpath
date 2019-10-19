@@ -24,6 +24,16 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
+    def _traverse_for_value(self, source, path_):
+        """Looks path_ is innocent string key, but may content expression, function"""
+        if isinstance(source, dict):
+            # xxx: validate path, not blindly sending None
+            return source.get(path_, None)
+        else:
+            # xxx: accept list type
+            # xxx: accept path with index, function.
+            raise NotImplementedError
+
     def _execute(self, query, unrestricted=False):
         """ """
         # for now we support single from resource

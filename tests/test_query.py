@@ -123,3 +123,31 @@ def test_in_query(es_data, engine):
     )
     result = builder(async_result=False).fetchall()
     assert result.header.total == 0
+
+
+def test_select_muiltipaths(es_data, engine):
+    """
+    pp res["_source"]
+{'organization_resource': {'address': [{'city': 'Den Burg;Jeg fik bøde på '
+                                                '5.000 kroner i et andet '
+                                                'orkester. først søge '
+                                                'permanent ophold i år 2032',
+                                        'country': 'NLD',
+                                        'line': ['Galapagosweg 91'],
+                                        'postalCode': '9105 PZ',
+                                        'use': 'work'},
+                                       {'city': 'Den Burg',
+                                        'country': 'NLD',
+                                        'line': ['PO Box 2311'],
+                                        'postalCode': '9100 AA',
+                                        'use': 'work'}],
+                           'name': 'Burgers University Medical Center'}}
+(Pdb) c
+    """
+    builder = Q_(resource="Organization", engine=engine).select(
+        "Organization.name", "Organization.address"
+    )
+    builder = builder.where(T_("Organization.active") == V_("true"))
+    result = builder(async_result=False).fetchall()
+
+    assert len(result.body[0]) == 2

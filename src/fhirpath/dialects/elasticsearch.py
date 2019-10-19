@@ -553,7 +553,7 @@ class ElasticSearchDialect(DialectBase):
                 return path_
             parts = path_.split(".")
             if len(parts) > 1:
-                path_ = ".".join([root_replacer] + list(parts.split(".")[1:]))
+                return ".".join([root_replacer] + list(parts[1:]))
             else:
                 return root_replacer
 

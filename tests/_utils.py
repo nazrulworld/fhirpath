@@ -72,11 +72,13 @@ class TestElasticsearchEngine(ElasticsearchEngine):
             if res["_type"] != DOC_TYPE:
                 continue
             row = EngineResultRow()
-            for fieldname in selects:
-                if fieldname in res["_source"]:
-                    row.append(res["_source"][fieldname])
-                else:
-                    row.append(None)
+            for fullpath in selects:
+                source = res["_source"]
+                for path_ in fullpath.split("."):
+                    source = self._traverse_for_value(source, path_)
+                    if source is None:
+                        break
+                row.append(source)
             container.add(row)
 
 
