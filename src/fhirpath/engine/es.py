@@ -1,4 +1,6 @@
 # _*_ coding: utf-8 _*_
+import re
+
 from zope.interface import implementer
 
 from fhirpath.engine.base import Engine
@@ -6,11 +8,31 @@ from fhirpath.engine.base import EngineResult
 from fhirpath.engine.base import EngineResultBody
 from fhirpath.engine.base import EngineResultHeader
 from fhirpath.enums import EngineQueryType
+from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
 
+CONTAINS_INDEX_OR_FUNCTION = re.compile(r"[a-z09_]+(\[[0-9]+\])|(\([0-9]*\))$", re.I)
+CONTAINS_INDEX = re.compile(r"[a-z09_]+\[[0-9]+\]$", re.I)
+CONTAINS_FUNCTION = re.compile(r"[a-z09_]+\([0-9]*\)$", re.I)
+
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def navigate_indexed_path(source, path_):
+    """ """
+    parts = path_.split("[")
+    p_ = parts[0]
+    index = int(parts[1][:-1])
+    value = source.get(p_, None)
+    if value is None:
+        return value
+
+    try:
+        return value[index]
+    except IndexError:
+        return None
 
 
 @implementer(IElasticsearchEngine)
@@ -42,39 +64,80 @@ class ElasticsearchEngine(Engine):
                 selects.append(".".join([resource_type] + parts[1:]))
         result.selects = selects
 
-    def _get_source_filters(self, compiled):
+    def _get_source_filters(self, query, field_index_name):
         """ """
-        source_filters = compiled.get("_source", {})
-        if source_filters is False:
-            return []
-        else:
-            return source_filters.get("includes", [])
+        source_filters = []
+        for el_path in query.get_select():
+            if el_path.star:
+                source_filters.append(field_index_name)
+                break
+            parts = el_path._raw.split(".")
+            source_filters.append(".".join([field_index_name] + parts[1:]))
+        return source_filters
 
     def _traverse_for_value(self, source, path_):
-        """Looks path_ is innocent string key, but may content expression, function
-        https://www.devdays.com/amsterdam/wp-content/uploads/sites/2/2018/11/Ewout-Kramer-Working-with-FhirPath-DevDays-2018-Amsterdam.pdf
-        By index:
-        Patient.name[1]
-         By position:
-        Patient.name.last().
-        given.first()
-         Subsets:
-         Patient.name.given
-         Patient.name.given.Tail()
-         Patient.name.Skip(1).Take(3)
-
-        Everything is a list and every function returns a list:
-         Patient.name.count(), Patient.active.count()
-         Patient.name.first().count()
-         Patient.active.first() (always the same as Patient.active)
-         3.count()(a collection with just the integer 1)
-         (1 + 2).count() (‘+’ works on two sets of 1 element!)"""
+        """Looks path_ is innocent string key, but may content expression, function.
+        """
         if isinstance(source, dict):
             # xxx: validate path, not blindly sending None
+            if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
+                path_
+            ):
+                raise ValidationError(
+                    f"Invalid path {path_} has been supllied!"
+                    "Path cannot contain function if source type is dict"
+                )
+            if CONTAINS_INDEX.match(path_):
+                return navigate_indexed_path(source, path_)
+
             return source.get(path_, None)
+
+        elif isinstance(source, list):
+            if not CONTAINS_FUNCTION.match(path_):
+                raise ValidationError(
+                    f"Invalid path {path_} has been supllied!"
+                    "Path should contain function if source type is list"
+                )
+            parts = path_.split("(")
+            func_name = parts[0]
+            index = None
+            if len(parts[1]) > 1:
+                index = int(parts[1][:-1])
+            if func_name == "count":
+                return len(source)
+            elif func_name == "first":
+                return source[0]
+            elif func_name == "last":
+                return source[-1]
+            elif func_name == "Skip":
+                new_order = list()
+                for idx, no in enumerate(source):
+                    if idx == index:
+                        continue
+                    new_order.append(no)
+                return new_order
+            elif func_name == "Take":
+                try:
+                    return source[index]
+                except IndexError:
+                    return None
+            else:
+                raise NotImplementedError
+        elif isinstance(source, (bytes, str)):
+            if not CONTAINS_FUNCTION.match(path_):
+                raise ValidationError(
+                    f"Invalid path {path_} has been supllied!"
+                    "Path should contain function if source type is list"
+                )
+            parts = path_.split("(")
+            func_name = parts[0]
+            index = len(parts[1]) > 1 and int(parts[1][:-1]) or None
+            if func_name == "count":
+                return len(source)
+            else:
+                raise NotImplementedError
+
         else:
-            # xxx: accept list type
-            # xxx: accept path with index, function.
             raise NotImplementedError
 
     def _execute(self, query, unrestricted, query_type):
@@ -103,9 +166,7 @@ class ElasticsearchEngine(Engine):
 
         return raw_result, field_index_name, compiled
 
-    def execute(
-        self, query, unrestricted=False, query_type=EngineQueryType.DML
-    ):
+    def execute(self, query, unrestricted=False, query_type=EngineQueryType.DML):
         """ """
         raw_result, field_index_name, compiled = self._execute(
             query, unrestricted, query_type
@@ -113,7 +174,7 @@ class ElasticsearchEngine(Engine):
         if query_type == EngineQueryType.COUNT:
             source_filters = []
         else:
-            source_filters = self._get_source_filters(compiled)
+            source_filters = self._get_source_filters(query, field_index_name)
 
         # xxx: process result
         result = self.process_raw_result(raw_result, source_filters)

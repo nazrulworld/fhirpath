@@ -52,6 +52,17 @@ has_space_as = re.compile(r"^[a-z\.0-9]+ +as +[a-z0-9]+$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
 has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)\s\-]+\)", re.I | re.U)
 
+contains_index = re.compile(r"\[[0-9]+\]", re.U)
+# first()last()Tail()count()Skip(1).Take(3)
+contains_function = re.compile(
+    r"(\.first\(\))|"
+    r"(\.last\(\))|"
+    r"(\.count\(\))|"
+    r"(\.Skip\([0-9]+\))|"
+    r"(\.Take\([0-9]+\))",
+    re.I | re.U,
+)
+
 
 @implementer(IFqlClause)
 class FqlClause(deque):
@@ -946,16 +957,32 @@ class ElementPath(object):
             type_name = match.group("type_name")
             type_name = type_name[0].upper() + type_name[1:]
             self._path = self._raw.replace(replacer, type_name)
+
         elif has_space_as.match(self._raw):
             parts = list(map(lambda x: x.strip(), self._raw.split(" as ")))
             self._path = parts[0] + parts[1][0].upper() + parts[1][1:]
+
         elif has_dot_is.search(self._raw):
             raise NotImplementedError
+
         elif has_dot_where.search(self._raw):
             pos = self._raw.lower().find("where(")
             self._path = self._raw[0 : pos - 1]  # noqa: E203
             expr = self._raw[pos:]
             self._where = PathWhereConstraint.from_expression(expr)
+
+        elif contains_index.search(self._raw):
+            start = contains_index.search(self._raw).group()
+            # xxx: do better if case from where condition
+            # now we assume, coming from select!
+            self._path = self._raw[: self._raw.find(start)]
+
+        elif contains_function.search(self._raw):
+            start = contains_function.search(self._raw).group()
+            # xxx: do better if case from where condition
+            # now we assume, coming from select!
+            self._path = self._raw[: self._raw.find(start)]
+
         else:
             self._path = self._raw
 

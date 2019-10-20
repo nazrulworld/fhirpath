@@ -25,6 +25,7 @@ DATASET_1 = {
                 },
             ],
             "name": "Burgers University Medical Center",
+            "telecom": [{"system": "phone", "value": "022-655 2300", "use": "work"}],
         }
     },
 }

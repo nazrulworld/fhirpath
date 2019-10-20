@@ -249,3 +249,21 @@ def test_path_constraint_as_complex():
     """ """
     path_ = ElementPath("MedicationRequest.medication as CodeableConcept")
     assert path_._path == "MedicationRequest.medicationCodeableConcept"
+
+
+def test_path_constains_index():
+    """ """
+    path_ = ElementPath("Organization.address[0].line[1]")
+    assert path_._path == "Organization.address"
+
+
+def test_path_constains_function():
+    """ """
+    path_ = ElementPath("Organization.address.first()")
+    assert path_._path == "Organization.address"
+
+    path_ = ElementPath("Organization.telecom.Take(1)")
+    assert path_._path == "Organization.telecom"
+
+    path_ = ElementPath("Organization.telecom.Skip(0)")
+    assert path_._path == "Organization.telecom"

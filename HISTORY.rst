@@ -11,6 +11,8 @@ Improvements
 
 - FHIRPath ``count()`` and ``empty()`` functions are supported.
 
+- Supports path navigation with index and functions inside ``select``. Example ``[index]``, ``last()``, ``first()``, ``Skip()``, ``Take()``, ``count()``.
+
 Breakings
 
 - ``QueryResult.first`` and ``QueryResult.single`` are no longer return FHIR Model instance instead returning ``fhirpath.engine.EngineResultRow``.
