@@ -3,6 +3,7 @@ import logging
 
 from zope.interface import Invalid
 
+from fhirpath.enums import EngineQueryType
 from fhirpath.utils import import_string
 
 from ..connection import Connection
@@ -41,26 +42,50 @@ class ElasticsearchConnection(Connection):
             )
         return info
 
-    def finalize_search_params(self, compiled_query):
+    def finalize_search_params(
+        self, compiled_query, query_type=EngineQueryType.DML
+    ):
         """ """
         compiled_query = compiled_query.copy()
         params = dict()
-        params["from_"] = compiled_query.pop("from", 0)
-        params["size"] = compiled_query.pop("size", 100)
-        if "scroll" in compiled_query:
-            params["scroll"] = compiled_query.pop("scroll")
-        params["ignore_unavailable"] = compiled_query.pop("ignore_unavailable", True)
+
+        from_ = compiled_query.pop("from", 0)
+        size = compiled_query.pop("size", 100)
+        scroll = compiled_query.pop("scroll", None)
+        ignore_unavailable = compiled_query.pop("ignore_unavailable", True)
+
+        if query_type == EngineQueryType.DML:
+            params["from_"] = from_
+            params["size"] = size
+            if scroll is not None:
+                params["scroll"] = scroll
+        elif query_type == EngineQueryType.COUNT:
+            compiled_query.pop("_source", None)
+
+        params["ignore_unavailable"] = ignore_unavailable
         params["body"] = compiled_query
         return params
 
-    def fetch(self, compiled_query):
+    def fetch(self, index, compiled_query):
         """xxx: must have use scroll+slice
         https://stackoverflow.com/questions/43211387/what-does-elasticsearch-automatic-slicing-do
         https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
         """
-        search_params = self.finalize_search_params(compiled_query)
+        search_params = self.finalize_search_params(
+            compiled_query, EngineQueryType.DML
+        )
         conn = self.raw_connection
-        result = conn.search(**search_params)
+        result = conn.search(index=index, **search_params)
+        self._evaluate_result(result)
+        return result
+
+    def count(self, index, compiled_query):
+        """ """
+        search_params = self.finalize_search_params(
+            compiled_query, EngineQueryType.COUNT
+        )
+        conn = self.raw_connection
+        result = conn.count(index=index, **search_params)
         self._evaluate_result(result)
         return result
 
@@ -111,9 +136,7 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
         for url in urls:
             item = {"host": url.host, "port": url.port or 9200}
             if url.username:
-                item["http_auth"] = "{0}:{1}".format(
-                    url.username, url.password or ""
-                )
+                item["http_auth"] = "{0}:{1}".format(url.username, url.password or "")
             if "use_ssl" in url.query:
                 item["use_ssl"] = url.query.get("use_ssl").lower() in (
                     "true",

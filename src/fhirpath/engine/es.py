@@ -5,6 +5,7 @@ from fhirpath.engine.base import Engine
 from fhirpath.engine.base import EngineResult
 from fhirpath.engine.base import EngineResultBody
 from fhirpath.engine.base import EngineResultHeader
+from fhirpath.enums import EngineQueryType
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
@@ -50,7 +51,24 @@ class ElasticsearchEngine(Engine):
             return source_filters.get("includes", [])
 
     def _traverse_for_value(self, source, path_):
-        """Looks path_ is innocent string key, but may content expression, function"""
+        """Looks path_ is innocent string key, but may content expression, function
+        https://www.devdays.com/amsterdam/wp-content/uploads/sites/2/2018/11/Ewout-Kramer-Working-with-FhirPath-DevDays-2018-Amsterdam.pdf
+        By index:
+        Patient.name[1]
+         By position:
+        Patient.name.last().
+        given.first()
+         Subsets:
+         Patient.name.given
+         Patient.name.given.Tail()
+         Patient.name.Skip(1).Take(3)
+
+        Everything is a list and every function returns a list:
+         Patient.name.count(), Patient.active.count()
+         Patient.name.first().count()
+         Patient.active.first() (always the same as Patient.active)
+         3.count()(a collection with just the integer 1)
+         (1 + 2).count() (‘+’ works on two sets of 1 element!)"""
         if isinstance(source, dict):
             # xxx: validate path, not blindly sending None
             return source.get(path_, None)
@@ -59,7 +77,7 @@ class ElasticsearchEngine(Engine):
             # xxx: accept path with index, function.
             raise NotImplementedError
 
-    def _execute(self, query, unrestricted=False):
+    def _execute(self, query, unrestricted, query_type):
         """ """
         # for now we support single from resource
         query_copy = query.clone()
@@ -76,15 +94,26 @@ class ElasticsearchEngine(Engine):
         }
 
         compiled = self.dialect.compile(**params)
-        raw_result = self.connection.fetch(compiled)
+        if query_type == EngineQueryType.DML:
+            raw_result = self.connection.fetch(self.get_index_name(), compiled)
+        elif query_type == EngineQueryType.COUNT:
+            raw_result = self.connection.count(self.get_index_name(), compiled)
+        else:
+            raise NotImplementedError
 
         return raw_result, field_index_name, compiled
 
-    def execute(self, query, unrestricted=False):
+    def execute(
+        self, query, unrestricted=False, query_type=EngineQueryType.DML
+    ):
         """ """
-        raw_result, field_index_name, compiled = self._execute(query, unrestricted)
-
-        source_filters = self._get_source_filters(compiled)
+        raw_result, field_index_name, compiled = self._execute(
+            query, unrestricted, query_type
+        )
+        if query_type == EngineQueryType.COUNT:
+            source_filters = []
+        else:
+            source_filters = self._get_source_filters(compiled)
 
         # xxx: process result
         result = self.process_raw_result(raw_result, source_filters)
@@ -107,8 +136,11 @@ class ElasticsearchEngine(Engine):
 
     def process_raw_result(self, rawresult, selects):
         """ """
+        if len(selects) == 0 and "count" in rawresult:
+            # Might be count API
+            total = rawresult["count"]
         # let´s make some compabilities
-        if isinstance(rawresult["hits"]["total"], dict):
+        elif isinstance(rawresult["hits"]["total"], dict):
             total = rawresult["hits"]["total"]["value"]
         else:
             total = rawresult["hits"]["total"]

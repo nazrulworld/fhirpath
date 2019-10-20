@@ -3,6 +3,7 @@ from copy import copy
 
 from zope.interface import implementer
 
+from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.exceptions import ValidationError
 from fhirpath.thirdparty import Proxy
@@ -393,9 +394,9 @@ class QueryResult(object):
         """Returns a collection with a single value which is the integer count of
         the number of items in the input collection.
         Returns 0 when the input collection is empty."""
-        query = self._query.clone()
-        query.get_select().clear()
-        result = self._engine.execute(query, self._unrestricted)
+        result = self._engine.execute(
+            self._query, self._unrestricted, EngineQueryType.COUNT
+        )
         return result.header.total
 
     def empty(self):

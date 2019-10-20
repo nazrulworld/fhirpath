@@ -58,3 +58,11 @@ class WhereConstraintType(enum.Enum):
     T2 = "T2"
     # complex constraint with subpath
     T3 = "T3"
+
+
+@enum.unique
+class EngineQueryType(enum.Enum):
+    """" """
+    DDL = "DDL"
+    DML = "DML"
+    COUNT = "COUNT"
