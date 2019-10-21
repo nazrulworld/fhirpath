@@ -506,6 +506,21 @@ class AsyncQueryResult(QueryResult):
             return result.body[0]
         return None
 
+    async def count(self):
+        """ """
+        result = await self._engine.execute(
+            self._query, self._unrestricted, EngineQueryType.COUNT
+        )
+        return result.header.total
+
+    async def empty(self):
+        """Returns true if the input collection is empty ({ }) and false otherwise."""
+        return await self.count() == 0
+
+    async def __len__(self):
+        """ """
+        return await self.count()
+
 
 def Q_(resource=None, engine=None):
     """ """
