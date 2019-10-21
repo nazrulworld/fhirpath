@@ -3,6 +3,7 @@ import re
 
 from zope.interface import implementer
 
+from fhirpath.engine import EngineResultRow
 from fhirpath.engine.base import Engine
 from fhirpath.engine.base import EngineResult
 from fhirpath.engine.base import EngineResultBody
@@ -191,9 +192,20 @@ class ElasticsearchEngine(Engine):
     def calculate_field_index_name(self, resource_type):
         raise NotImplementedError
 
-    def extract_hits(self, fieldname, hits, container):
+    def extract_hits(self, selects, hits, container, doc_type="_doc"):
         """ """
-        raise NotImplementedError
+        for res in hits:
+            if res["_type"] != doc_type:
+                continue
+            row = EngineResultRow()
+            for fullpath in selects:
+                source = res["_source"]
+                for path_ in fullpath.split("."):
+                    source = self._traverse_for_value(source, path_)
+                    if source is None:
+                        break
+                row.append(source)
+            container.add(row)
 
     def process_raw_result(self, rawresult, selects):
         """ """

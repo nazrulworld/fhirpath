@@ -13,7 +13,6 @@ import pytz
 import yarl
 from isodate import datetime_isoformat
 
-from fhirpath.engine import EngineResultRow
 from fhirpath.engine import dialect_factory
 from fhirpath.engine.es import ElasticsearchEngine
 from fhirpath.enums import FHIR_VERSION
@@ -68,18 +67,9 @@ class TestElasticsearchEngine(ElasticsearchEngine):
 
     def extract_hits(self, selects, hits, container):
         """ """
-        for res in hits:
-            if res["_type"] != DOC_TYPE:
-                continue
-            row = EngineResultRow()
-            for fullpath in selects:
-                source = res["_source"]
-                for path_ in fullpath.split("."):
-                    source = self._traverse_for_value(source, path_)
-                    if source is None:
-                        break
-                row.append(source)
-            container.add(row)
+        return ElasticsearchEngine.extract_hits(
+            self, selects, hits, container, DOC_TYPE
+        )
 
 
 def has_internet_connection():
