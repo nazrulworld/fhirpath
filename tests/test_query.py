@@ -4,6 +4,7 @@ import pytest
 from fhirpath.engine import EngineResultRow
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import MultipleResultsFound
+from fhirpath.exceptions import ValidationError
 from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
@@ -155,3 +156,47 @@ def test_result_empty(es_data, engine):
     builder = builder.where(T_("Organization.active") == V_("false"))
     empty = builder(async_result=False).empty()
     assert empty is True
+
+
+def test_result_with_path_contains_index(es_data, engine):
+    """ """
+    conn, meta_info = es_data
+    load_organizations_data(conn, 5)
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.select(
+        "Organization.name.count()", "Organization.address[1]"
+    ).where(T_("Organization.active") == V_("true"))
+    result = builder(async_result=False).fetchall()
+    expected_length = "Burgers University Medical Center"
+    expected_postal_code = "9100 AA"
+
+    assert result.body[0][0] == len(expected_length)
+    assert result.body[0][1]["postalCode"] == expected_postal_code
+
+
+def test_result_path_contains_function(es_data, engine):
+    """ """
+    builder = Q_(resource="Patient", engine=engine)
+    builder = builder.select(
+        "Patient.name.first().given.Skip(0).Take(0)",
+        "Patient.identifier.last().assigner.display",
+    ).where(T_("Patient.gender") == V_("male"))
+    result = builder(async_result=False).fetchall()
+
+    assert result.body[0][0] == "Patient"
+    assert result.body[0][1] == "Zitelab ApS"
+
+    # Test Some exception
+    with pytest.raises(NotImplementedError):
+        builder = Q_(resource="Patient", engine=engine)
+        builder = builder.select(
+            "Patient.language.Skip(0)",
+        ).where(T_("Patient.gender") == V_("male"))
+        result = builder(async_result=False).first()
+
+    with pytest.raises(ValidationError):
+        builder = Q_(resource="Patient", engine=engine)
+        builder = builder.select(
+            "Patient.address[0].Skip(0)",
+        ).where(T_("Patient.gender") == V_("male"))
+        result = builder(async_result=False).first()

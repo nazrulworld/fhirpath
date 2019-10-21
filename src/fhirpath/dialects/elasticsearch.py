@@ -537,8 +537,8 @@ class ElasticSearchDialect(DialectBase):
 
     def apply_source_filter(self, query, body_structure, root_replacer=None):
         """https://www.elastic.co/guide/en/elasticsearch/reference/\
-            current/search-request-body.html#request-body-search-source-filtering
-            ---------------------------------------------------------------------
+        current/search-request-body.html#request-body-search-source-filtering
+
             1.) we are using FHIR field data from ES server directly, unlike collective.
                 elasticsearch, where only path is retrieve, then using that set
                 zcatalog brain, this patternt might good for
