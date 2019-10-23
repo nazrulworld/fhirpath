@@ -7,7 +7,7 @@ History
 
 Improvements
 
-- Now full select features are accepted, mean you can provide multiple path in select section. for example ``select(Patient.name, Patient.gender)``.
+- Now full ``select`` features are accepted, meaning that you can provide multiple path in ``select`` section. for example ``select(Patient.name, Patient.gender)``.
 
 - FHIRPath ``count()`` and ``empty()`` functions are supported.
 
