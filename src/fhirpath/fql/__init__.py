@@ -11,6 +11,7 @@ from .expressions import not_exists_
 from .expressions import not_in_
 from .expressions import or_
 from .expressions import sort_
+from .types import ElementPath
 
 
 __author__ = "Md Nazrul Islam"
@@ -27,4 +28,5 @@ __all__ = [
     "not_in_",
     "or_",
     "sort_",
+    "ElementPath"
 ]

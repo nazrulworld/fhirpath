@@ -555,10 +555,10 @@ class ElasticSearchDialect(DialectBase):
             body_structure["_source"] = False
             return
 
-        def replace(path_):
-            if root_replacer is None:
-                return path_
-            parts = path_.split(".")
+        def replace(path_el):
+            if root_replacer is None or path_el.non_fhir:
+                return path_el.path
+            parts = path_el.path.split(".")
             if len(parts) > 1:
                 return ".".join([root_replacer] + list(parts[1:]))
             else:
@@ -567,12 +567,12 @@ class ElasticSearchDialect(DialectBase):
         includes = list()
         if len(query.get_select()) == 1 and query.get_select()[0].star:
             if root_replacer is None:
-                includes.append(replace(query.get_from()[0][0]))
+                includes.append(query.get_from()[0][0])
             else:
                 includes.append(root_replacer)
         elif len(query.get_select()) > 0:
             for path_el in query.get_select():
-                includes.append(replace(path_el.path))
+                includes.append(replace(path_el))
 
         if len(includes) > 0:
             body_structure["_source"]["includes"].extend(includes)

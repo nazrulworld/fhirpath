@@ -40,6 +40,7 @@ from fhirpath.types import FhirDateTime
 from fhirpath.types import FhirDecimal
 from fhirpath.types import FhirInteger
 from fhirpath.types import FhirString
+from fhirpath.utils import EmptyPathInfoContext
 from fhirpath.utils import PathInfoContext
 from fhirpath.utils import proxy
 from fhirpath.utils import unwrap_proxy
@@ -513,6 +514,10 @@ class InTerm(Term):
         """ """
         return self.__add__(other)
 
+    def __eq__(self, other):
+        """ """
+        return Term.__eq__(self, other)
+
     def finalize(self, context):
         """ """
         self._finalize(context)
@@ -897,7 +902,7 @@ class ElementPath(object):
     """FHIR Resource path (dotted)
     1. Normalize any condition, casting, logic check"""
 
-    def __init__(self, dotted_path: str):
+    def __init__(self, dotted_path: str, non_fhir: bool = False):
         """ """
         self.context = None
 
@@ -906,6 +911,7 @@ class ElementPath(object):
         self._where = None
         self._is = None
         self._raw = dotted_path
+        self._non_fhir = non_fhir
 
         self.parse()
 
@@ -913,6 +919,11 @@ class ElementPath(object):
     def star(self):
         """ """
         return self._raw == "*"
+
+    @property
+    def non_fhir(self):
+        """ """
+        return self._non_fhir
 
     @classmethod
     def from_el_path(cls, el_path):
@@ -994,8 +1005,8 @@ class ElementPath(object):
 
     def validate(self, fhir_release):
         """ """
-        if self.star:
-            # no validation STAR
+        if self.star or self._non_fhir is True:
+            # no validation STAR or Non FHIR Path
             return
         context = PathInfoContext.context_from_path(self._path, fhir_release)
         if context is None:
@@ -1011,9 +1022,14 @@ class ElementPath(object):
 
         self.validate(context.fhir_release)
         # # xxx: more things to do
-        self.context = proxy(
-            PathInfoContext.context_from_path(self._path, context.fhir_release)
-        )
+        if self._non_fhir:
+            ctx = EmptyPathInfoContext()
+            ctx._path = self._raw
+        else:
+            ctx = proxy(
+                PathInfoContext.context_from_path(self._path, context.fhir_release)
+            )
+        self.context = ctx
         self._finalized = True
 
     def __copy__(self):

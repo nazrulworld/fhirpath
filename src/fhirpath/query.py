@@ -219,7 +219,7 @@ class QueryBuilder(object):
             if not IElementPath.providedBy(el_path):
                 el_path = ElementPath(el_path)
             # Make sure correct root path
-            if not el_path.star:
+            if not (el_path.star or el_path.non_fhir):
                 self._validate_root_path(str(el_path))
             self._select.append(el_path)
 

@@ -48,7 +48,9 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
-    def _add_result_headers(self, query, result, source_filters, compiled):
+    def _add_result_headers(
+        self, query, result, source_filters, compiled, field_index_name
+    ):
         """ """
         # Process additional meta
         result.header.raw_query = self.connection.finalize_search_params(compiled)
@@ -58,12 +60,16 @@ class ElasticsearchEngine(Engine):
         resource_type = query.get_from()[0][0]
         selects = list()
         for path_ in source_filters:
+            if not path_.startswith(field_index_name):
+                selects.append(path_)
+                continue
             parts = path_.split(".")
             if len(parts) == 1:
                 selects.append(resource_type)
             else:
                 selects.append(".".join([resource_type] + parts[1:]))
-        result.selects = selects
+
+        result.header.selects = selects
 
     def _get_source_filters(self, query, field_index_name):
         """ """
@@ -72,6 +78,10 @@ class ElasticsearchEngine(Engine):
             if el_path.star:
                 source_filters.append(field_index_name)
                 break
+            if el_path.non_fhir is True:
+                # No replacer for Non Fhir Path
+                source_filters.append(el_path.path)
+                continue
             parts = el_path._raw.split(".")
             source_filters.append(".".join([field_index_name] + parts[1:]))
         return source_filters
@@ -181,8 +191,9 @@ class ElasticsearchEngine(Engine):
         result = self.process_raw_result(raw_result, source_filters)
 
         # Process additional meta
-        self._add_result_headers(query, result, source_filters, compiled)
-
+        self._add_result_headers(
+            query, result, source_filters, compiled, field_index_name
+        )
         return result
 
     def build_security_query(self, query):

@@ -8,6 +8,7 @@ from fhirpath.exceptions import ValidationError
 from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
+from fhirpath.fql import ElementPath
 from fhirpath.fql import exists_
 from fhirpath.fql import in_
 from fhirpath.fql import not_
@@ -189,14 +190,29 @@ def test_result_path_contains_function(es_data, engine):
     # Test Some exception
     with pytest.raises(NotImplementedError):
         builder = Q_(resource="Patient", engine=engine)
-        builder = builder.select(
-            "Patient.language.Skip(0)",
-        ).where(T_("Patient.gender") == V_("male"))
+        builder = builder.select("Patient.language.Skip(0)").where(
+            T_("Patient.gender") == V_("male")
+        )
         result = builder(async_result=False).first()
 
     with pytest.raises(ValidationError):
         builder = Q_(resource="Patient", engine=engine)
-        builder = builder.select(
-            "Patient.address[0].Skip(0)",
-        ).where(T_("Patient.gender") == V_("male"))
+        builder = builder.select("Patient.address[0].Skip(0)").where(
+            T_("Patient.gender") == V_("male")
+        )
         result = builder(async_result=False).first()
+
+
+def test_query_with_non_fhir_select(es_data, engine):
+    """ """
+    builder = Q_(resource="Patient", engine=engine)
+    el_path1 = ElementPath("creation_date", non_fhir=True)
+    el_path2 = ElementPath("title", non_fhir=True)
+    builder = builder.select(el_path1, el_path2).where(
+        T_("Patient.gender") == V_("male")
+    )
+
+    result = builder(async_result=False).fetchall()
+
+    assert len(result.header.selects) == 2
+    assert "creation_date" in result.header.selects
