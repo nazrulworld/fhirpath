@@ -5,7 +5,9 @@ History
 0.4.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Bugfixes
+
+- ``fhirpath.search.Search.parse_query_string`` now returning ``MuliDict``(what is expected) instead of ``MultiDictProxy``.
 
 
 0.4.0 (2019-10-24)

@@ -175,7 +175,7 @@ class Search(object):
 
             params.add(param_name, value)
 
-        return MultiDictProxy(params)
+        return params
 
     @classmethod
     def from_query_string(cls, query_string):
