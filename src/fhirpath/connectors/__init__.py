@@ -15,7 +15,7 @@ def make_url(connection_str):
     return _parse_rfc1738_args(connection_str)
 
 
-def create_connection(conn_string, klass):
+def create_connection(conn_string, klass=None):
     """ """
     mod_pattern = "fhirpath.connectors.factory.{driver_mod}.create"
     if isinstance(conn_string, (tuple, list)):
