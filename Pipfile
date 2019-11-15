@@ -6,6 +6,8 @@ verify_ssl = true
 [dev-packages]
 fhirpath = {editable = true,extras = ["test"],path = "."}
 elasticsearch = {version = "==6.4.0"}
+psycopg2 = {version = "==2.8.4"}
+SQLAlchemy = {version = "==1.3.11"}
 aioelasticsearch = {version = "==0.5.2"}
 black = {version = "==19.3b0"}
 isort = {version = "==4.3.21"}

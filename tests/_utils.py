@@ -12,6 +12,7 @@ import elasticsearch
 import pytz
 import yarl
 from isodate import datetime_isoformat
+from pytest_docker_fixtures.containers._base import BaseImage
 
 from fhirpath.engine import dialect_factory
 from fhirpath.engine.es import ElasticsearchEngine
@@ -287,3 +288,30 @@ def _cleanup_es(conn, prefix=""):
                 conn.indices.delete(index_name)
             except elasticsearch.exceptions.AuthorizationException:
                 pass
+
+
+class Postgresql(BaseImage):
+    name = "postgresql"
+    port = 5432
+
+    def check(self):
+        import psycopg2
+
+        try:
+            conn = psycopg2.connect(
+                f"dbname=fhir_db user=fhir_dm password=Secret# host={self.host} "
+                f"port={self.get_port()}"
+            )
+            cur = conn.cursor()
+            cur.execute("SELECT 1;")
+            cur.fetchone()
+            cur.close()
+            conn.close()
+            return True
+        except:  # noqa
+            conn = None
+            cur = None
+        return False
+
+
+pg_image = Postgresql()

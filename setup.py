@@ -65,6 +65,9 @@ test_requirements = [
     "pytest-cov",
     "pytest-mock",
     "pytest-docker-fixtures",
+    "psycopg2",
+    "elasticsearch",
+    "SQLAlchemy"
 ]
 docs_requirements = [
     "sphinx",

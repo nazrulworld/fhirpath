@@ -14,6 +14,17 @@ images.configure(
     },
 )
 
+images.configure(
+    "postgresql",
+    "postgres",
+    "10.10",
+    env={
+        "POSTGRES_USER": "fhir_dm",
+        "POSTGRES_PASSWORD": "Secret#",
+        "POSTGRES_DB": "fhir_db",
+        "transport.host": "127.0.0.1",
+    },
+)
 
 pytest_plugins = [
     "aiohttp.pytest_plugin",

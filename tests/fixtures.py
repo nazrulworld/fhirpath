@@ -1,6 +1,9 @@
 # _*_ coding: utf-8 _*_
 
+import os
+
 import pytest
+from pytest_docker_fixtures import IS_TRAVIS
 
 from fhirpath.connectors import create_connection
 from fhirpath.fhirspec import DEFAULT_SETTINGS
@@ -11,6 +14,7 @@ from ._utils import TestElasticsearchEngine
 from ._utils import _cleanup_es
 from ._utils import _load_es_data
 from ._utils import _setup_es_index
+from ._utils import pg_image
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -32,6 +36,23 @@ def fhir_spec_settings():
     settings = attrdict(DEFAULT_SETTINGS.copy())
 
     yield settings
+
+
+@pytest.fixture(scope="session")
+def fhirbase_pg():
+    if os.environ.get("POSTGRESQL"):
+        yield os.environ["POSTGRESQL"].split(":")
+    else:
+        if IS_TRAVIS:
+            host = "localhost"
+            port = 6379
+        else:
+            host, port = pg_image.run()
+
+        yield host, port  # provide the fixture value
+
+        if not IS_TRAVIS:
+            pg_image.stop()
 
 
 @pytest.fixture(scope="session")
