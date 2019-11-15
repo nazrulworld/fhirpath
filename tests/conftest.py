@@ -21,8 +21,7 @@ images.configure(
     env={
         "POSTGRES_USER": "fhir_dm",
         "POSTGRES_PASSWORD": "Secret#",
-        "POSTGRES_DB": "fhir_db",
-        "transport.host": "127.0.0.1",
+        "POSTGRES_DB": "fhir_db"
     },
 )
 

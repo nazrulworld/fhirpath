@@ -43,7 +43,7 @@ def fhirbase_pg():
     if os.environ.get("POSTGRESQL"):
         yield os.environ["POSTGRESQL"].split(":")
     else:
-        if IS_TRAVIS:
+        if IS_TRAVIS and 1 == 2:
             host = "localhost"
             port = 6379
         else:
