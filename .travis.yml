@@ -12,31 +12,31 @@ matrix:
       python: 3.6
       env: python_version=3.6
       addons:
-        postgresql: "10"
-        apt:
-            packages:
-            - postgresql-10
-            - postgresql-client-10
+        postgresql: "10.10"
+#        apt:
+#            packages:
+#            - postgresql-10
+#            - postgresql-client-10
 
     - name: Python 3.7
       python: 3.7
       env: python_version=3.7
       addons:
-        postgresql: "10"
-        apt:
-            packages:
-            - postgresql-10
-            - postgresql-client-10
+        postgresql: "10.10"
+#        apt:
+#          packages:
+#           - postgresql-10
+#           - postgresql-client-10
 
     - name: Python 3.8
       python: 3.8-dev
       env: python_version=3.8
       addons:
-        postgresql: "10"
-        apt:
-            packages:
-            - postgresql-10
-            - postgresql-client-10
+        postgresql: "10.10"
+#        apt:
+#            packages:
+#            - postgresql-10
+#            - postgresql-client-10
 
 
   allow_failures:
@@ -45,7 +45,7 @@ matrix:
 env:
   global:
     - ES_VERSION=7.3.1
-    - PGPORT=5433
+#    - PGPORT=5433
 
 cache:
   directories:
@@ -59,7 +59,7 @@ install:
   - sleep 1
 
 before_script:
-  - sleep 10
+  - sleep 5
   - psql -c 'create database fhir_db;' -U postgres
 
 script:
