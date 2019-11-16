@@ -299,7 +299,7 @@ class Postgresql(BaseImage):
 
         try:
             conn = psycopg2.connect(
-                f"dbname=fhir_db user=fhir_dm password=Secret# host={self.host} "
+                f"dbname=fhir_db user=postgres host={self.host} "
                 f"port={self.get_port()}"
             )
             cur = conn.cursor()

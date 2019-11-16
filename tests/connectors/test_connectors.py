@@ -20,7 +20,7 @@ def test_es_connection_creation(es):
 def test_pg_connection_creation(fhirbase_pg):
     """ """
     host, port = fhirbase_pg
-    conn_str = "pg://fhir_dm:Secret#@{0}:{1}/fhir_db".format(host, port)
+    conn_str = "pg://postgres:@{0}:{1}/fhir_db".format(host, port)
     connection = create_connection(conn_str)
     info = connection.server_info()
     assert info is not None
@@ -29,7 +29,7 @@ def test_pg_connection_creation(fhirbase_pg):
 def test_pg_connection_from_url(fhirbase_pg):
     """ """
     host, port = fhirbase_pg
-    conn_str = "pg://fhir_dm:Secret#@{0}:{1}/fhir_db".format(host, port)
+    conn_str = "pg://postgres:@{0}:{1}/fhir_db".format(host, port)
     connection = pg.PostgresConnection.from_url(conn_str)
     info = connection.server_info()
     assert info is not None

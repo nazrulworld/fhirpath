@@ -19,8 +19,7 @@ images.configure(
     "postgres",
     "10.10",
     env={
-        "POSTGRES_USER": "fhir_dm",
-        "POSTGRES_PASSWORD": "Secret#",
+        "POSTGRES_USER": "postgres",
         "POSTGRES_DB": "fhir_db"
     },
 )
