@@ -1,5 +1,5 @@
 # Config file for automatic testing at travis-ci.org
-dist: bionic
+dist: xenial
 language: python
 sudo: required
 services:
@@ -29,7 +29,7 @@ matrix:
 #           - postgresql-client-10
 
     - name: Python 3.8
-      python: 3.8-dev
+      python: 3.8
       env: python_version=3.8
       addons:
         postgresql: "10.10"
@@ -40,12 +40,12 @@ matrix:
 
 
   allow_failures:
-    - python: 3.8-dev
+    - python: 3.8
 
 env:
   global:
     - ES_VERSION=7.3.1
-#    - PGPORT=5433
+    - PGPORT=5433
 
 cache:
   directories:
@@ -59,7 +59,7 @@ install:
   - sleep 1
 
 before_script:
-  - sleep 5
+  - sleep 1
   - psql -c 'create database fhir_db;' -U postgres
 
 script:
