@@ -45,7 +45,7 @@ def fhirbase_pg():
     else:
         if IS_TRAVIS:
             host = "localhost"
-            port = 6379
+            port = 5433
         else:
             host, port = pg_image.run()
 
