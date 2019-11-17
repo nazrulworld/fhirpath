@@ -34,6 +34,11 @@ ES_JSON_MAPPING_DIR = (
 FHIR_EXAMPLE_RESOURCES = (
     pathlib.Path(os.path.abspath(__file__)).parent / "_static" / "FHIR"
 )
+FHIRBASE_STRUCTURE_DIR = (
+    pathlib.Path(os.path.dirname(os.path.abspath(__file__))).parent
+    / "static"
+    / "fhirbase"
+)
 DOC_TYPE = "_doc"
 
 ES_INDEX_NAME = "fhirpath_elasticsearch_index"
@@ -315,3 +320,13 @@ class Postgresql(BaseImage):
 
 
 pg_image = Postgresql()
+
+
+def _init_fhirbase_structure(connection):
+    """ """
+    struc_file = FHIRBASE_STRUCTURE_DIR / "fhirbase-4.0.0.sql"
+    with io.open(str(struc_file)) as fp:
+        struc = fp.read()
+
+    with connection.get_cursor(commit=True) as cursor:
+        cursor.execute(struc)

@@ -12,6 +12,7 @@ from fhirpath.utils import proxy
 
 from ._utils import TestElasticsearchEngine
 from ._utils import _cleanup_es
+from ._utils import _init_fhirbase_structure
 from ._utils import _load_es_data
 from ._utils import _setup_es_index
 from ._utils import pg_image
@@ -83,3 +84,13 @@ def es_data(es_connection):
     yield es_connection, None
     # clean up
     _cleanup_es(es_connection.raw_connection)
+
+
+@pytest.fixture(scope="session")
+def init_fhirbase_pg(fhirbase_pg):
+    """ """
+    host, port = fhirbase_pg
+    conn_str = "pg://postgres:@{0}:{1}/fhir_db".format(host, port)
+    connection = create_connection(conn_str)
+    _init_fhirbase_structure(connection)
+    yield connection

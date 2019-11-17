@@ -11,8 +11,8 @@ matrix:
     - name: Python 3.6
       python: 3.6
       env: python_version=3.6
-      addons:
-        postgresql: "10.10"
+#      addons:
+#        postgresql: "10"
 #        apt:
 #            packages:
 #            - postgresql-10
@@ -21,8 +21,8 @@ matrix:
     - name: Python 3.7
       python: 3.7
       env: python_version=3.7
-      addons:
-        postgresql: "10.10"
+#      addons:
+#        postgresql: "10"
 #        apt:
 #          packages:
 #           - postgresql-10
@@ -31,8 +31,8 @@ matrix:
     - name: Python 3.8
       python: 3.8
       env: python_version=3.8
-      addons:
-        postgresql: "10.10"
+#      addons:
+#        postgresql: "10"
 #        apt:
 #            packages:
 #            - postgresql-10
