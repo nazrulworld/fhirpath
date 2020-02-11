@@ -2,17 +2,21 @@
 dist: xenial
 language: python
 sudo: required
+
 services:
-  - docker
-  - postgresql
+    - postgresql
+    - docker
+
+before_script:
+  - psql -c 'create database fhir_db;' -U postgres
 
 matrix:
   include:
     - name: Python 3.6
       python: 3.6
       env: python_version=3.6
-#      addons:
-#        postgresql: "10"
+      addons:
+        postgresql: 10
 #        apt:
 #            packages:
 #            - postgresql-10
@@ -21,8 +25,8 @@ matrix:
     - name: Python 3.7
       python: 3.7
       env: python_version=3.7
-#      addons:
-#        postgresql: "10"
+      addons:
+        postgresql: 10
 #        apt:
 #          packages:
 #           - postgresql-10
@@ -31,8 +35,8 @@ matrix:
     - name: Python 3.8
       python: 3.8
       env: python_version=3.8
-#      addons:
-#        postgresql: "10"
+      addons:
+        postgresql: 10
 #        apt:
 #            packages:
 #            - postgresql-10
@@ -58,13 +62,10 @@ install:
   - pip install codecov
   - sleep 1
 
-before_script:
-  - sleep 1
-  - psql -c 'create database fhir_db;' -U postgres
-
 script:
   - make clean
   - make lint
   - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
+
 after_success:
   - codecov
