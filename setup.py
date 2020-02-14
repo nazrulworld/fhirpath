@@ -21,7 +21,7 @@ def run_post_develop(self):
     run_post_install(self)
 
 
-class PostIntsall(install):
+class PostInstall(install):
     """ """
 
     def run(self):
@@ -58,7 +58,7 @@ requirements = [
     "yarl"
 ]
 
-setup_requirements = ["pytest-runner"]
+setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
 
 test_requirements = [
     "pytest",
@@ -99,7 +99,7 @@ setup(
     license="GNU General Public License v3",
     long_description=readme + "\n\n" + history,
     include_package_data=True,
-    keywords="fhirpath",
+    keywords="fhirpath, HL7, FHIR, healthcare",
     packages=find_packages("src", include=["fhirpath"]),
     package_dir={"": "src"},
     setup_requires=setup_requirements,
@@ -119,5 +119,5 @@ setup(
         "GitHub: repo": "https://github.com/nazrulworld/fhirpath",
     },
     zip_safe=False,
-    cmdclass={"install": PostIntsall, "develop": PostDevelop},
+    cmdclass={"install": PostInstall, "develop": PostDevelop},
 )

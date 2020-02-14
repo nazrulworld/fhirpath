@@ -1,0 +1,65 @@
+[project]
+name = "fhirpath"
+version = "0.4.2.dev0"
+description = "FHIRPath implementation in Python."
+authors = [
+    "Md Nazrul Islam <email2nazrul@gmail.com>"
+]
+license = "GNU General Public License v3"
+readme = "README.rst"
+python = ">=3.5"
+homepage = "https://nazrul.me/fhirpath/"
+repository = "https://github.com/nazrulworld/fhirpath"
+documentation = "https://fhirpath.readthedocs.io/"
+
+keywords = ["fhirpath", "HL7", "FHIR", "healthcare", "IHE"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Topic :: Software Development",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8"
+]
+
+
+[build-system]
+requires = [
+    "setuptools >= 45.2.0",
+    "setuptools_scm[toml]>=3.4.3",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+target_version = ['py37']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | \.env
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | setup.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
+[tool.setuptools_scm]
+write_to = "src/fhirpath/version.py"

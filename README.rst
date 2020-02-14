@@ -206,3 +206,6 @@ owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks
 
 **"FHIR® is the registered trademark of HL7 and is used with the permission of HL7.
 Use of the FHIR trademark does not constitute endorsement of this product by HL7"**
+https://martin-thoma.com/pyproject-toml/
+https://github.com/pypa/sampleproject
+https://packaging.python.org/tutorials/packaging-projects/
