@@ -15,7 +15,6 @@ from .types import SortTerm
 from .types import Term
 from .types import TermValue
 
-
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 __all__ = [
@@ -33,6 +32,7 @@ __all__ = [
     "sort_",
     "fql",
 ]
+
 
 # API functions
 def T_(path, value=EMPTY_VALUE, match_type=None, non_fhir=False):  # noqa: E302
@@ -95,7 +95,7 @@ def _prepare_term_or_group(path, value=EMPTY_VALUE):
     elif ITerm.providedBy(path):
         term_or_group = path
         if value is not EMPTY_VALUE:
-            term_or_group == value
+            return term_or_group == value
 
     elif isinstance(path, str):
         term_or_group = T_(path, value)
@@ -142,7 +142,6 @@ def in_(path, values):
 
 
 def not_in_(path, values):
-
     return not_(in_(path, values))
 
 
