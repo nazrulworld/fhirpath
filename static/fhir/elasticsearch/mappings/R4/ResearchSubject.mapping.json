@@ -1,0 +1,153 @@
+{
+  "resourceType": "ResearchSubject",
+  "meta": {
+    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "versionId": "R4"
+  },
+  "mapping": {
+    "properties": {
+      "identifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "status": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "period": {
+        "properties": {
+          "start": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "end": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        }
+      },
+      "study": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "individual": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "assignedArm": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "actualArm": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "consent": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "id": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "meta": {
+        "properties": {
+          "versionId": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "lastUpdated": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "profile": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "implicitRules": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "language": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "resourceType": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}

@@ -1,0 +1,712 @@
+{
+  "resourceType": "Observation",
+  "meta": {
+    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "versionId": "R4"
+  },
+  "mapping": {
+    "properties": {
+      "identifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "basedOn": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "partOf": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "status": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "category": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "code": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "subject": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "focus": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "encounter": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "effectiveDateTime": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "effectivePeriod": {
+        "properties": {
+          "start": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "end": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        }
+      },
+      "effectiveTiming": {
+        "properties": {
+          "event": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "code": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "effectiveInstant": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "issued": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "performer": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "valueQuantity": {
+        "properties": {
+          "value": {
+            "type": "float",
+            "store": false
+          },
+          "code": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "unit": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "valueCodeableConcept": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "valueString": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "valueBoolean": {
+        "type": "boolean",
+        "store": false
+      },
+      "valueInteger": {
+        "type": "integer",
+        "store": false
+      },
+      "valueRange": {
+        "properties": {
+          "high": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          },
+          "low": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "valueRatio": {
+        "properties": {
+          "numerator": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          },
+          "denominator": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "valueTime": {
+        "type": "date",
+        "format": "basic_t_time_no_millis",
+        "store": false
+      },
+      "valueDateTime": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "valuePeriod": {
+        "properties": {
+          "start": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "end": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        }
+      },
+      "dataAbsentReason": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "interpretation": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "note": {
+        "properties": {
+          "authorReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              }
+            }
+          },
+          "authorString": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "time": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        },
+        "type": "nested"
+      },
+      "bodySite": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "method": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "specimen": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "device": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "hasMember": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "derivedFrom": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "id": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "meta": {
+        "properties": {
+          "versionId": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "lastUpdated": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "profile": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "implicitRules": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "language": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "resourceType": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}

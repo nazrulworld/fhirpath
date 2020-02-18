@@ -1,0 +1,206 @@
+{
+  "resourceType": "PaymentNotice",
+  "meta": {
+    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "versionId": "R4"
+  },
+  "mapping": {
+    "properties": {
+      "identifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "status": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "request": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "response": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "created": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "provider": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "payment": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "paymentDate": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "payee": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "recipient": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "amount": {
+        "properties": {
+          "value": {
+            "type": "float",
+            "store": false
+          },
+          "currency": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "paymentStatus": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "id": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "meta": {
+        "properties": {
+          "versionId": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "lastUpdated": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "profile": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "implicitRules": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "language": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "resourceType": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}

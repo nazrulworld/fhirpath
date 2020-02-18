@@ -1,0 +1,967 @@
+{
+  "resourceType": "MedicationRequest",
+  "meta": {
+    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "versionId": "R4"
+  },
+  "mapping": {
+    "properties": {
+      "identifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "status": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "statusReason": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "intent": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "category": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "priority": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "doNotPerform": {
+        "type": "boolean",
+        "store": false
+      },
+      "reportedBoolean": {
+        "type": "boolean",
+        "store": false
+      },
+      "reportedReference": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "medicationCodeableConcept": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "medicationReference": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "subject": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "encounter": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "supportingInformation": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "authoredOn": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "requester": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "performer": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "performerType": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "recorder": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "reasonCode": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "reasonReference": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "instantiatesCanonical": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "instantiatesUri": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "basedOn": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "groupIdentifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        }
+      },
+      "courseOfTherapyType": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "insurance": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "note": {
+        "properties": {
+          "authorReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              }
+            }
+          },
+          "authorString": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "time": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        },
+        "type": "nested"
+      },
+      "dosageInstruction": {
+        "properties": {
+          "asNeededBoolean": {
+            "type": "boolean",
+            "store": false
+          },
+          "asNeededCodeableConcept": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "site": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "timing": {
+            "properties": {
+              "event": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              },
+              "code": {
+                "properties": {
+                  "text": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "standard",
+                    "index_prefixes": {
+                      "min_chars": 1,
+                      "max_chars": 10
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "patientInstruction": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "doseAndRate": {
+            "properties": {
+              "doseQuantity": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "standard",
+                    "index_prefixes": {
+                      "min_chars": 1,
+                      "max_chars": 10
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  }
+                }
+              },
+              "rateRatio": {
+                "properties": {
+                  "numerator": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  },
+                  "denominator": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  }
+                }
+              },
+              "rateRange": {
+                "properties": {
+                  "high": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  },
+                  "low": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false
+                      }
+                    }
+                  }
+                }
+              },
+              "rateQuantity": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "maxDosePerPeriod": {
+            "properties": {
+              "numerator": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              },
+              "denominator": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "maxDosePerAdministration": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          },
+          "maxDosePerLifetime": {
+            "properties": {
+              "value": {
+                "type": "float",
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "unit": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "priorPrescription": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "detectedIssue": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "eventHistory": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        },
+        "type": "nested"
+      },
+      "id": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "meta": {
+        "properties": {
+          "versionId": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "lastUpdated": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "profile": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "implicitRules": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "language": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "resourceType": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}

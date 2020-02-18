@@ -1,0 +1,646 @@
+{
+  "resourceType": "EffectEvidenceSynthesis",
+  "meta": {
+    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "versionId": "R4"
+  },
+  "mapping": {
+    "properties": {
+      "url": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "identifier": {
+        "properties": {
+          "use": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "system": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "value": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "version": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "name": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "title": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "status": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "date": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "publisher": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "standard",
+        "index_prefixes": {
+          "min_chars": 1,
+          "max_chars": 10
+        }
+      },
+      "contact": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "telecom": {
+            "properties": {
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "rank": {
+                "type": "integer",
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "value": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            },
+            "type": "nested"
+          }
+        },
+        "type": "nested"
+      },
+      "note": {
+        "properties": {
+          "authorReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              }
+            }
+          },
+          "authorString": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "time": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        },
+        "type": "nested"
+      },
+      "jurisdiction": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "approvalDate": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "lastReviewDate": {
+        "type": "date",
+        "format": "date_time_no_millis||date_optional_time",
+        "store": false
+      },
+      "effectivePeriod": {
+        "properties": {
+          "start": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "end": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          }
+        }
+      },
+      "topic": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        },
+        "type": "nested"
+      },
+      "author": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "telecom": {
+            "properties": {
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "rank": {
+                "type": "integer",
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "value": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            },
+            "type": "nested"
+          }
+        },
+        "type": "nested"
+      },
+      "editor": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "telecom": {
+            "properties": {
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "rank": {
+                "type": "integer",
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "value": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            },
+            "type": "nested"
+          }
+        },
+        "type": "nested"
+      },
+      "reviewer": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "telecom": {
+            "properties": {
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "rank": {
+                "type": "integer",
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "value": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            },
+            "type": "nested"
+          }
+        },
+        "type": "nested"
+      },
+      "endorser": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "telecom": {
+            "properties": {
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "rank": {
+                "type": "integer",
+                "store": false
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "value": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard",
+                "index_prefixes": {
+                  "min_chars": 1,
+                  "max_chars": 10
+                }
+              }
+            },
+            "type": "nested"
+          }
+        },
+        "type": "nested"
+      },
+      "synthesisType": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "studyType": {
+        "properties": {
+          "text": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "standard",
+            "index_prefixes": {
+              "min_chars": 1,
+              "max_chars": 10
+            }
+          },
+          "coding": {
+            "type": "nested",
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false
+              }
+            }
+          }
+        }
+      },
+      "population": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "exposure": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "exposureAlternative": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "outcome": {
+        "properties": {
+          "reference": {
+            "type": "text",
+            "index": true,
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          }
+        }
+      },
+      "id": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "meta": {
+        "properties": {
+          "versionId": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          },
+          "lastUpdated": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "profile": {
+            "type": "keyword",
+            "index": true,
+            "store": false
+          }
+        }
+      },
+      "implicitRules": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "language": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      },
+      "resourceType": {
+        "type": "keyword",
+        "index": true,
+        "store": false
+      }
+    }
+  }
+}
