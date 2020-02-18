@@ -7,14 +7,15 @@ verify_ssl = true
 fhirpath = {editable = true,extras = ["test"],path = "."}
 elasticsearch = {version = "==6.4.0"}
 psycopg2 = {version = "==2.8.4"}
-SQLAlchemy = {version = "==1.3.11"}
+SQLAlchemy = {version = "==1.3.13"}
 aioelasticsearch = {version = "==0.5.2"}
-black = {version = "==19.3b0"}
+black = {version = "==19.10b0"}
 isort = {version = "==4.3.21"}
 flake8 = {version = "==3.7.8"}
 flake8-isort = {version = "==2.7.0"}
-zc-buildout = {version = "==2.13.1"}
-setuptools = {version = "==41.2.0"}
+zc-buildout = {version = "==2.13.3"}
+setuptools = {version = "==45.2.0"}
+mypy = {version = "==0.761"}
 [packages]
 fhir-resources = {version = "==5.0.1"}
 zope-interface = {version = "==4.6.0"}
@@ -27,7 +28,7 @@ sphinxcontrib-httpdomain = {version = "==1.7.0"}
 sphinxcontrib-httpexample = {version = "==0.10.3"}
 tox = {version = "==3.14.0"}
 certifi = {version = "==2019.9.11"}
-zest-releaser = {extras = ["recommended"],version = "==6.19.0"}
+zest-releaser = {extras = ["recommended"],version = "==6.20.0"}
 
 [requires]
 python_version = "3.7"

@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
 import ast
 import datetime
-import operator
+from fhirpath.enums import OPERATOR
 import re
 from collections import deque
 from copy import copy
@@ -162,13 +162,13 @@ class BaseTerm(object):
             self.path.finalize(context)
 
         if self.arithmetic_operator is None:
-            self.arithmetic_operator = operator.and_
+            self.arithmetic_operator = OPERATOR.and_
 
         if self.unary_operator is None:
-            self.unary_operator = operator.pos
+            self.unary_operator = OPERATOR.pos
 
         if self.comparison_operator is None:
-            self.comparison_operator = operator.eq
+            self.comparison_operator = OPERATOR.eq
 
         self.validate()
 
@@ -220,14 +220,14 @@ class BaseTerm(object):
         """+self Unary plus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.pos
+        self.unary_operator = OPERATOR.pos
         return self.clone()
 
     def __neg__(self):
         """-self Unary minus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.neg
+        self.unary_operator = OPERATOR.neg
 
         return self.clone()
 
@@ -238,42 +238,42 @@ class BaseTerm(object):
     def __ne__(self, other):
         """Represent != """
         self.__compare__(other)
-        self.comparison_operator = operator.ne
+        self.comparison_operator = OPERATOR.ne
 
         return self.clone()
 
     def __eq__(self, other):
         """Represent =="""
         self.__compare__(other)
-        self.comparison_operator = operator.eq
+        self.comparison_operator = OPERATOR.eq
 
         return self.clone()
 
     def __le__(self, other):
         """Represent less than le """
         self.__compare__(other)
-        self.comparison_operator = operator.le
+        self.comparison_operator = OPERATOR.le
 
         return self.clone()
 
     def __lt__(self, other):
         """ """
         self.__compare__(other)
-        self.comparison_operator = operator.lt
+        self.comparison_operator = OPERATOR.lt
 
         return self.clone()
 
     def __ge__(self, other):
         """ """
         self.__compare__(other)
-        self.comparison_operator = operator.ge
+        self.comparison_operator = OPERATOR.ge
 
         return self.clone()
 
     def __gt__(self, other):
         """ """
         self.__compare__(other)
-        self.comparison_operator = operator.gt
+        self.comparison_operator = OPERATOR.gt
 
         return self.clone()
 
@@ -317,13 +317,13 @@ class Term(BaseTerm):
             self.path.finalize(context)
 
         if self.arithmetic_operator is None:
-            self.arithmetic_operator = operator.and_
+            self.arithmetic_operator = OPERATOR.and_
 
         if self.unary_operator is None:
-            self.unary_operator = operator.pos
+            self.unary_operator = OPERATOR.pos
 
         if self.comparison_operator is None:
-            self.comparison_operator = operator.eq
+            self.comparison_operator = OPERATOR.eq
 
         self.validate()
 
@@ -357,10 +357,10 @@ class Term(BaseTerm):
                 "unsignedInt",
                 "positiveInt",
             ) and self.comparison_operator in (
-                operator.lt,
-                operator.le,
-                operator.gt,
-                operator.ge,
+                OPERATOR.lt,
+                OPERATOR.le,
+                OPERATOR.gt,
+                OPERATOR.ge,
             ):
                 raise ValidationError(
                     "Operator '{0!s}' is allowed for value type '{1!s}'".format(
@@ -433,13 +433,13 @@ class NonFhirTerm(BaseTerm):
         self.validate()
 
         if self.arithmetic_operator is None:
-            self.arithmetic_operator = operator.and_
+            self.arithmetic_operator = OPERATOR.and_
 
         if self.unary_operator is None:
-            self.unary_operator = operator.pos
+            self.unary_operator = OPERATOR.pos
 
         if self.comparison_operator is None:
-            self.comparison_operator = operator.eq
+            self.comparison_operator = OPERATOR.eq
 
         self._value = self.value.to_python()
 
@@ -466,10 +466,10 @@ class NonFhirTerm(BaseTerm):
             "unsignedInt",
             "positiveInt",
         ) and self.comparison_operator in (
-            operator.lt,
-            operator.le,
-            operator.gt,
-            operator.ge,
+            OPERATOR.lt,
+            OPERATOR.le,
+            OPERATOR.gt,
+            OPERATOR.ge,
         ):
             raise ValidationError(
                 "Operator '{0!s}' is allowed for value type '{1!s}'".format(
@@ -584,7 +584,7 @@ class ExistsTerm(object):
             self.path.finalize(context)
 
         if self.unary_operator is None:
-            self.unary_operator = operator.pos
+            self.unary_operator = OPERATOR.pos
 
         self._finalized = True
 
@@ -606,14 +606,14 @@ class ExistsTerm(object):
         """+self Unary plus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.pos
+        self.unary_operator = OPERATOR.pos
         return self.clone()
 
     def __neg__(self):
         """-self Unary minus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.neg
+        self.unary_operator = OPERATOR.neg
 
         return self.clone()
 
@@ -638,14 +638,14 @@ class TermValue(object):
         """+self Unary plus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.pos
+        self.unary_operator = OPERATOR.pos
         return self.clone()
 
     def __neg__(self):
         """-self Unary minus sign"""
         required_not_finalized(self)
 
-        self.unary_operator = operator.neg
+        self.unary_operator = OPERATOR.neg
 
         return self.clone()
 

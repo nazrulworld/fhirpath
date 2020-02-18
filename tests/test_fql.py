@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
-import operator
+from fhirpath.enums import OPERATOR
 from datetime import datetime
 
 import pytest
@@ -37,7 +37,7 @@ def test_term_normal(engine):
     term.finalize(engine)
 
     assert term.value() is False
-    assert term.arithmetic_operator == operator.and_
+    assert term.arithmetic_operator == OPERATOR.and_
 
     term = Term("Patient.address.line", "Lane 1")
     term.finalize(engine)
@@ -67,7 +67,7 @@ def test_term_complex_operator(engine):
     term = term >= value
     term.finalize(engine)
 
-    assert term.comparison_operator == operator.ge
+    assert term.comparison_operator == OPERATOR.ge
     assert isinstance(term.value(), datetime)
 
 
@@ -76,13 +76,13 @@ def test_expression_add(engine):
     term = and_("Patient.name.given", "Krog")
     term.finalize(engine)
     assert ITerm.providedBy(term)
-    assert term.arithmetic_operator == operator.and_
+    assert term.arithmetic_operator == OPERATOR.and_
     assert term.path.context.multiple is True
 
     term = T_("Patient.name.period.start")
     term = and_(-term, datetime.now().isoformat(timespec="seconds"))
     term.finalize(engine)
-    assert term.unary_operator == operator.neg
+    assert term.unary_operator == OPERATOR.neg
 
     term = T_("Patient.name.period.start")
     group = G_(term <= datetime.now().isoformat(timespec="seconds"))
@@ -100,13 +100,14 @@ def test_expression_or(engine):
     term = or_("Task.for.reference", "Patient/PAT-001")
     term.finalize(engine)
     assert ITerm.providedBy(term)
-    assert term.arithmetic_operator == operator.or_
+    assert term.arithmetic_operator == OPERATOR.or_
     assert term.path.context.parent.prop_name == "for_fhir"
 
     term = T_("Patient.name.period.start")
+
     term = or_(-term, datetime.now().isoformat(timespec="seconds"))
     term.finalize(engine)
-    assert term.unary_operator == operator.neg
+    assert term.unary_operator == OPERATOR.neg
 
     term = T_("Patient.name.period.start")
     group = G_(term <= datetime.now().isoformat(timespec="seconds"))
@@ -124,12 +125,12 @@ def test_expression_existence(engine):
     term.finalize(engine)
 
     assert IExistsTerm.providedBy(term) is True
-    assert term.unary_operator == operator.pos
+    assert term.unary_operator == OPERATOR.pos
 
     # test not exists
     term = not_exists_("Task.for.reference")
     term.finalize(engine)
-    assert term.unary_operator == operator.neg
+    assert term.unary_operator == OPERATOR.neg
 
     # Test from Term
     term = T_("Task.for.reference")
@@ -152,7 +153,7 @@ def test_expression_in(engine):
     term = term + "Patient/PAT-001"
     term.finalize(engine)
 
-    assert term.unary_operator == operator.neg
+    assert term.unary_operator == OPERATOR.neg
     assert len(term.value) == 2
 
 
@@ -175,7 +176,7 @@ def test_complex_expression(engine):
     term = term >= (-value)
     term.finalize(engine)
 
-    assert term.unary_operator == operator.neg
+    assert term.unary_operator == OPERATOR.neg
 
 
 def test_query_builder(engine):

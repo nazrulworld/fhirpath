@@ -1,5 +1,5 @@
 # _*_ coding: utf-8 _*_
-import operator
+from fhirpath.enums import OPERATOR
 from urllib.parse import urlencode
 
 from fhirpath.enums import MatchType
@@ -83,7 +83,7 @@ def test_parameter_normalization(engine):
     path_, value_pack, modifier = fhir_search.normalize_param("status:not")
     # single valued
     assert isinstance(value_pack, tuple)
-    # operator
+    # OPERATOR
     assert value_pack[0] == "eq"
     # actual value
     assert value_pack[1] == "completed"
@@ -92,7 +92,7 @@ def test_parameter_normalization(engine):
     assert modifier is None
     assert isinstance(value_pack, list)
     assert len(value_pack) == 2
-    # operator
+    # OPERATOR
     assert value_pack[0][0] == "ge"
     # actual value
     assert value_pack[0][1] == "2010-01-01"
@@ -101,7 +101,7 @@ def test_parameter_normalization(engine):
     field_name, value_pack, modifier = fhir_search.normalize_param("code")
     assert isinstance(value_pack, list)
 
-    # operator
+    # OPERATOR
     assert value_pack[1][0] == "eq"
     # actual value
     assert value_pack[1][1] == "http://loinc.org|1\\,234-5&subject.name=peter"
@@ -176,8 +176,8 @@ def test_create_term(engine):
     term = fhir_search.create_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
-    assert term.unary_operator == operator.neg
-    assert term.arithmetic_operator == operator.and_
+    assert term.unary_operator == OPERATOR.neg
+    assert term.arithmetic_operator == OPERATOR.and_
     assert term.value.value == "completed"
 
     path_, value_pack, modifier = fhir_search.normalize_param("authored-on")
@@ -264,7 +264,7 @@ def test_create_identifier_term(engine):
     term = fhir_search.create_identifier_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
-    assert term.terms[0].unary_operator == operator.neg
+    assert term.terms[0].unary_operator == OPERATOR.neg
 
 
 def test_create_quantity_term(engine):

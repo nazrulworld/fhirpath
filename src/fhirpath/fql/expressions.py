@@ -1,5 +1,5 @@
 # _*_ coding: utf-8 _*_
-import operator
+from fhirpath.enums import OPERATOR
 
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import ITerm
@@ -70,7 +70,7 @@ def exists_(path):
     else:
         path_ = path
     term = ExistsTerm(path_)
-    term.unary_operator = operator.pos
+    term.unary_operator = OPERATOR.pos
     return term
 
 
@@ -106,7 +106,7 @@ def _prepare_term_or_group(path, value=EMPTY_VALUE):
 def and_(path, value=EMPTY_VALUE):
     """ """
     term_or_group = _prepare_term_or_group(path, value=value)
-    term_or_group.arithmetic_operator = operator.and_
+    term_or_group.arithmetic_operator = OPERATOR.and_
 
     return term_or_group
 
@@ -114,7 +114,7 @@ def and_(path, value=EMPTY_VALUE):
 def or_(path, value=EMPTY_VALUE):
     """ """
     term_or_group = _prepare_term_or_group(path, value=value)
-    term_or_group.arithmetic_operator = operator.or_
+    term_or_group.arithmetic_operator = OPERATOR.or_
 
     return term_or_group
 
@@ -122,7 +122,7 @@ def or_(path, value=EMPTY_VALUE):
 def xor_(path, value=EMPTY_VALUE):
     """ """
     term_or_group = _prepare_term_or_group(path, value=value)
-    term_or_group.arithmetic_operator = operator.xor
+    term_or_group.arithmetic_operator = OPERATOR.xor
 
     return term_or_group
 
@@ -130,7 +130,7 @@ def xor_(path, value=EMPTY_VALUE):
 def not_(path, value=EMPTY_VALUE):
     """ """
     term_or_group = _prepare_term_or_group(path, value=value)
-    term_or_group.unary_operator = operator.neg
+    term_or_group.unary_operator = OPERATOR.neg
 
     return term_or_group
 

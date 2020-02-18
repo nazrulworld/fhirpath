@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
 import logging
-import operator
+from fhirpath.enums import OPERATOR
 import re
 
 import isodate
@@ -27,12 +27,12 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 logger = logging.getLogger("fhirpath.dialects.elasticsearch")
 URI_SCHEME = re.compile(r"^https?://", re.I)
 ES_PY_OPERATOR_MAP = {
-    operator.eq: None,
-    operator.ne: None,
-    operator.gt: "gt",
-    operator.lt: "lt",
-    operator.ge: "gte",
-    operator.le: "lte",
+    OPERATOR.eq: None,
+    OPERATOR.ne: None,
+    OPERATOR.gt: "gt",
+    OPERATOR.lt: "lt",
+    OPERATOR.ge: "gte",
+    OPERATOR.le: "lte",
 }
 
 
@@ -138,7 +138,7 @@ class ElasticSearchDialect(DialectBase):
             try:
                 info_ = mapping_[path_]
             except KeyError:
-                logger.warn("No mapping found for {0}".format(dotted_path))
+                logger.warning("No mapping found for {0}".format(dotted_path))
                 return {}
             if "properties" in info_:
                 mapping_ = info_["properties"]
@@ -161,9 +161,9 @@ class ElasticSearchDialect(DialectBase):
             """ """
             q, unary_operator = self.resolve_term(term, mapping, root_replacer)
 
-            if unary_operator == operator.neg:
+            if unary_operator == OPERATOR.neg:
                 container = body_structure["query"]["bool"]["must_not"]
-            elif unary_operator == operator.pos:
+            elif unary_operator == OPERATOR.pos:
                 container = body_structure["query"]["bool"]["filter"]
             else:
                 # xxx: if None may be should?
@@ -198,7 +198,7 @@ class ElasticSearchDialect(DialectBase):
     def resolve_term(self, term, mapping, root_replacer):
         """ """
         if IGroupTerm.providedBy(term):
-            unary_operator = operator.pos
+            unary_operator = OPERATOR.pos
             if term.type == GroupType.DECOUPLED:
 
                 if term.match_operator == MatchType.ANY:
@@ -343,23 +343,23 @@ class ElasticSearchDialect(DialectBase):
         else:
             raise NotImplementedError
 
-        if term.comparison_operator in (operator.eq, operator.ne):
+        if term.comparison_operator in (OPERATOR.eq, OPERATOR.ne):
             qr["range"] = {
                 path_: {
-                    ES_PY_OPERATOR_MAP[operator.ge]: isodate.strftime(
+                    ES_PY_OPERATOR_MAP[OPERATOR.ge]: isodate.strftime(
                         value, value_formatter
                     ),
-                    ES_PY_OPERATOR_MAP[operator.le]: isodate.strftime(
+                    ES_PY_OPERATOR_MAP[OPERATOR.le]: isodate.strftime(
                         value, value_formatter
                     ),
                 }
             }
 
         elif term.comparison_operator in (
-            operator.le,
-            operator.lt,
-            operator.ge,
-            operator.gt,
+            OPERATOR.le,
+            OPERATOR.lt,
+            OPERATOR.ge,
+            OPERATOR.gt,
         ):
             qr["range"] = {
                 path_: {
@@ -375,15 +375,15 @@ class ElasticSearchDialect(DialectBase):
                 qr["range"][path_]["time_zone"] = timezone
 
         if (
-            term.comparison_operator != operator.ne
-            and term.unary_operator == operator.neg
+            term.comparison_operator != OPERATOR.ne
+            and term.unary_operator == OPERATOR.neg
         ) or (
-            term.comparison_operator == operator.ne
-            and term.unary_operator != operator.neg
+            term.comparison_operator == OPERATOR.ne
+            and term.unary_operator != OPERATOR.neg
         ):
-            unary_operator = operator.neg
+            unary_operator = OPERATOR.neg
         else:
-            unary_operator = operator.pos
+            unary_operator = OPERATOR.pos
 
         return qr, unary_operator
 
@@ -393,32 +393,32 @@ class ElasticSearchDialect(DialectBase):
         path_ = self._create_dotted_path(term, root_replacer)
         value = term.get_real_value()
 
-        if term.comparison_operator in (operator.eq, operator.ne):
+        if term.comparison_operator in (OPERATOR.eq, OPERATOR.ne):
             qr["range"] = {
                 path_: {
-                    ES_PY_OPERATOR_MAP[operator.ge]: value,
-                    ES_PY_OPERATOR_MAP[operator.le]: value,
+                    ES_PY_OPERATOR_MAP[OPERATOR.ge]: value,
+                    ES_PY_OPERATOR_MAP[OPERATOR.le]: value,
                 }
             }
 
         elif term.comparison_operator in (
-            operator.le,
-            operator.lt,
-            operator.ge,
-            operator.gt,
+            OPERATOR.le,
+            OPERATOR.lt,
+            OPERATOR.ge,
+            OPERATOR.gt,
         ):
             qr["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
 
         if (
-            term.comparison_operator != operator.ne
-            and term.unary_operator == operator.neg
+            term.comparison_operator != OPERATOR.ne
+            and term.unary_operator == OPERATOR.neg
         ) or (
-            term.comparison_operator == operator.ne
-            and term.unary_operator != operator.neg
+            term.comparison_operator == OPERATOR.ne
+            and term.unary_operator != OPERATOR.neg
         ):
-            unary_operator = operator.neg
+            unary_operator = OPERATOR.neg
         else:
-            unary_operator = operator.pos
+            unary_operator = OPERATOR.pos
 
         return qr, unary_operator
 

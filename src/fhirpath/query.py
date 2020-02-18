@@ -517,9 +517,9 @@ class AsyncQueryResult(QueryResult):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
         return await self.count() == 0
 
-    async def __len__(self):
+    def __len__(self):
         """ """
-        return await self.count()
+        return self.count()
 
 
 def Q_(resource=None, engine=None):

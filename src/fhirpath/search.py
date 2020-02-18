@@ -976,7 +976,7 @@ class Search(object):
 
         self.validate_normalized_value(param_name_, param_value_, modifier_)
         _path = self.resolve_path_context(param_name_)
-        return (_path, param_value_, modifier_)
+        return _path, param_value_, modifier_
 
     def validate(self):
         """ """
@@ -997,7 +997,11 @@ class Search(object):
         # xxx: later more
 
     def validate_normalized_value(self, param_name, param_value, modifier):
-        """ """
+        """
+        :param param_name:
+        :param param_value:
+        :param modifier:
+        """
         if modifier in ("missing", "exists"):
             if not isinstance(param_value, tuple):
                 raise ValidationError(
