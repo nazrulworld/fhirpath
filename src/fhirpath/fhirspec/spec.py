@@ -1258,7 +1258,7 @@ class FHIRSearchSpec(object):
             for resource_type in param_def.expression_map:
                 if not storage.exists(resource_type):
                     storage.insert(
-                        resource_type, ResoureSearchParameterDefinition(resource_type)
+                        resource_type, ResourceSearchParameterDefinition(resource_type)
                     )
                 obj = storage.get(resource_type)
                 # add search param code to obj
@@ -1390,6 +1390,10 @@ class SearchParameter(object):
         # try cleanup Zero Width Space
         if "\u200b" in exp:
             exp = exp.replace("\u200b", "")
+        if "|" in exp:
+            # some case for example name: "Organization.name | Organization.alias"
+            # we take first one!
+            exp = exp.split("|")[0]
 
         return exp.strip()
 
@@ -1414,7 +1418,7 @@ class SearchParameter(object):
         return newone
 
 
-class ResoureSearchParameterDefinition(object):
+class ResourceSearchParameterDefinition(object):
     """ """
 
     __slots__ = ("__storage__", "_finalized", "resource_type")

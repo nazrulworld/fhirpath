@@ -1,7 +1,6 @@
 # _*_ coding: utf-8 _*_
 import ast
 import datetime
-from fhirpath.enums import OPERATOR
 import re
 from collections import deque
 from copy import copy
@@ -13,6 +12,7 @@ from zope.interface import implementer_only
 from fhirpath.constraints import required_finalized
 from fhirpath.constraints import required_not_finalized
 from fhirpath.constraints import required_value_not_assigned
+from fhirpath.enums import OPERATOR
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType

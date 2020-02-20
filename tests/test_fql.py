@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
-from fhirpath.enums import OPERATOR
 from datetime import datetime
 
 import pytest
 import pytz
 
+from fhirpath.enums import OPERATOR
 from fhirpath.enums import WhereConstraintType
 from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
@@ -17,6 +17,7 @@ from fhirpath.fql.expressions import in_
 from fhirpath.fql.expressions import not_exists_
 from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
+from fhirpath.fql.expressions import sa_
 from fhirpath.fql.types import ElementPath
 from fhirpath.fql.types import Term
 from fhirpath.fql.types import TermValue
@@ -177,6 +178,16 @@ def test_complex_expression(engine):
     term.finalize(engine)
 
     assert term.unary_operator == OPERATOR.neg
+
+
+def test_sa_expression(engine):
+    """ """
+    term = T_("Organization.id")
+    value = V_("f0")
+    term = sa_(term, value)
+    term.finalize(engine)
+
+    assert term.comparison_operator == OPERATOR.sa
 
 
 def test_query_builder(engine):

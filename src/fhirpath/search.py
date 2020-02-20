@@ -17,9 +17,11 @@ from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
+from fhirpath.fql import eb_
 from fhirpath.fql import exists_
 from fhirpath.fql import not_
 from fhirpath.fql import not_exists_
+from fhirpath.fql import sa_
 from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IFhirPrimitiveType
@@ -213,9 +215,11 @@ class Search(object):
             for nd in normalized_data:
                 self.add_term(nd, terms_container)
 
-        result = self.attach_limit_terms(
+        factory = self.attach_limit_terms(
             self.attach_sort_terms(builder.where(*terms_container))
-        )(
+        )
+
+        result = factory(
             unrestricted=self.context.unrestricted,
             async_result=self.context.async_result,
         )
@@ -853,9 +857,12 @@ class Search(object):
         assert self.context.engine.fhir_release == FHIR_VERSION.STU3
         return self.single_valued_quantity_term(path_, value, modifier)
 
-    def validate_pre_term(self, path_, value, modifier):
+    def validate_pre_term(self, operator_, path_, value, modifier):
         """ """
-        pass
+        if modifier in ("above", "below") and operator_ in ("sa", "eb"):
+            raise ValidationError(
+                "You cannot use modifier (above,below) and prefix (sa,eb) at a time"
+            )
 
     def create_term(self, path_, value, modifier):
         """ """
@@ -863,6 +870,8 @@ class Search(object):
 
         if isinstance(value, tuple):
             operator_, original_value = value
+            # do validate first
+            self.validate_pre_term(operator_, path_, value, modifier)
             if isinstance(original_value, list):
                 # we force IN will have equal or not equal operator_
                 # xxx: should be validated already
@@ -877,6 +886,10 @@ class Search(object):
             term = T_(path_)
             if modifier == "not":
                 term = not_(term)
+            elif modifier == "below" and operator_ == "eq":
+                operator_ = "sa"
+            elif modifier == "above" and operator_ == "eq":
+                operator_ = "eb"
 
             val = V_(original_value)
 
@@ -892,6 +905,10 @@ class Search(object):
                 term = term > val
             elif operator_ == "ge":
                 term = term >= val
+            elif operator_ == "sa":
+                term = sa_(term, val)
+            elif operator_ == "eb":
+                term = eb_(term, val)
             else:
                 raise NotImplementedError
 

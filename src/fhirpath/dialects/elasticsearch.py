@@ -1,12 +1,12 @@
 # _*_ coding: utf-8 _*_
 """ElasticSearch Dialect"""
 import logging
-from fhirpath.enums import OPERATOR
 import re
 
 import isodate
 from zope.interface import alsoProvides
 
+from fhirpath.enums import OPERATOR
 from fhirpath.enums import GroupType
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
@@ -89,6 +89,25 @@ class ElasticSearchDialect(DialectBase):
         else:
             q = {"term": {path: value}}
 
+        return q
+
+    def _create_sa_term(self, path, value):
+        """Create ES Prefix Query"""
+        if isinstance(value, (list, tuple)):
+            if len(value) == 1:
+                value = value[0]
+            else:
+                q = {
+                    "bool": {"should": [], "minimum_should_match": 1}
+                }
+                for val in value:
+                    q["bool"]["should"].append(
+                        {"prefix": {path: {"value": val}}}
+                    )
+                return q
+
+        q = {"prefix": {path: {"value": value}}}
+        # xxx: what about multiple
         return q
 
     def _create_dotted_path(self, term, root_replacer=None):
@@ -283,7 +302,12 @@ class ElasticSearchDialect(DialectBase):
                         )
 
                     else:
-                        q = self._create_term(dotted_path, value, multiple=multiple)
+                        if term.comparison_operator == OPERATOR.sa:
+                            q = self._create_sa_term(
+                                dotted_path, value
+                            )
+                        else:
+                            q = self._create_term(dotted_path, value, multiple=multiple)
                         resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
@@ -433,6 +457,8 @@ class ElasticSearchDialect(DialectBase):
             # xxx: should handle exact match
             if term.match_type == TermMatchType.EXACT:
                 qr = {"match_phrase": {path_: value}}
+            elif term.comparison_operator == OPERATOR.sa:
+                qr = {"match_phrase_prefix": {path_: value}}
             else:
                 qr = {"match": {path_: value}}
         elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:

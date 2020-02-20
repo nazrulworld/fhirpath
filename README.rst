@@ -226,7 +226,6 @@ Note that the way search parameters operate is not the same as
 the way the operations on two numbers work in a mathematical sense.
 sa (starts-after) and
 eb (ends-before) are not used with integer values but are used for decimals.
-https://www.elastic.co/guide/en/elasticsearch/reference/current/index-prefixes.html
 https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-wildcard-query.html
 https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-prefix-query.html#prefix-query-ex-request
 

@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 _*_
 from fhirpath.enums import OPERATOR
-
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import ITerm
 from fhirpath.types import EMPTY_VALUE
@@ -14,6 +13,7 @@ from .types import NonFhirTerm
 from .types import SortTerm
 from .types import Term
 from .types import TermValue
+
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
@@ -37,11 +37,7 @@ __all__ = [
 # API functions
 def T_(path, value=EMPTY_VALUE, match_type=None, non_fhir=False):  # noqa: E302
     """ """
-    params = {
-        "path": path,
-        "value": value,
-        "match_type": match_type
-    }
+    params = {"path": path, "value": value, "match_type": match_type}
     if non_fhir is False:
         term = Term(**params)
     else:
@@ -143,6 +139,20 @@ def in_(path, values):
 
 def not_in_(path, values):
     return not_(in_(path, values))
+
+
+def sa_(path, value=EMPTY_VALUE):
+    """ """
+    term_or_group = _prepare_term_or_group(path, value)
+    term_or_group.comparison_operator = OPERATOR.sa
+    return term_or_group
+
+
+def eb_(path, value=EMPTY_VALUE):
+    """ """
+    term_or_group = _prepare_term_or_group(path, value)
+    term_or_group.comparison_operator = OPERATOR.eb
+    return term_or_group
 
 
 def sort_(path, order=EMPTY_VALUE):

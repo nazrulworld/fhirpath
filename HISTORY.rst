@@ -2,10 +2,17 @@
 History
 =======
 
-0.4.2 (unreleased)
+0.5.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Improvements
+
+- Add support for ``:bellow`` FHIR search modifier and ``sa`` prefix. See https://github.com/nazrulworld/fhirpath/issues/2
+
+Bugfixes
+
+- Upgrade to this version is recommended as it includes couples of major bug fixes.
+
 
 
 0.4.1 (2019-11-05)

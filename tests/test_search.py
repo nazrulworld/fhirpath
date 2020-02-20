@@ -1,7 +1,8 @@
 # _*_ coding: utf-8 _*_
-from fhirpath.enums import OPERATOR
 from urllib.parse import urlencode
 
+from fhirpath.enums import FHIR_VERSION
+from fhirpath.enums import OPERATOR
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.fhirpath import Q_
@@ -11,6 +12,12 @@ from fhirpath.search import SearchContext
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def test_params_definition():
+    """ """
+    definition = Search.get_parameter_definition(FHIR_VERSION.R4, "Organization")
+    assert definition.name.expression == "Organization.name"
 
 
 def test_parse_query_string():
@@ -291,6 +298,20 @@ def test_create_quantity_term(engine):
     assert term.terms[2].value.value == float("5.40e-3")
 
 
+def test_sa_term(engine):
+    """ """
+    context = SearchContext(engine, "Organization")
+    params = (("_id:below", "fo"),)
+
+    fhir_search = Search(context, params=params)
+
+    path_, value_pack, modifier = fhir_search.normalize_param("_id:below")
+    term = fhir_search.create_term(path_, value_pack, modifier)
+    term.finalize(fhir_search.context.engine)
+
+    assert term.comparison_operator == OPERATOR.sa
+
+
 def test_sort_attachment(engine):
     """ """
     context = SearchContext(engine, "Task")
@@ -439,3 +460,33 @@ def test_codeableconcept_with_not_modifier(es_data, engine):
 
     bundle = fhir_search()
     assert bundle.total == 0
+
+
+def test_search_result_with_below_modifier(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Organization")
+    params = (("name:below", "Burge"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+    # little bit complex
+    search_context = SearchContext(engine, "Patient")
+    params = (("identifier:below", "|2403"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("given", "saEel"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("given:below", "Eel,Eve"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("gender:below", "ma,naz"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
