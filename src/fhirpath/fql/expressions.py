@@ -155,6 +155,13 @@ def eb_(path, value=EMPTY_VALUE):
     return term_or_group
 
 
+def contains_(path, value=EMPTY_VALUE):
+    """ """
+    term_or_group = _prepare_term_or_group(path, value)
+    term_or_group.comparison_operator = OPERATOR.contains
+    return term_or_group
+
+
 def sort_(path, order=EMPTY_VALUE):
     """ """
     sort_term = SortTerm(path)

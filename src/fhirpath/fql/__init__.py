@@ -4,6 +4,7 @@ from .expressions import G_
 from .expressions import T_
 from .expressions import V_
 from .expressions import and_
+from .expressions import contains_
 from .expressions import eb_
 from .expressions import exists_
 from .expressions import in_
@@ -32,5 +33,6 @@ __all__ = [
     "sort_",
     "sa_",
     "eb_",
+    "contains_",
     "ElementPath"
 ]

@@ -36,6 +36,25 @@ ES_PY_OPERATOR_MAP = {
 }
 
 
+def escape_star(v):
+    """ """
+    if "*" in v:
+        v = v.replace("*", "\\*")
+    return v
+
+
+def escape_all(v):
+    """ """
+    v = escape_star(v)
+    v = (
+        v.replace(".", "\\.")
+        .replace("?", "\\?")
+        .replace(":", "\\:")
+        .replace("[", "\\[")
+    )
+    return v
+
+
 class ElasticSearchDialect(DialectBase):
     """ """
 
@@ -106,12 +125,8 @@ class ElasticSearchDialect(DialectBase):
 
         return q
 
-    def _create_eb_term(self, path, value):
-        """Create ES Prefix Query"""
-
-        def _check(v):
-            if "*" in v:
-                raise NotImplementedError
+    def _create_contains_term(self, path, value):
+        """Create ES Regex Query"""
 
         if isinstance(value, (list, tuple)):
             if len(value) == 1:
@@ -119,13 +134,29 @@ class ElasticSearchDialect(DialectBase):
             else:
                 q = {"bool": {"should": [], "minimum_should_match": 1}}
                 for val in value:
-                    _check(val)
                     q["bool"]["should"].append(
-                        {"wildcard": {path: {"value": "*" + val}}}
+                        {"prefix": {path: {"value": ".*{0}.*".format(escape_all(val))}}}
                     )
                 return q
-        _check(value)
-        q = {"wildcard": {path: {"value": "*" + value}}}
+
+        q = {"regexp": {path: {"value": ".*{0}.*".format(escape_all(value))}}}
+
+        return q
+
+    def _create_eb_term(self, path, value):
+        """Create ES Prefix Query"""
+        if isinstance(value, (list, tuple)):
+            if len(value) == 1:
+                value = value[0]
+            else:
+                q = {"bool": {"should": [], "minimum_should_match": 1}}
+                for val in value:
+                    q["bool"]["should"].append(
+                        {"wildcard": {path: {"value": "*" + escape_star(val)}}}
+                    )
+                return q
+
+        q = {"wildcard": {path: {"value": "*{0}".format(escape_star(value))}}}
 
         return q
 
@@ -325,7 +356,8 @@ class ElasticSearchDialect(DialectBase):
                             q = self._create_sa_term(dotted_path, value)
                         elif term.comparison_operator == OPERATOR.eb:
                             q = self._create_eb_term(dotted_path, value)
-
+                        elif term.comparison_operator == OPERATOR.contains:
+                            q = self._create_contains_term(dotted_path, value)
                         else:
                             q = self._create_term(dotted_path, value, multiple=multiple)
                         resolved = q, term.unary_operator
@@ -474,15 +506,27 @@ class ElasticSearchDialect(DialectBase):
         fulltext_analyzers = ("standard",)
         value = term.get_real_value()
         if map_info.get("analyzer", "standard") in fulltext_analyzers:
-            # xxx: should handle exact match
+
             if term.match_type == TermMatchType.EXACT:
                 qr = {"match_phrase": {path_: value}}
             elif term.comparison_operator == OPERATOR.sa:
                 qr = {"match_phrase_prefix": {path_: value}}
             elif term.comparison_operator == OPERATOR.eb:
-                qr = {"match": {path_: {"query": value, "operator": "AND"}}}
+                qr = {
+                    "query_string": {
+                        "fields": [path_],
+                        "query": "*{0}".format(escape_star(value)),
+                    }
+                }
+            elif term.comparison_operator == OPERATOR.contains:
+                qr = {
+                    "query_string": {
+                        "fields": [path_],
+                        "query": "*{0}*".format(escape_star(value)),
+                    }
+                }
             else:
-                qr = {"match": {path_: value}}
+                qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
         elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:
             qr = {"match_phrase": {path_: value}}
         else:

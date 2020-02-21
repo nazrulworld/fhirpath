@@ -15,6 +15,7 @@ from fhirpath.fql.expressions import and_
 from fhirpath.fql.expressions import eb_
 from fhirpath.fql.expressions import exists_
 from fhirpath.fql.expressions import in_
+from fhirpath.fql.expressions import contains_
 from fhirpath.fql.expressions import not_exists_
 from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
@@ -199,6 +200,16 @@ def test_eb_expression(engine):
     term.finalize(engine)
 
     assert term.comparison_operator == OPERATOR.eb
+
+
+def test_contains_expression(engine):
+    """ """
+    term = T_("Organization.id")
+    value = V_("01")
+    term = contains_(term, value)
+    term.finalize(engine)
+
+    assert term.comparison_operator == OPERATOR.contains
 
 
 def test_query_builder(engine):
