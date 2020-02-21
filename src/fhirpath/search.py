@@ -17,11 +17,11 @@ from fhirpath.exceptions import ValidationError
 from fhirpath.fql import G_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
+from fhirpath.fql import contains_
 from fhirpath.fql import eb_
 from fhirpath.fql import exists_
 from fhirpath.fql import not_
 from fhirpath.fql import not_exists_
-from fhirpath.fql import contains_
 from fhirpath.fql import sa_
 from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
@@ -865,7 +865,9 @@ class Search(object):
                 "You cannot use modifier (above,below) and prefix (sa,eb) at a time"
             )
         if modifier == "contains" and operator_ != "eq":
-            raise NotImplementedError("In case of :contains modifier, only eq prefix is supported")
+            raise NotImplementedError(
+                "In case of :contains modifier, only eq prefix is supported"
+            )
 
     def create_term(self, path_, value, modifier):
         """ """

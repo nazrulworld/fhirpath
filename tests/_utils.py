@@ -43,6 +43,7 @@ DOC_TYPE = "_doc"
 
 ES_INDEX_NAME = "fhirpath_elasticsearch_index"
 ES_INDEX_NAME_REAL = "fhirpath_elasticsearch_index_1"
+IS_TRAVIS = os.environ.get("TRAVIS", "") != ""
 
 
 class TestElasticsearchEngine(ElasticsearchEngine):

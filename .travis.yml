@@ -4,43 +4,20 @@ language: python
 sudo: required
 
 services:
-    - postgresql
     - docker
-
-before_script:
-#  - psql -c 'create database fhir_db;' -U postgres
 
 matrix:
   include:
     - name: Python 3.6
       python: 3.6
       env: python_version=3.6
-      addons:
-        postgresql: 10
-       apt:
-           packages:
-           - postgresql-10
-           - postgresql-client-10
     - name: Python 3.7
       python: 3.7
       env: python_version=3.7
-      addons:
-        postgresql: 10
-       apt:
-         packages:
-          - postgresql-10
-          - postgresql-client-10
 
     - name: Python 3.8
       python: 3.8
       env: python_version=3.8
-      addons:
-        postgresql: 10
-      apt:
-        packages:
-           - postgresql-10
-           - postgresql-client-10
-
 
   allow_failures:
     - python: 3.8

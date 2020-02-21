@@ -12,10 +12,10 @@ from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
 from fhirpath.fql.expressions import V_
 from fhirpath.fql.expressions import and_
+from fhirpath.fql.expressions import contains_
 from fhirpath.fql.expressions import eb_
 from fhirpath.fql.expressions import exists_
 from fhirpath.fql.expressions import in_
-from fhirpath.fql.expressions import contains_
 from fhirpath.fql.expressions import not_exists_
 from fhirpath.fql.expressions import not_in_
 from fhirpath.fql.expressions import or_
