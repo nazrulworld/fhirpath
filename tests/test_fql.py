@@ -12,6 +12,7 @@ from fhirpath.fql.expressions import G_
 from fhirpath.fql.expressions import T_
 from fhirpath.fql.expressions import V_
 from fhirpath.fql.expressions import and_
+from fhirpath.fql.expressions import eb_
 from fhirpath.fql.expressions import exists_
 from fhirpath.fql.expressions import in_
 from fhirpath.fql.expressions import not_exists_
@@ -188,6 +189,16 @@ def test_sa_expression(engine):
     term.finalize(engine)
 
     assert term.comparison_operator == OPERATOR.sa
+
+
+def test_eb_expression(engine):
+    """ """
+    term = T_("Organization.id")
+    value = V_("01")
+    term = eb_(term, value)
+    term.finalize(engine)
+
+    assert term.comparison_operator == OPERATOR.eb
 
 
 def test_query_builder(engine):

@@ -227,7 +227,6 @@ the way the operations on two numbers work in a mathematical sense.
 sa (starts-after) and
 eb (ends-before) are not used with integer values but are used for decimals.
 https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-wildcard-query.html
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-prefix-query.html#prefix-query-ex-request
 
 
 https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html

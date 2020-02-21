@@ -490,3 +490,24 @@ def test_search_result_with_below_modifier(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_search_result_with_above_modifier(es_data, engine):
+    """ """
+    # little bit complex
+    search_context = SearchContext(engine, "Patient")
+    params = (("identifier:above", "|0002"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("given", "ebctor"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "Organization")
+    params = (("name:above", "Medical Center"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
