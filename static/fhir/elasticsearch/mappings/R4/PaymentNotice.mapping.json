@@ -1,7 +1,7 @@
 {
   "resourceType": "PaymentNotice",
   "meta": {
-    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "lastUpdated": "2020-02-22T11:15:16+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -48,20 +48,18 @@
       "request": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "response": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -73,20 +71,18 @@
       "provider": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "payment": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -98,20 +94,18 @@
       "payee": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "recipient": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },

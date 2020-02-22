@@ -1,7 +1,7 @@
 {
   "resourceType": "MedicationAdministration",
   "meta": {
-    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "lastUpdated": "2020-02-22T11:15:16+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -48,10 +48,9 @@
       "partOf": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -167,40 +166,36 @@
       "medicationReference": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "subject": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "context": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "supportingInformation": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -262,10 +257,9 @@
       "reasonReference": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -273,20 +267,18 @@
       "request": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "device": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -296,10 +288,9 @@
           "authorReference": {
             "properties": {
               "reference": {
-                "type": "text",
+                "type": "keyword",
                 "index": true,
-                "store": false,
-                "analyzer": "fhir_reference_analyzer"
+                "store": false
               }
             }
           },
@@ -334,10 +325,9 @@
       "eventHistory": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"

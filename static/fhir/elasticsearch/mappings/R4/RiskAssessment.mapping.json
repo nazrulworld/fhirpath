@@ -1,7 +1,7 @@
 {
   "resourceType": "RiskAssessment",
   "meta": {
-    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "lastUpdated": "2020-02-22T11:15:16+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -43,20 +43,18 @@
       "basedOn": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "parent": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -136,20 +134,18 @@
       "subject": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "encounter": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -175,20 +171,18 @@
       "condition": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "performer": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -230,10 +224,9 @@
       "reasonReference": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -241,10 +234,9 @@
       "basis": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -264,10 +256,9 @@
           "authorReference": {
             "properties": {
               "reference": {
-                "type": "text",
+                "type": "keyword",
                 "index": true,
-                "store": false,
-                "analyzer": "fhir_reference_analyzer"
+                "store": false
               }
             }
           },

@@ -58,7 +58,8 @@ def escape_all(v):
 class ElasticSearchDialect(DialectBase):
     """ """
 
-    def _apply_nested(self, query, dotted_path):
+    @staticmethod
+    def apply_nested(query, dotted_path):
         """ """
         wrapper = {
             "nested": {
@@ -70,7 +71,8 @@ class ElasticSearchDialect(DialectBase):
         }
         return wrapper
 
-    def _apply_path_replacement(self, dotted_path, root_replacer):
+    @staticmethod
+    def apply_path_replacement(dotted_path, root_replacer):
         """ """
         if root_replacer is not None:
             path_ = ".".join([root_replacer] + list(dotted_path.split(".")[1:]))
@@ -78,7 +80,8 @@ class ElasticSearchDialect(DialectBase):
             path_ = dotted_path
         return path_
 
-    def _attach_nested_on_demand(self, context, query_, root_replacer):
+    @staticmethod
+    def attach_nested_on_demand(context, query_, root_replacer):
         """ """
         path_context = context
         qr = query_
@@ -87,17 +90,18 @@ class ElasticSearchDialect(DialectBase):
             if path_context.multiple and not IFhirPrimitiveType.implementedBy(
                 path_context.type_class
             ):
-                path_ = self._apply_path_replacement(
+                path_ = ElasticSearchDialect.apply_path_replacement(
                     str(path_context._path), root_replacer
                 )
-                qr = self._apply_nested(qr, path_)
+                qr = ElasticSearchDialect.apply_nested(qr, path_)
             if path_context.is_root():
                 break
             path_context = path_context.parent
 
         return qr
 
-    def _create_term(self, path, value, multiple=False):
+    @staticmethod
+    def create_term(path, value, multiple=False):
         """Create ES Query term"""
         multiple_ = isinstance(value, (list, tuple)) or multiple is True
         if multiple_ is True and not isinstance(value, (list, tuple)):
@@ -110,7 +114,8 @@ class ElasticSearchDialect(DialectBase):
 
         return q
 
-    def _create_sa_term(self, path, value):
+    @staticmethod
+    def create_sa_term(path, value):
         """Create ES Prefix Query"""
         if isinstance(value, (list, tuple)):
             if len(value) == 1:
@@ -125,7 +130,8 @@ class ElasticSearchDialect(DialectBase):
 
         return q
 
-    def _create_contains_term(self, path, value):
+    @staticmethod
+    def create_contains_term(path, value):
         """Create ES Regex Query"""
 
         if isinstance(value, (list, tuple)):
@@ -143,7 +149,8 @@ class ElasticSearchDialect(DialectBase):
 
         return q
 
-    def _create_eb_term(self, path, value):
+    @staticmethod
+    def create_eb_term(path, value):
         """Create ES Prefix Query"""
         if isinstance(value, (list, tuple)):
             if len(value) == 1:
@@ -160,7 +167,8 @@ class ElasticSearchDialect(DialectBase):
 
         return q
 
-    def _create_dotted_path(self, term, root_replacer=None):
+    @staticmethod
+    def create_dotted_path(term, root_replacer=None):
         """ """
         if INonFhirTerm.providedBy(term):
             return term.path
@@ -171,7 +179,8 @@ class ElasticSearchDialect(DialectBase):
             path_ = term.path.path
         return path_
 
-    def _clean_up(self, body_structure):
+    @staticmethod
+    def clean_up(body_structure):
         """ """
         if len(body_structure["query"]["bool"]["should"]) == 0:
             del body_structure["query"]["bool"]["should"]
@@ -199,7 +208,8 @@ class ElasticSearchDialect(DialectBase):
             if len(body_structure["_source"]) == 0:
                 del body_structure["_source"]
 
-    def _get_path_mapping_info(self, mapping, dotted_path):
+    @staticmethod
+    def get_path_mapping_info(mapping, dotted_path):
         """ """
         mapping_ = mapping["properties"]
 
@@ -214,7 +224,7 @@ class ElasticSearchDialect(DialectBase):
             else:
                 return info_
 
-    def compile(self, query, mapping, root_replacer=None):
+    def compile(self, query, mapping=None, root_replacer=None, **kwargs):
         """
         :param: query
 
@@ -223,7 +233,7 @@ class ElasticSearchDialect(DialectBase):
         :root_replacer: Path´s root replacer:
             Could be mapping name or index name in zope´s ZCatalog context
         """
-        body_structure = self.create_structure()
+        body_structure = ElasticSearchDialect.create_structure()
         conditional_terms = query.get_where()
 
         for term in conditional_terms:
@@ -248,15 +258,21 @@ class ElasticSearchDialect(DialectBase):
             container.append(q)
 
         # ResourceType bind
-        self.apply_from_constraint(query, body_structure, root_replacer=root_replacer)
+        ElasticSearchDialect.apply_from_constraint(
+            query, body_structure, root_replacer=root_replacer
+        )
         # Sorting
-        self.apply_sort(query.get_sort(), body_structure, root_replacer=root_replacer)
+        ElasticSearchDialect.apply_sort(
+            query.get_sort(), body_structure, root_replacer=root_replacer
+        )
         # Limit
-        self.apply_limit(query.get_limit(), body_structure)
+        ElasticSearchDialect.apply_limit(query.get_limit(), body_structure)
         # ES source_
-        self.apply_source_filter(query, body_structure, root_replacer=root_replacer)
+        ElasticSearchDialect.apply_source_filter(
+            query, body_structure, root_replacer=root_replacer
+        )
 
-        self._clean_up(body_structure)
+        ElasticSearchDialect.clean_up(body_structure)
 
         if "should" in body_structure["query"]["bool"]:
             if "minimum_should_match" not in body_structure["query"]["bool"]:
@@ -304,7 +320,9 @@ class ElasticSearchDialect(DialectBase):
                 container.append(resolved[0])
 
             if not IIgnoreNestedCheck.providedBy(term):
-                qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+                qr = ElasticSearchDialect.attach_nested_on_demand(
+                    term.path.context, qr, root_replacer
+                )
 
             return qr, unary_operator
 
@@ -322,7 +340,9 @@ class ElasticSearchDialect(DialectBase):
             return qr, unary_operator
 
         elif IExistsTerm.providedBy(term):
-            return self.resolve_exists_term(term, root_replacer=root_replacer)
+            return ElasticSearchDialect.resolve_exists_term(
+                term, root_replacer=root_replacer
+            )
 
         elif ITerm.providedBy(term):
 
@@ -341,25 +361,33 @@ class ElasticSearchDialect(DialectBase):
                 ):
                     # xxx: may do something special?
                     multiple = term.path.context.multiple
-                    dotted_path = self._create_dotted_path(term, root_replacer)
+                    dotted_path = ElasticSearchDialect.create_dotted_path(
+                        term, root_replacer
+                    )
                     value = term.get_real_value()
 
-                    map_info = self._get_path_mapping_info(mapping, dotted_path)
+                    map_info = ElasticSearchDialect.get_path_mapping_info(
+                        mapping, dotted_path
+                    )
 
                     if map_info.get("type", None) == "text":
-                        resolved = self.resolve_string_term(
+                        resolved = ElasticSearchDialect.resolve_string_term(
                             term, map_info, root_replacer
                         )
 
                     else:
                         if term.comparison_operator == OPERATOR.sa:
-                            q = self._create_sa_term(dotted_path, value)
+                            q = ElasticSearchDialect.create_sa_term(dotted_path, value)
                         elif term.comparison_operator == OPERATOR.eb:
-                            q = self._create_eb_term(dotted_path, value)
+                            q = ElasticSearchDialect.create_eb_term(dotted_path, value)
                         elif term.comparison_operator == OPERATOR.contains:
-                            q = self._create_contains_term(dotted_path, value)
+                            q = ElasticSearchDialect.create_contains_term(
+                                dotted_path, value
+                            )
                         else:
-                            q = self._create_term(dotted_path, value, multiple=multiple)
+                            q = ElasticSearchDialect.create_term(
+                                dotted_path, value, multiple=multiple
+                            )
                         resolved = q, term.unary_operator
 
                 elif term.path.context.type_name in (
@@ -378,7 +406,9 @@ class ElasticSearchDialect(DialectBase):
                     "positiveInt",
                 ):
 
-                    resolved = self.resolve_numeric_term(term, root_replacer)
+                    resolved = ElasticSearchDialect.resolve_numeric_term(
+                        term, root_replacer
+                    )
                 else:
                     raise NotImplementedError
 
@@ -387,7 +417,9 @@ class ElasticSearchDialect(DialectBase):
 
                 # check for nested
                 qr, unary_operator = resolved
-                qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+                qr = ElasticSearchDialect.attach_nested_on_demand(
+                    term.path.context, qr, root_replacer
+                )
                 return qr, unary_operator
             else:
                 raise NotImplementedError("Line 288")
@@ -406,7 +438,7 @@ class ElasticSearchDialect(DialectBase):
             type_name = term.path.context.type_name
 
         value = term.get_real_value()
-        path_ = self._create_dotted_path(term, root_replacer)
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
 
         if type_name in ("dateTime", "instant"):
             value_formatter = (
@@ -463,10 +495,11 @@ class ElasticSearchDialect(DialectBase):
 
         return qr, unary_operator
 
-    def resolve_numeric_term(self, term, root_replacer=None):
+    @staticmethod
+    def resolve_numeric_term(term, root_replacer=None):
         """ """
         qr = dict()
-        path_ = self._create_dotted_path(term, root_replacer)
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
         value = term.get_real_value()
 
         if term.comparison_operator in (OPERATOR.eq, OPERATOR.ne):
@@ -498,10 +531,11 @@ class ElasticSearchDialect(DialectBase):
 
         return qr, unary_operator
 
-    def resolve_string_term(self, term, map_info, root_replacer=None):
+    @staticmethod
+    def resolve_string_term(term, map_info, root_replacer=None):
         """ """
         # xxx: could have support for free text search
-        path_ = self._create_dotted_path(term, root_replacer)
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
 
         fulltext_analyzers = ("standard",)
         value = term.get_real_value()
@@ -527,21 +561,25 @@ class ElasticSearchDialect(DialectBase):
                 }
             else:
                 qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
-        elif ("/" in value or URI_SCHEME.match(value)) and ".reference" in path_:
-            qr = {"match_phrase": {path_: value}}
+
         else:
-            qr = self._create_term(path_, value, term.path.context.multiple)
+            qr = ElasticSearchDialect.create_term(
+                path_, value, term.path.context.multiple
+            )
 
         resolved = qr, term.unary_operator
         return resolved
 
-    def resolve_exists_term(self, term, root_replacer=None):
+    @staticmethod
+    def resolve_exists_term(term, root_replacer=None):
         """ """
-        path_ = self._create_dotted_path(term, root_replacer)
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
 
         qr = {"exists": {"field": path_}}
         if not INonFhirTerm.providedBy(term):
-            qr = self._attach_nested_on_demand(term.path.context, qr, root_replacer)
+            qr = ElasticSearchDialect.attach_nested_on_demand(
+                term.path.context, qr, root_replacer
+            )
 
         return qr, term.unary_operator
 
@@ -575,10 +613,10 @@ class ElasticSearchDialect(DialectBase):
             "boolean",
         ):
             if term.match_type not in (TermMatchType.FULLTEXT, None):
-                resolved = self.resolve_string_term(term, {}, None)
+                resolved = ElasticSearchDialect.resolve_string_term(term, {}, None)
             else:
                 value = term.get_real_value()
-                q = self._create_term(term.path, value)
+                q = ElasticSearchDialect.create_term(term.path, value)
                 resolved = q, term.unary_operator
 
         elif visit_name in ("dateTime", "date", "time", "instant"):
@@ -587,12 +625,13 @@ class ElasticSearchDialect(DialectBase):
 
         elif visit_name in ("integer", "decimal", "unsignedInt", "positiveInt"):
 
-            resolved = self.resolve_numeric_term(term, None)
+            resolved = ElasticSearchDialect.resolve_numeric_term(term, None)
         else:
             raise NotImplementedError
         return resolved
 
-    def apply_limit(self, limit_clause, body_structure):
+    @staticmethod
+    def apply_limit(limit_clause, body_structure):
         """ """
         if limit_clause.empty:
             # no limit! should be scroll
@@ -603,7 +642,8 @@ class ElasticSearchDialect(DialectBase):
         if isinstance(limit_clause.offset, int):
             body_structure["from"] = limit_clause.offset
 
-    def apply_sort(self, sort_terms, body_structure, root_replacer=None):
+    @staticmethod
+    def apply_sort(sort_terms, body_structure, root_replacer=None):
         """ """
         for term in sort_terms:
             if root_replacer is not None:
@@ -620,14 +660,16 @@ class ElasticSearchDialect(DialectBase):
             }
             body_structure["sort"].append(item)
 
-    def apply_from_constraint(self, query, body_structure, root_replacer=None):
+    @staticmethod
+    def apply_from_constraint(query, body_structure, root_replacer=None):
         """We force apply resource type boundary"""
         for res_name, res_klass in query.get_from():
             path_ = "{0}.resourceType".format(root_replacer or res_name)
             term = {"term": {path_: res_name}}
             body_structure["query"]["bool"]["filter"].append(term)
 
-    def apply_source_filter(self, query, body_structure, root_replacer=None):
+    @staticmethod
+    def apply_source_filter(query, body_structure, root_replacer=None):
         """https://www.elastic.co/guide/en/elasticsearch/reference/\
         current/search-request-body.html#request-body-search-source-filtering
 
@@ -669,7 +711,8 @@ class ElasticSearchDialect(DialectBase):
         if len(includes) > 0:
             body_structure["_source"]["includes"].extend(includes)
 
-    def create_structure(self):
+    @staticmethod
+    def create_structure():
         """ """
         return {
             "query": {

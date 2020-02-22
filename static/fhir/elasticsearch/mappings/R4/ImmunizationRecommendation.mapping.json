@@ -1,7 +1,7 @@
 {
   "resourceType": "ImmunizationRecommendation",
   "meta": {
-    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "lastUpdated": "2020-02-22T11:15:16+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -43,10 +43,9 @@
       "patient": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
@@ -58,10 +57,9 @@
       "authority": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },

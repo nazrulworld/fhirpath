@@ -31,8 +31,6 @@ from fhirpath.interfaces import ISearch
 from fhirpath.interfaces import ISearchContext
 from fhirpath.query import Q_
 from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
-from fhirpath.thirdparty import at_least_one_of
-from fhirpath.thirdparty import mutually_exclusive_parameters
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -69,10 +67,11 @@ class SearchContext(object):
 class Search(object):
     """ """
 
-    @at_least_one_of("query_string", "params")
-    @mutually_exclusive_parameters("query_string", "params")
     def __init__(self, context, query_string=None, params=None):
         """ """
+        # validate first
+        Search.validate_params(context, query_string, params)
+
         self.context = ISearchContext(context)
         if query_string:
             all_params = Search.parse_query_string(query_string, False)
@@ -94,8 +93,28 @@ class Search(object):
             self.context.engine.fhir_release, self.context.resource_name
         )
 
+    @staticmethod
+    def validate_params(context, query_string, params):
+        """ """
+        if not ISearchContext.providedBy(context):
+            raise ValidationError(
+                ":context must be implemented "
+                "fhirpath.interfaces.ISearchContext interface"
+            )
+
+        if query_string is None and params is None:
+            raise ValidationError(
+                "At least one of value is required, "
+                "either ´query_string´ or search ´params´ "
+            )
+        if query_string and params:
+            raise ValidationError(
+                "Only value from one of arguments "
+                "(´query_string´, ´params´) is accepted"
+            )
+
     def prepare_params(self, all_params):
-        """makeing search, sort, limit, params
+        """making search, sort, limit, params
         Result Parameters
         ~~~~~~~~~~~~~~~~
         _sort
@@ -999,7 +1018,7 @@ class Search(object):
         else:
             param_value_ = values
 
-        self.validate_normalized_value(param_name_, param_value_, modifier_)
+        Search.validate_normalized_value(param_name_, param_value_, modifier_)
         _path = self.resolve_path_context(param_name_)
         return _path, param_value_, modifier_
 
@@ -1021,7 +1040,8 @@ class Search(object):
             )
         # xxx: later more
 
-    def validate_normalized_value(self, param_name, param_value, modifier):
+    @staticmethod
+    def validate_normalized_value(param_name, param_value, modifier):
         """
         :param param_name:
         :param param_value:
@@ -1182,8 +1202,6 @@ class AsyncSearch(Search):
         return response
 
 
-@at_least_one_of("query_string", "params")
-@mutually_exclusive_parameters("query_string", "params")
 def fhir_search(context, query_string=None, params=None):
     """ """
     if context.async_result:

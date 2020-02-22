@@ -1,7 +1,7 @@
 {
   "resourceType": "InsurancePlan",
   "meta": {
-    "lastUpdated": "2020-02-18T11:03:21+06:00",
+    "lastUpdated": "2020-02-22T11:15:16+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -117,30 +117,27 @@
       "ownedBy": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "administeredBy": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         }
       },
       "coverageArea": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -148,10 +145,9 @@
       "endpoint": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"
@@ -159,10 +155,9 @@
       "network": {
         "properties": {
           "reference": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
-            "store": false,
-            "analyzer": "fhir_reference_analyzer"
+            "store": false
           }
         },
         "type": "nested"

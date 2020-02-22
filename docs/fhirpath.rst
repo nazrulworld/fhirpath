@@ -105,6 +105,14 @@ fhirpath.utils module
    :undoc-members:
    :show-inheritance:
 
+fhirpath.version module
+-----------------------
+
+.. automodule:: fhirpath.version
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
