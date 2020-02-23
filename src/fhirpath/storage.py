@@ -1,5 +1,7 @@
 # _*_ coding: utf-8 _*_
 from collections import defaultdict
+from datetime import datetime
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -15,9 +17,9 @@ __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 class MemoryStorage(defaultdict):
     """ """
 
-    _last_updated = None
-    _write_locked = None
-    _read_locaked = None
+    _last_updated: Optional[datetime]
+    _write_locked: Optional[bool]
+    _read_locked: Optional[bool]
 
     def get(self, item, default=EMPTY_VALUE):
         """ """

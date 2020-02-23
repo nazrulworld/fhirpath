@@ -11,7 +11,7 @@ class IBaseClass(Interface):
 
     _finalized = Attribute("Finalized Flag")
 
-    def finalize(contex):
+    def finalize(context):
         """ """
 
 

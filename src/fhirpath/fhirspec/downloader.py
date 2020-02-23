@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import zipfile
 from http.client import HTTPResponse
+from typing import Text
 from urllib.error import HTTPError
 from urllib.request import Request
 from urllib.request import urlopen
@@ -16,13 +17,15 @@ from fhirpath.enums import FHIR_VERSION
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 logger = logging.getLogger("fhirpath.fhirspec.downloader")
-BASE_URL = (
+BASE_URL: Text = (
     "https://github.com/nazrulworld/fhirpath-scripts/blob/master/resources"
     "/fhirspec/{release}.zip?raw=true"
 )
 
 
-def write_stream(outputdir: str, response: HTTPResponse, release: FHIR_VERSION):
+def write_stream(
+    outputdir: Text, response: HTTPResponse, release: FHIR_VERSION
+) -> Text:
     """ """
     filename = ".".join([release.value, "zip"])
 
@@ -37,13 +40,13 @@ def write_stream(outputdir: str, response: HTTPResponse, release: FHIR_VERSION):
     return os.path.join(outputdir, filename)
 
 
-def download_archive(release: FHIR_VERSION, temp_location: str):
+def download_archive(release: FHIR_VERSION, temp_location: Text) -> Text:
     """ """
     fullurl = BASE_URL.format(release=release.value)
 
     request = Request(url=fullurl, method="GET", unverifiable=False)
 
-    response: HTTPResponse = None
+    response: HTTPResponse
     try:
         response = urlopen(request)
         assert response.status == 200

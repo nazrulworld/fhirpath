@@ -1,6 +1,10 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
+from typing import Dict
+from typing import Pattern
+from typing import Set
+from typing import Text
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict
@@ -35,13 +39,13 @@ from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
-escape_comma_replacer = "_ESCAPE_COMMA_"
-uri_scheme = re.compile(r"^https?://", re.I)
-value_prefixes = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
-has_dot_as = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
-has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
-has_dot_where = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
-parentheses_wrapped = re.compile(r"^\(.+\)$")
+escape_comma_replacer: Text = "_ESCAPE_COMMA_"
+uri_scheme: Pattern = re.compile(r"^https?://", re.I)
+value_prefixes: Set[str] = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
+has_dot_as: Pattern = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
+has_dot_is: Pattern = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
+has_dot_where: Pattern = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
+parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 
@@ -67,7 +71,7 @@ class SearchContext(object):
 class Search(object):
     """ """
 
-    def __init__(self, context, query_string=None, params=None):
+    def __init__(self, context: SearchContext, query_string=None, params=None):
         """ """
         # validate first
         Search.validate_params(context, query_string, params)
@@ -84,7 +88,7 @@ class Search(object):
         else:
             raise Invalid
 
-        self.result_params = dict()
+        self.result_params: Dict = dict()
         self.search_params = None
 
         self.prepare_params(all_params)

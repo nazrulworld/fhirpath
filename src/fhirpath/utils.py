@@ -8,7 +8,14 @@ import re
 import sys
 import uuid
 from importlib import import_module
-from typing import Union
+from types import ModuleType
+from typing import Any
+from typing import List
+from typing import Match
+from typing import Optional
+from typing import Pattern
+from typing import Text
+from typing import cast
 
 import pkg_resources
 from yarl import URL
@@ -26,8 +33,6 @@ from .types import PrimitiveDataTypes
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-NoneType = type(None)
 
 
 def _reraise(tp, value, tb=None):
@@ -54,7 +59,7 @@ def reraise(klass, msg=None, callback=None, **kw):
         del t, v, tb
 
 
-def force_str(value, allow_non_str=True):
+def force_str(value: Any, allow_non_str: bool = True) -> Text:
     """ """
     if isinstance(value, bytes):
         return value.decode("utf8", "strict")
@@ -64,7 +69,9 @@ def force_str(value, allow_non_str=True):
     return value
 
 
-def force_bytes(string, encoding="utf8", errors="strict"):
+def force_bytes(
+    string: Text, encoding: Text = "utf8", errors: Text = "strict"
+) -> bytes:
 
     if isinstance(string, bytes):
         if encoding == "utf8":
@@ -78,21 +85,24 @@ def force_bytes(string, encoding="utf8", errors="strict"):
     return string.encode(encoding, errors)
 
 
-def import_string(dotted_path: str) -> type:
+def import_string(dotted_path: Text) -> type:
     """Shameless hack from django utils, please don't mind!"""
+    module_path: Text
+    class_name: Text
     try:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except (ValueError, AttributeError):
-        msg = f"{dotted_path} doesn't look like a module path"
+        msg = f"{dotted_path} doesnt look like a module path"
         reraise(ImportError, msg)
 
-    module = import_module(module_path)
-
+    module: ModuleType = import_module(module_path)
+    cls: type
     try:
-        return getattr(module, class_name)
+        cls = getattr(module, class_name)
     except AttributeError:
         msg = f'Module "{module_path}" does not define a "{class_name}" attribute/class'
         reraise(ImportError, msg)
+    return cls
 
 
 def builder(func):
@@ -122,10 +132,10 @@ def builder(func):
 
 
 def lookup_fhir_class_path(
-    resource_type: str,
+    resource_type: Text,
     cache: bool = True,
     fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
-) -> Union[str, NoneType]:  # noqa: E999
+) -> Optional[Text]:  # noqa: E999
     """This function finds FHIR resource model class (from fhir.resources) and
     return dotted path string.
 
@@ -156,56 +166,61 @@ def lookup_fhir_class_path(
         return storage.get(resource_type)
 
     # Trying to get from entire modules
-    prime_module = ["fhir", "resources"]
+    prime_module: List[Text] = ["fhir", "resources"]
     if FHIR_VERSION.DEFAULT != fhir_release:
         prime_module.append(fhir_release.value)
 
     prime_module_level = len(prime_module)
-    prime_module = ".".join(prime_module)
+    prime_module_path: Text = ".".join(prime_module)
 
-    prime_module = import_module(prime_module)
+    prime_module_type: ModuleType = import_module(prime_module_path)
 
     for importer, module_name, ispkg in pkgutil.walk_packages(
-        prime_module.__path__, prime_module.__name__ + ".", onerror=lambda x: None
+        prime_module_type.__path__,  # type: ignore
+        prime_module_type.__name__ + ".",
+        onerror=lambda x: None,
     ):
         if ispkg or (prime_module_level + 1) < len(module_name.split(".")):
             continue
 
-        module_obj = import_module(module_name)
+        module_type: ModuleType = import_module(module_name)
 
-        for klass_name, klass in inspect.getmembers(module_obj, inspect.isclass):
+        for klass_name, klass in inspect.getmembers(module_type, inspect.isclass):
 
             if klass_name == resource_type:
                 storage.insert(resource_type, f"{module_name}.{resource_type}")
                 return storage.get(resource_type)
-
     return None
 
 
 def lookup_fhir_class(
-    resource_type: str, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
+    resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
 ):  # noqa: E999
-    klass_path = lookup_fhir_class_path(resource_type, True, fhir_release)
-    klass = import_string(klass_path)
+    klass_path: Optional[Text] = lookup_fhir_class_path(
+        resource_type, True, fhir_release
+    )
+    klass: type = import_string(cast(Text, klass_path))
     return klass
 
 
-CONTAINS_PY_PACKAGE = re.compile(r"^\$\{(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE)
+CONTAINS_PY_PACKAGE: Pattern = re.compile(
+    r"^\$\{(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE
+)
 
 
-def expand_path(path_: str):
+def expand_path(path_: Text) -> Text:
     """Path normalizer
     Supports:
     1. Home Path expander
     2. Package path discovery"""
 
+    pkg_matched: Optional[Match[Text]] = CONTAINS_PY_PACKAGE.match(path_)
     if path_.startswith("~"):
         real_path = os.path.expanduser(path_)
 
-    elif CONTAINS_PY_PACKAGE.match(path_):
-        match = CONTAINS_PY_PACKAGE.match(path_)
-        replacement = match.group(0)
-        package_name = match.group("package_name")
+    elif pkg_matched is not None:
+        replacement = pkg_matched.group(0)
+        package_name = pkg_matched.group("package_name")
 
         try:
             real_path = path_.replace(
@@ -293,7 +308,7 @@ class PathInfoContext:
         self.multiple = multiple
 
     @classmethod
-    def context_from_path(cls, pathname: str, fhir_release: FHIR_VERSION):
+    def context_from_path(cls, pathname: Text, fhir_release: FHIR_VERSION):
         """ """
         if pathname == "*":
             return EMPTY_PATH_INFO_CONTEXT
@@ -305,9 +320,9 @@ class PathInfoContext:
             return storage.get(pathname)
 
         parts = pathname.split(".")
-        model = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
-        model = import_string(model)
-        new_path = parts[0]
+        model_path = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
+        model_type: type = import_string(cast(Text, model_path))
+        new_path: Text = parts[0]
         context = None
 
         for index, part in enumerate(parts[1:], 1):
@@ -320,7 +335,7 @@ class PathInfoContext:
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
                 else:
-                    model = context.type_class
+                    model_type = context.type_class
                     continue
 
             for (
@@ -331,7 +346,7 @@ class PathInfoContext:
                 is_list,
                 of_many,
                 not_optional,
-            ) in model().elementProperties():
+            ) in model_type().elementProperties():
 
                 if part != jsname:
                     continue
@@ -357,11 +372,11 @@ class PathInfoContext:
                     # Get Property: should return parent Context obj instead
                     # of just string
                     parent_context = context.parent
-                    parent_context.add_child(new_path)
+                    parent_context.add_child(new_path)  # type: ignore
 
                 storage.insert(new_path, context)
                 if not is_primitive:
-                    model = type_class
+                    model_type = cast(type, type_class)
                 else:
                     if (index + 1) < len(parts):
                         raise ValueError("Invalid path {0}".format(pathname))
@@ -458,10 +473,10 @@ class Model:
     """ """
 
     @staticmethod
-    def create(resource_type: str, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
+    def create(resource_type: Text, fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT):
         """ """
         klass = import_string(
-            lookup_fhir_class_path(resource_type, fhir_release=fhir_version)
+            cast(Text, lookup_fhir_class_path(resource_type, fhir_release=fhir_version))
         )
         # xxx: should be cache?
         model = ModelFactory(f"{klass.__name__}Model", (klass, PathNavigator), {})

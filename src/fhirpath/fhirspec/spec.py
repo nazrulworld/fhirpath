@@ -12,6 +12,7 @@ import pathlib
 import re
 from collections import defaultdict
 from copy import copy
+from typing import Dict
 
 from fhirpath.interfaces import IStorage
 from fhirpath.thirdparty import attrdict
@@ -37,11 +38,11 @@ class FHIRSpec(object):
         assert settings is not None
         self.settings = settings
 
-        self.info = FHIRVersionInfo(self, self.directory)
+        self.info: FHIRVersionInfo = FHIRVersionInfo(self, self.directory)
 
-        self.valuesets = {}  # system-url: FHIRValueSet()
-        self.codesystems = {}  # system-url: FHIRCodeSystem()
-        self.profiles = {}  # profile-name: FHIRStructureDefinition()
+        self.valuesets: Dict = {}  # system-url: FHIRValueSet()
+        self.codesystems: Dict = {}  # system-url: FHIRCodeSystem()
+        self.profiles: Dict = {}  # profile-name: FHIRStructureDefinition()
 
         self.prepare()
         self.read_profiles()
@@ -1057,7 +1058,7 @@ class FHIRClass(object):
     """ An element/resource that should become its own class.
     """
 
-    known = {}
+    known: Dict = {}
 
     @classmethod
     def for_element(cls, element):
@@ -1301,7 +1302,7 @@ class SearchParameterDefinition(object):
         "xpath",
         "multiple_or",
         "multiple_and",
-        "component"
+        "component",
     )
 
     @classmethod
@@ -1361,7 +1362,7 @@ class SearchParameter(object):
         "xpath",
         "multiple_or",
         "multiple_and",
-        "component"
+        "component",
     )
 
     @classmethod

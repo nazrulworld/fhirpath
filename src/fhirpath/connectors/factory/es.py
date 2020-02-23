@@ -42,9 +42,7 @@ class ElasticsearchConnection(Connection):
             )
         return info
 
-    def finalize_search_params(
-        self, compiled_query, query_type=EngineQueryType.DML
-    ):
+    def finalize_search_params(self, compiled_query, query_type=EngineQueryType.DML):
         """ """
         compiled_query = compiled_query.copy()
         params = dict()
@@ -71,9 +69,7 @@ class ElasticsearchConnection(Connection):
         https://stackoverflow.com/questions/43211387/what-does-elasticsearch-automatic-slicing-do
         https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
         """
-        search_params = self.finalize_search_params(
-            compiled_query, EngineQueryType.DML
-        )
+        search_params = self.finalize_search_params(compiled_query, EngineQueryType.DML)
         conn = self.raw_connection
         result = conn.search(index=index, **search_params)
         self._evaluate_result(result)

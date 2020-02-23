@@ -48,6 +48,7 @@ class Connection(object):
 
 class ConnectionProxy(Proxy):
     """ """
+
     def __init__(self, obj):
         """ """
         super(ConnectionProxy, self).__init__()

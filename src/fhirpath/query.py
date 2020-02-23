@@ -1,5 +1,6 @@
 # _*_ coding: utf-8 _*_
 from copy import copy
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -43,7 +44,7 @@ class Query(object):
 
     def __init__(
         self,
-        fhir_relase: FHIR_VERSION,
+        fhir_release: FHIR_VERSION,
         from_: FromClause,
         select: SelectClause,
         where: WhereClause,
@@ -52,19 +53,19 @@ class Query(object):
     ):
         """ """
 
-        self.fhir_relase = fhir_relase
-        self._from = from_
-        self._select = select
-        self._where = where
-        self._sort = sort
-        self._limit = limit
+        self.fhir_release: FHIR_VERSION = fhir_release
+        self._from: FromClause = from_
+        self._select: SelectClause = select
+        self._where: WhereClause = where
+        self._sort: SortClause = sort
+        self._limit: LimitClause = limit
 
     @classmethod
-    def _builder(cls, engine=None):
+    def _builder(cls, engine: Optional[object] = None) -> object:
         return QueryBuilder(engine)
 
     @classmethod
-    def from_builder(cls, builder):
+    def from_builder(cls, builder: object):
         """Create Query object from QueryBuilder.
         Kind of reverse process"""
         if not IQueryBuilder(builder)._finalized:
@@ -72,12 +73,12 @@ class Query(object):
                 "QueryBuilder object must be in finalized state"
             )
         query = cls(
-            builder._engine.fhir_release,
-            builder._from,
-            builder._select,
-            builder._where,
-            builder._sort,
-            builder._limit,
+            builder._engine.fhir_release,  # type: ignore
+            builder._from,  # type: ignore
+            builder._select,  # type: ignore
+            builder._where,  # type: ignore
+            builder._sort,  # type: ignore
+            builder._limit,  # type: ignore
         )
         return query
 
@@ -110,7 +111,7 @@ class Query(object):
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
 
-        newone.fhir_relase = self.fhir_relase
+        newone.fhir_release = self.fhir_release
 
         newone._from = copy(self._from)
         newone._select = copy(self._select)

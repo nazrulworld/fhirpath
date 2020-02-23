@@ -42,7 +42,11 @@ install:
 script:
   - make clean
   - make lint
+  - mypy src/fhirpath
+  - isort -c -rc src/fhirpath
+  - black --check --verbose src/fhirpath
   - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
 
 after_success:
   - codecov
+

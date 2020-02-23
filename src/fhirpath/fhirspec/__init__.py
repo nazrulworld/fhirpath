@@ -135,29 +135,32 @@ class FhirSpecFactory:
     @staticmethod
     def from_release(release: str, settings: dict = None):
         """ """
-        release = FHIR_VERSION[release]
+        release_enum = FHIR_VERSION[release]
 
-        ensure_spec_jsons(release)
+        ensure_spec_jsons(release_enum)
 
         default_settings = attrdict() + DEFAULT_SETTINGS.copy()
         if settings:
             default_settings += settings
 
-        spec = FHIRSpec(str(SPEC_JSON_DIR / release.value), default_settings)
+        spec = FHIRSpec(str(SPEC_JSON_DIR / release_enum.value), default_settings)
 
         return spec
 
 
 class FHIRSearchSpecFactory:
     """ """
+
     @staticmethod
     def from_release(release: str):
         """ """
-        release = FHIR_VERSION[release]
+        release_enum = FHIR_VERSION[release]
 
-        ensure_spec_jsons(release)
+        ensure_spec_jsons(release_enum)
 
         spec = FHIRSearchSpec(
-            (SPEC_JSON_DIR / release.value), release, SEARCH_PARAMETERS_STORAGE
+            (SPEC_JSON_DIR / release_enum.value),
+            release_enum,
+            SEARCH_PARAMETERS_STORAGE,
         )
         return spec

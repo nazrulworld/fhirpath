@@ -34,5 +34,5 @@ __all__ = [
     "sa_",
     "eb_",
     "contains_",
-    "ElementPath"
+    "ElementPath",
 ]

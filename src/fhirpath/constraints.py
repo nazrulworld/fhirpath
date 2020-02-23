@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 _*_
-
 from fhirpath.exceptions import ConstraintNotSatisfied
 
 from .interfaces import IBaseClass
@@ -9,7 +8,7 @@ from .interfaces import IValuedClass
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
-def required_value_not_assigned(obj):
+def required_value_not_assigned(obj: object) -> None:
     """ """
     required_not_finalized(obj)
     obj = IValuedClass(obj)
@@ -20,7 +19,7 @@ def required_value_not_assigned(obj):
         )
 
 
-def required_not_finalized(obj):
+def required_not_finalized(obj: object) -> None:
     """ """
     obj = IBaseClass(obj)
 
@@ -31,15 +30,15 @@ def required_not_finalized(obj):
         )
 
 
-def required_from_resource(obj):
+def required_from_resource(obj: object) -> None:
     """ """
-    if len(obj._from) == 0:
+    if len(obj._from) == 0:  # type: ignore
         raise ConstraintNotSatisfied(
             "`_from` (resource must be provided first!) {0!r}".format(obj.__class__)
         )
 
 
-def required_finalized(obj):
+def required_finalized(obj: object) -> None:
     """ """
     obj = IBaseClass(obj)
 

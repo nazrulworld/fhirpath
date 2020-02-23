@@ -5,6 +5,10 @@ https://www.hl7.org/fhir/datatypes.html#primitive
 import base64
 import re
 from collections import deque
+from datetime import date
+from datetime import datetime
+from typing import Optional
+from typing import Text
 
 import isodate
 from zope.interface import implementer
@@ -53,8 +57,8 @@ class FhirPrimitiveType(str):
     corresponds with in the FHIR resource,
     e.g. Active in the Patient class. This field is of the standard .Net data type."""
 
-    __visit_name__ = None
-    __regex__ = None
+    __visit_name__: Text
+    __regex__: Optional[Text]
 
     def _validate(self):
         """ """
@@ -80,7 +84,7 @@ class FhirBoolean(FhirPrimitiveType):
         if not res:
             raise ValueError("Invalid FHIR boolean value! should true or false")
 
-    def to_python(self):
+    def to_python(self) -> bool:
         """ """
         self._validate()
 
@@ -107,7 +111,7 @@ class FhirInteger(FhirPrimitiveType):
                 "range −2,147,483,648..2,147,483,647"
             )
 
-    def to_python(self):
+    def to_python(self) -> int:
         """ """
         self._validate()
 
@@ -141,7 +145,7 @@ class FhirString(FhirPrimitiveType):
                 "range −2,147,483,648..2,147,483,647"
             )
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         return str(self)
 
@@ -177,7 +181,7 @@ class FhirDecimal(FhirPrimitiveType):
         if not res:
             raise ValueError("Invalid FHIR decimal value!")
 
-    def to_python(self):
+    def to_python(self) -> float:
         """ """
         self._validate()
 
@@ -196,7 +200,7 @@ class FhirURI(FhirPrimitiveType):
     __visit_name__ = "uri"
     __regex__ = r"\S*"
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """"""
         return str(self)
 
@@ -215,7 +219,7 @@ class FhirURL(FhirPrimitiveType):
     # xxx: restricted to defined protocol
     __regex__ = None
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         return str(self)
 
@@ -237,7 +241,7 @@ class FhirCanonical(FhirPrimitiveType):
 
     __regex__ = None
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         return str(self)
 
@@ -254,10 +258,16 @@ class FhirBase64Binary(bytes):
     JSON representation: A JSON string - base64 content
     """
 
-    __visit_name__ = "base64Binary"
-    __regex__ = r"(\s*([0-9a-zA-Z\+\=]){4}\s*)+"
+    __visit_name__: Text = "base64Binary"
+    __regex__: Text = r"(\s*([0-9a-zA-Z\+\=]){4}\s*)+"
 
-    def to_python(self):
+    def _validate(self):
+        """ """
+        res = re.match(self.__regex__, self.decode())
+        if not res:
+            raise ValueError("Invalid FHIR base64Binary value!")
+
+    def to_python(self) -> bytes:
         """ """
         self._validate()
 
@@ -280,7 +290,7 @@ class FhirInstant(FhirPrimitiveType):
     __visit_name__ = "instant"
     __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))"  # noqa: E501
 
-    def to_python(self):
+    def to_python(self) -> datetime:
         """ """
         self._validate()
 
@@ -303,7 +313,7 @@ class FhirDate(FhirPrimitiveType):
     __visit_name__ = "date"
     __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?"  # noqa: E501
 
-    def to_python(self):
+    def to_python(self) -> date:
         """ """
         self._validate()
 
@@ -328,7 +338,7 @@ class FhirDateTime(FhirPrimitiveType):
     __visit_name__ = "dateTime"
     __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"  # noqa: E501
 
-    def to_python(self):
+    def to_python(self) -> datetime:
         """ """
         self._validate()
 
@@ -350,7 +360,7 @@ class FhirTime(FhirPrimitiveType):
     __visit_name__ = "time"
     __regex__ = r"([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?"
 
-    def to_python(self):
+    def to_python(self) -> float:
         """ """
         self._validate()
 
@@ -371,7 +381,7 @@ class FhirCode(FhirPrimitiveType):
     __visit_name__ = "code"
     __regex__ = r"[^\s]+(\s[^\s]+)*"
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         self._validate()
 
@@ -388,7 +398,7 @@ class FhirOid(FhirPrimitiveType):
     __visit_name__ = "oid"
     __regex__ = r"urn:oid:[0-2](\.(0|[1-9][0-9]*))+"
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         self._validate()
 
@@ -408,7 +418,7 @@ class FhirId(FhirPrimitiveType):
     __visit_name__ = "id"
     __regex__ = r"[A-Za-z0-9\-\.]{1,64}"
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         self._validate()
 
@@ -440,7 +450,7 @@ class FhirMarkdown(FhirPrimitiveType):
     __visit_name__ = "markdown"
     __regex__ = r"\s*(\S|\s)*"
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """"""
         return str(self)
 
@@ -455,7 +465,7 @@ class FhirUnsignedInt(FhirPrimitiveType):
     __visit_name__ = "unsignedInt"
     __regex__ = r"[0]|([1-9][0-9]*)"
 
-    def to_python(self):
+    def to_python(self) -> int:
         """ """
         self._validate()
 
@@ -472,7 +482,7 @@ class FhirPositiveInt(FhirPrimitiveType):
     __visit_name__ = "positiveInt"
     __regex__ = r"\+?[1-9][0-9]*"
 
-    def to_python(self):
+    def to_python(self) -> int:
         """ """
         self._validate()
 
@@ -490,7 +500,7 @@ class FhirUUID(FhirPrimitiveType):
     __visit_name__ = "uuid"
     __regex__ = None
 
-    def to_python(self):
+    def to_python(self) -> Text:
         """ """
         return str(self)
 
