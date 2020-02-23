@@ -20,6 +20,22 @@ fhirpath.dialects.elasticsearch module
    :undoc-members:
    :show-inheritance:
 
+fhirpath.dialects.postgres module
+---------------------------------
+
+.. automodule:: fhirpath.dialects.postgres
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+fhirpath.dialects.sqlalchemy module
+-----------------------------------
+
+.. automodule:: fhirpath.dialects.sqlalchemy
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------

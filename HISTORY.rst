@@ -9,7 +9,7 @@ Improvements
 
 - Add support for important FHIR search modifier ``:contains``. See https://github.com/nazrulworld/fhirpath/issues/1
 
-- Add support for ``:above``FHIR search modifier and `èb``prefix. See https://github.com/nazrulworld/fhirpath/issues/2
+- Add support for ``:above``FHIR search modifier and `èb`` prefix. See https://github.com/nazrulworld/fhirpath/issues/2
 
 - Add support for ``:bellow`` FHIR search modifier and ``sa`` prefix. See https://github.com/nazrulworld/fhirpath/issues/2
 

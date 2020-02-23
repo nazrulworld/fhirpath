@@ -12,6 +12,14 @@ fhirpath.connectors.factory.es module
    :undoc-members:
    :show-inheritance:
 
+fhirpath.connectors.factory.pg module
+-------------------------------------
+
+.. automodule:: fhirpath.connectors.factory.pg
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------

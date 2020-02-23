@@ -206,28 +206,3 @@ owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks
 
 **"FHIR® is the registered trademark of HL7 and is used with the permission of HL7.
 Use of the FHIR trademark does not constitute endorsement of this product by HL7"**
-
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-wildcard-query.html
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-prefix-query.html
-GET /_search
-{
-    "query": {
-        "bool" : {
-            "should": [
-                { "term": { "message": "quick" }},
-                { "term": { "message": "brown" }},
-                { "prefix": { "message": "f"}}
-            ]
-        }
-    }
-}
-If no prefix is present, the prefix eq is assumed.
-Note that the way search parameters operate is not the same as
-the way the operations on two numbers work in a mathematical sense.
-sa (starts-after) and
-eb (ends-before) are not used with integer values but are used for decimals.
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-wildcard-query.html
-
-
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
-https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html

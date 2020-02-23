@@ -12,14 +12,6 @@ fhirpath.thirdparty.peewee module
    :undoc-members:
    :show-inheritance:
 
-fhirpath.thirdparty.plone\_api\_validation module
--------------------------------------------------
-
-.. automodule:: fhirpath.thirdparty.plone_api_validation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 fhirpath.thirdparty.werkzeug module
 -----------------------------------
 

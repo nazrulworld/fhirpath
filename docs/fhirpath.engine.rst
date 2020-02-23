@@ -20,6 +20,14 @@ fhirpath.engine.es module
    :undoc-members:
    :show-inheritance:
 
+fhirpath.engine.fhirbase module
+-------------------------------
+
+.. automodule:: fhirpath.engine.fhirbase
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
