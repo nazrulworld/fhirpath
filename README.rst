@@ -32,8 +32,8 @@ Introduction
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
-FHIRPath_ (STU1) implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
-FHIRPath_ (STU1) specification compliance product.
+FHIRPath_ Normative Release (v2.0.0) implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
+FHIRPath_ Normative Release (v2.0.0) specification compliance product.
 
 * Supports FHIR® ``STU3`` and ``R4``.
 * Supports multiple provider´s engine. Now Plone_ & guillotina_ framework powered providers `fhirpath-guillotina`_ and `collective.fhirpath`_ respectively are supported and more coming soon.
@@ -44,7 +44,7 @@ FHIRPath_ (STU1) specification compliance product.
 Usages
 ------
 
-This library is kind of abstract type, where all specifications from FHIRPath_ (STU1) are implemented rather than completed solution (ready to go).
+This library is kind of abstract type, where all specifications from FHIRPath_ Normative Release (v2.0.0) are implemented rather than completed solution (ready to go).
 The main reason behind this design pattern, to support multiple database systems as well as well as any framework, there is no dependency.
 
 ``fhirpath`` never taking care of creating indexes, mappings (elasticsearch) and storing data, if you want to use this library, you have to go
@@ -187,7 +187,7 @@ This package skeleton was created with Cookiecutter_ and the `audreyr/cookiecutt
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
-.. _`FHIRPath`: http://hl7.org/fhirpath/
+.. _`FHIRPath`: http://hl7.org/fhirpath/N1/
 .. _`FHIR`: http://hl7.org/fhir/
 .. _`ORM`: https://en.wikipedia.org/wiki/Object-relational_mapping
 .. _`Plone`: https://plone.org

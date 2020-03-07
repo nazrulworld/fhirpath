@@ -96,3 +96,16 @@ def test_fhir_search_spec():
 
     for param in resource_search_params:
         assert param in patient_params
+
+
+def test_lookup_fhir_resource_spec():
+    """ """
+    from fhirpath.fhirspec import lookup_fhir_resource_spec
+    from fhirpath.fhirspec.spec import FHIRStructureDefinition
+
+    spec = lookup_fhir_resource_spec("Patient", False, FHIR_VERSION.R4)
+    assert spec is not None
+    assert isinstance(spec, FHIRStructureDefinition)
+
+    spec = lookup_fhir_resource_spec("PatientFake", False, FHIR_VERSION.R4)
+    assert spec is None

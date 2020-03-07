@@ -30,7 +30,7 @@ class IStorage(Interface):
 
     _last_updated = Attribute("Last Updated")
     _write_locked = Attribute("Write Locked")
-    _read_locaked = Attribute("Read Locked")
+    _read_locked = Attribute("Read Locked")
 
     def get(item):
         """ """
@@ -78,6 +78,10 @@ class IPrimitiveTypeCollection(Interface):
 
     def remove(item=None, index=None):
         """ """
+
+
+class ITypeSpecifier(Interface):
+    """ """
 
 
 class IPathInfoContext(Interface):

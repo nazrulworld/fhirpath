@@ -17,6 +17,7 @@ from fhirpath.thirdparty import ImmutableDict
 
 from .interfaces import IFhirPrimitiveType
 from .interfaces import IPrimitiveTypeCollection
+from .interfaces import ITypeSpecifier
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -602,3 +603,8 @@ class PrimitiveTypeCollection(object):
             # validation purpose
             member.to_python()
             yield member
+
+
+@implementer(ITypeSpecifier)
+class TypeSpecifier(str):
+    """ """

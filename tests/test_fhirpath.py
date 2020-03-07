@@ -1,28 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import json
 
-"""Tests for `fhirpath` package."""
+import pytest
 
-# import pytest
+from fhirpath.enums import FHIR_VERSION
+from fhirpath.fhirpath import FHIRPath
+from fhirpath.fhirspec import lookup_fhir_resource_spec
+from fhirpath.utils import lookup_fhir_class
 
-from click.testing import CliRunner
-
-# from fhirpath import fhirpath
-from fhirpath import cli
-
-
-def test_content(response):
-    """Sample pytest test function with the pytest fixture as an argument."""
-    # from bs4 import BeautifulSoup
-    # assert 'GitHub' in BeautifulSoup(response.content).title.string
+from ._utils import FHIR_EXAMPLE_RESOURCES
 
 
-def test_command_line_interface():
-    """Test the CLI."""
-    runner = CliRunner()
-    result = runner.invoke(cli.main)
-    assert result.exit_code == 0
-    assert "fhirpath.cli.main" in result.output
-    help_result = runner.invoke(cli.main, ["--help"])
-    assert help_result.exit_code == 0
-    assert "--help  Show this message and exit." in help_result.output
+__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
+
+
+def test_fhirpath_access_member():
+    """ """
+    with open(str(FHIR_EXAMPLE_RESOURCES / "Patient.json"), "r") as fp:
+        data = fp.read()
+        obj = lookup_fhir_class("Patient", FHIR_VERSION.R4)(json.loads(data))
+    fpath = FHIRPath(obj)
+    assert fpath.name.count() == 1

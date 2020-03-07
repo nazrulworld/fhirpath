@@ -2,14 +2,18 @@
 """FHIR Specification: http://www.hl7.org/fhir/"""
 import os
 import pathlib
+import typing
 
 from fhirpath.enums import FHIR_VERSION
+from fhirpath.storage import FHIR_RESOURCE_SPEC_STORAGE
 from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
 from fhirpath.thirdparty import ImmutableDict
 from fhirpath.thirdparty import attrdict
 
 from .spec import FHIRSearchSpec  # noqa: F401
 from .spec import FHIRSpec  # noqa: F401
+from .spec import FHIRStructureDefinition
+from .spec import logger
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -164,3 +168,44 @@ class FHIRSearchSpecFactory:
             SEARCH_PARAMETERS_STORAGE,
         )
         return spec
+
+
+def lookup_fhir_resource_spec(
+    resource_type: typing.Text,
+    cache: bool = True,
+    fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
+) -> typing.Optional[FHIRStructureDefinition]:  # noqa: E999
+    """
+
+    :arg resource_type: the resource type name (required). i.e Organization
+
+    :arg cache: (default True) the flag which indicates should query fresh or
+        serve from cache if available.
+
+    :arg fhir_release: FHIR Release (version) name.
+        i.e FHIR_VERSION.STU3, FHIR_VERSION.R4
+
+    :return FHIRStructureDefinition
+
+    Example::
+
+        >>> from fhirpath.fhirspec import lookup_fhir_resource_spec
+        >>> from zope.interface import Invalid
+        >>> dotted_path = lookup_fhir_resource_spec('Patient')
+        >>> 'fhir.resources.patient.Patient' == dotted_path
+        True
+        >>> dotted_path = lookup_fhir_resource_spec('FakeResource')
+        >>> dotted_path is None
+        True
+    """
+    storage = FHIR_RESOURCE_SPEC_STORAGE.get(fhir_release.value)
+
+    if storage.exists(resource_type) and cache:
+        return storage.get(resource_type)
+
+    specs = FhirSpecFactory.from_release(fhir_release.value)
+    try:
+        return specs.profiles[resource_type.lower()]
+    except KeyError:
+        logger.info(f"{resource_type} has not been found in profile specifications")
+        return None

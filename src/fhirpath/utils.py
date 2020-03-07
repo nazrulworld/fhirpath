@@ -151,12 +151,12 @@ def lookup_fhir_class_path(
 
     Example::
 
-        >>> from guillotina_fhirfield.helpers import search_fhir_resource_cls
+        >>> from fhirpath.utils import lookup_fhir_class_path
         >>> from zope.interface import Invalid
-        >>> dotted_path = search_fhir_resource_cls('Patient')
+        >>> dotted_path = lookup_fhir_class_path('Patient')
         >>> 'fhir.resources.patient.Patient' == dotted_path
         True
-        >>> dotted_path = search_fhir_resource_cls('FakeResource')
+        >>> dotted_path = lookup_fhir_class_path('FakeResource')
         >>> dotted_path is None
         True
     """

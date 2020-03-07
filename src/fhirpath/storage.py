@@ -51,9 +51,10 @@ class MemoryStorage(defaultdict):
         return len(self)
 
 
-FHIR_RESOURCE_CLASS_STORAGE = MemoryStorage()
-PATH_INFO_STORAGE = MemoryStorage()
-SEARCH_PARAMETERS_STORAGE = MemoryStorage()
+FHIR_RESOURCE_CLASS_STORAGE: MemoryStorage = MemoryStorage()
+PATH_INFO_STORAGE: MemoryStorage = MemoryStorage()
+SEARCH_PARAMETERS_STORAGE: MemoryStorage = MemoryStorage()
+FHIR_RESOURCE_SPEC_STORAGE: MemoryStorage = MemoryStorage()
 
 releases = set([member.value for member in FHIR_VERSION])
 for release in releases:
@@ -65,4 +66,7 @@ for release in releases:
 
     if not SEARCH_PARAMETERS_STORAGE.exists(release):
         SEARCH_PARAMETERS_STORAGE.insert(release, MemoryStorage())
+
+    if not FHIR_RESOURCE_SPEC_STORAGE.exists(release):
+        FHIR_RESOURCE_SPEC_STORAGE.insert(release, MemoryStorage())
 del releases

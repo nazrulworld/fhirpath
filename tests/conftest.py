@@ -18,10 +18,7 @@ images.configure(
     "postgresql",
     "postgres",
     "10.10",
-    env={
-        "POSTGRES_USER": "postgres",
-        "POSTGRES_DB": "fhir_db"
-    },
+    env={"POSTGRES_USER": "postgres", "POSTGRES_DB": "fhir_db"},
 )
 
 pytest_plugins = [
