@@ -12,7 +12,7 @@ from .types import TypeSpecifier
 __author__ = "Md Nazrul Islam <email2nazrul>"
 
 FHIR_PREFIX = "FHIR"
-
+FHIRPathType = typing.TypeVar("FHIRPathType", bound="FHIRPath")
 FHIRPATH_DATATYPES = {
     "bool": "Boolean",
     "str": "String",
@@ -126,10 +126,8 @@ class ListTypeInfo:
         return FHIRPath.__storage__[self.elementType].get_elements()
 
 
-class TupleTypeInfoElement:
-    name: str
-    type: TypeSpecifier
-    isOneBased: bool
+class TupleTypeInfoElement(ClassInfoElement):
+    """ """
 
 
 class TupleTypeInfo:
@@ -140,6 +138,10 @@ class TupleTypeInfo:
     @see http://hl7.org/fhirpath/N1/#anonymous-types"""
 
     element: typing.List[TupleTypeInfoElement]
+
+    def get_elements(self):
+        """ """
+        return self.element
 
 
 class FHIRPath(object):
@@ -156,12 +158,21 @@ class FHIRPath(object):
 
     __slots__ = ("_obj", "_predecessor", "_type_info", "_prop_name", "_of_many")
 
-    def __init__(self, _obj: type):
+    def __init__(self, _obj: typing.Any, predecessor=None):
         """ """
+        if predecessor is None and "FHIRAbstractBase" not in str(
+            inspect.getmro(type(_obj))
+        ):
+            raise ValueError(
+                "root fhirpath cannot be initialized, "
+                "without a object (must be derived from "
+                "``fhir.resources::FHIRAbstractBase``)"
+            )
+
         if type(_obj).__name__ == "FHIRDate":
             _obj = _obj.date
         object.__setattr__(self, "_obj", _obj)
-        object.__setattr__(self, "_predecessor", None)
+        object.__setattr__(self, "_predecessor", predecessor)
         object.__setattr__(self, "_type_info", None)
         object.__setattr__(self, "_prop_name", None)
         object.__setattr__(self, "_of_many", None)
@@ -180,7 +191,7 @@ class FHIRPath(object):
             # special case for `value` name
             valid = False
             obj = None
-            for el in self.type().get_elements():
+            for el in self.get_type().get_elements():
                 if el._common_name is not None and el._common_name == item:
                     valid = True
                     value = getattr(self._obj, el.name, None)
@@ -201,17 +212,28 @@ class FHIRPath(object):
         return self._obj
 
     @staticmethod
-    def build_elements(obj, base_type):
+    def build_elements(obj, base_type, klass):
         """ """
         base_properties = [item[0] for item in base_type().elementProperties()]
         elements = list()
         for item in obj.elementProperties():
             if item[0] in base_properties:
                 continue
-            el = ClassInfoElement.from_el_property_tuple(item)
+            el = klass.from_el_property_tuple(item)
             elements.append(el)
 
         return elements
+
+    @staticmethod
+    def convert_and_cache_elements(elements):
+        """ """
+        for el in elements:
+            specifier = el.type
+            if specifier.startswith("List<"):
+                specifier = specifier[5:-1]
+
+            if specifier not in FHIRPath.__storage__:
+                FHIRPath.__storage__[specifier] = FHIRPath.build_type_info_from_el(el)
 
     @staticmethod
     def build_type_info_from_el(element):
@@ -219,14 +241,37 @@ class FHIRPath(object):
         bases = inspect.getmro(element._py_class)
         if "FHIRAbstractBase" in str(bases):
             # FHIR type!
-            elements = FHIRPath.build_elements(bases[0](), bases[1])
-            klass_info = ClassInfo.from_object_base(bases[0](), bases[1], elements)
+            klass_info = FHIRPath.build_fhir_abstract_type_info(
+                obj=bases[0](), base_klass=bases[1]
+            )
         else:
             specifier = element.type
             if specifier.startswith("List<"):
                 specifier = specifier[5:-1]
             klass_info = SimpleTypeInfo.from_type_specifier(specifier)
         return klass_info
+
+    @staticmethod
+    def build_fhir_abstract_type_info(obj, base_klass):
+        """ """
+        key = ".".join([FHIR_PREFIX, type(obj).__name__])
+
+        if key not in FHIRPath.__storage__:
+            mod_base_name = inspect.getmodule(obj).__name__.split(".")[-1]
+            if mod_base_name == type(obj).__name__.lower():
+                elements = FHIRPath.build_elements(obj, base_klass, ClassInfoElement)
+                klass_info = ClassInfo.from_object_base(obj, base_klass, elements)
+            else:
+                # TupleType
+                elements = FHIRPath.build_elements(
+                    obj, base_klass, TupleTypeInfoElement
+                )
+                klass_info = TupleTypeInfo()
+                klass_info.element = elements
+            # cache it!
+            FHIRPath.convert_and_cache_elements(elements)
+            FHIRPath.__storage__[key] = klass_info
+        return FHIRPath.__storage__[key]
 
     def _assign_type_info(self):
         """("name", "json_name", type, type_name, is_list, "of_many", not_optional)"""
@@ -237,26 +282,14 @@ class FHIRPath(object):
 
         if "FHIRAbstractBase" in str(bases):
             # FHIR type!
-            key = ".".join([FHIR_PREFIX, bases[0].__name__])
-            if key not in FHIRPath.__storage__:
-                elements = FHIRPath.build_elements(self._obj, bases[1])
-                mod_base_name = inspect.getmodule(self._obj).__name__.split(".")[-1]
-                if mod_base_name == bases[0].__name__.lower():
-                    klass_info = ClassInfo.from_object_base(
-                        self._obj, bases[1], elements
-                    )
-                else:
-                    # TupleType
-                    raise NotImplementedError
-                FHIRPath.__storage__[key] = klass_info
-
-            object.__setattr__(self, "_type_info", FHIRPath.__storage__[key])
+            type_info = FHIRPath.build_fhir_abstract_type_info(self._obj, bases[1])
+            object.__setattr__(self, "_type_info", type_info)
 
         elif isinstance(self._obj, list) and self._prop_name and self._predecessor:
             """Do special treatment"""
             specifier = None
             element = None
-            for el in self._predecessor.type().get_elements():
+            for el in self._predecessor.get_type().get_elements():
                 if el.name == self._prop_name:
                     specifier = el.type[5:-1]
                     element = el
@@ -275,21 +308,28 @@ class FHIRPath(object):
 
             object.__setattr__(self, "_type_info", type_info)
         else:
-            if self._predecessor and self._prop_name:
-                for el in self._predecessor.type().get_elements():
-                    if el.name == self._prop_name:
-                        new_type = el.type
-                        if new_type.startswith("List<"):
-                            new_type = new_type[5:-1]
-                        # check in cache
-                        if new_type not in FHIRPath.__storage__:
-                            type_info = SimpleTypeInfo.from_type_specifier(new_type)
-                            FHIRPath.__storage__[new_type] = type_info
+            if self._predecessor:
+                predecessor_type = self._predecessor.get_type()
+                type_info = None
+                if isinstance(predecessor_type, ListTypeInfo):
+                    type_info = FHIRPath.__storage__[predecessor_type.elementType]
+                elif self._prop_name:
+                    for el in self._predecessor.get_type().get_elements():
+                        if el.name == self._prop_name:
+                            new_type = el.type
+                            if new_type.startswith("List<"):
+                                new_type = new_type[5:-1]
+                            # check in cache
+                            if new_type not in FHIRPath.__storage__:
 
-                        object.__setattr__(
-                            self, "_type_info", FHIRPath.__storage__[new_type]
-                        )
-                        break
+                                FHIRPath.__storage__[
+                                    new_type
+                                ] = SimpleTypeInfo.from_type_specifier(new_type)
+                            type_info = FHIRPath.__storage__[new_type]
+                            break
+                if type_info is None:
+                    raise NotImplementedError
+                object.__setattr__(self, "_type_info", type_info)
             else:
                 specifier = "System." + FHIRPATH_DATATYPES[bases[0].__name__]
                 if specifier not in FHIRPath.__storage__:
@@ -299,20 +339,18 @@ class FHIRPath(object):
 
     def _create_successor(self, _obj, prop_name: str = None, of_many: bool = None):
         """ """
-        successor = FHIRPath(_obj)
+        successor = FHIRPath(_obj, predecessor=self)
         object.__setattr__(successor, "_prop_name", prop_name)
         object.__setattr__(successor, "_of_many", of_many)
-        object.__setattr__(successor, "_predecessor", self)
         return successor
 
     def _clone(self, obj=None):
         """ """
         if obj is None:
             obj = self._obj
-        newone = FHIRPath(obj)
+        newone = FHIRPath(obj, predecessor=self._predecessor)
         object.__setattr__(newone, "_prop_name", self._prop_name)
         object.__setattr__(newone, "_of_many", self._of_many)
-        object.__setattr__(newone, "_predecessor", self._predecessor)
         return newone
 
     #   5.1. Existence
@@ -358,8 +396,10 @@ class FHIRPath(object):
 
     def anyTrue(self):
         """5.1.5. anyTrue() : Boolean
-        Takes a collection of Boolean values and returns true if any of the items are true.
-        If all the items are false, or if the input is empty ({ }), the result is false.
+        Takes a collection of Boolean values and returns true
+        if any of the items are true.
+        If all the items are false, or if the input is empty ({ }),
+        the result is false.
 
         The following example returns true if any of the components of the Observation
         have a value greater than 90 mm[Hg]:
@@ -369,7 +409,8 @@ class FHIRPath(object):
 
     def allFalse(self):
         """5.1.6. allFalse() : Boolean
-        Takes a collection of Boolean values and returns true if all the items are false.
+        Takes a collection of Boolean values and returns true
+        if all the items are false.
         If any items are true, the result is false. If the input is empty ({ }),
         the result is true.
 
@@ -423,14 +464,14 @@ class FHIRPath(object):
         """
         raise NotImplementedError
 
-    def count(self):
+    def count(self) -> int:
         """5.1.10. count() : Integer
         Returns the integer count of the number of items in the input collection.
         Returns 0 when the input collection is empty.
         """
-        if isinstance(self.type(), ListTypeInfo):
-            return len(self._obj)
-        raise NotImplementedError
+        if isinstance(self.get_type(), ListTypeInfo):
+            return self._obj is not None and len(self._obj) or 0
+        raise NotImplementedError("Collection Type Required")
 
     def distinct(self):
         """5.1.11. distinct() : collection
@@ -557,7 +598,7 @@ class FHIRPath(object):
         of the Patient with index 0:
         ``Patient.name[0]``
         """
-        if not isinstance(self.type(), ListTypeInfo):
+        if not isinstance(self.get_type(), ListTypeInfo):
             raise NotImplementedError("Must be collection")
         try:
             if isinstance(key, slice):
@@ -753,7 +794,7 @@ class FHIRPath(object):
         If the item is not one the above types, the result is empty.
 
         If the item is a String, but the string is not convertible to an integer
-        (using the regex format ``(\\+|-)?\d+)``, the result is empty.
+        (using the regex format ``(\\+|-)?\\d+)``, the result is empty.
         If the input collection contains multiple items, the evaluation of the
         expression will end and signal an error to the calling environment.
         If the input collection is empty, the result is empty.
@@ -769,7 +810,7 @@ class FHIRPath(object):
         - the item is a Boolean
 
         If the item is not one of the above types, or the item is a String,
-        but is not convertible to an Integer (using the regex format (\\+|-)?\d+),
+        but is not convertible to an Integer (using the regex format (\\+|-)?\\d+),
         the result is false.
 
         If the input collection contains multiple items,
@@ -878,7 +919,7 @@ class FHIRPath(object):
         If the item is not one of the above types, the result is empty.
 
         If the item is a String, but the string is not convertible to a Decimal
-        (using the regex format (\\+|-)?\d+(\.\d+)?), the result is empty.
+        (using the regex format (\\+|-)?\\d+(\\.\\d+)?), the result is empty.
 
         If the input collection contains multiple items, the evaluation of
         the expression will end and signal an error to the calling environment.
@@ -896,7 +937,7 @@ class FHIRPath(object):
         - the item is a Boolean
 
         If the item is not one of the above types, or is not convertible to a Decimal
-        (using the regex format (\\+|-)?\d+(\.\d+)?), the result is false.
+        (using the regex format (\\+|-)?\\d+(\\.\\d+)?), the result is false.
 
         If the input collection contains multiple items, the evaluation of
         the expression will end and signal an error to the calling environment.
@@ -923,7 +964,7 @@ class FHIRPath(object):
         If the item is a String, but the string is not convertible
 
         to a Quantity using the following regex format:
-        ``(?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?``
+        ``(?'value'(\\+|-)?\\d+(\\.\\d+)?)\\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?``
         then the result is empty. For example, the following are valid quantity strings:
         ``'4 days'``
         ``'10 \'mg[Hg]\''``
@@ -946,7 +987,7 @@ class FHIRPath(object):
 
         If the item is not one of the above types, or is not convertible
         to a Quantity using the following regex format:
-        ``(?'value'(\+|-)?\d+(\.\d+)?)\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?``
+        ``(?'value'(\\+|-)?\\d+(\\.\\d+)?)\\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?``
         then the result is false.
 
         If the input collection contains multiple items,
@@ -1347,14 +1388,15 @@ class FHIRPath(object):
         """5.7.6. log(base : Decimal) : Decimal
         Returns the logarithm base base of the input number.
 
-        When used with Integers, the arguments will be implicitly converted to Decimal.
+        When used with Integers, the arguments will be implicitly
+        converted to Decimal.
 
         If base is empty, the result is empty.
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of
+        the expression will end and signal an error to the calling environment.
 
         ``
         16.log(2) // 4.0
@@ -1580,7 +1622,7 @@ class FHIRPath(object):
         raise NotImplementedError
 
     #   10. Types and Reflection
-    def type(self):
+    def get_type(self):
         """FHIRPath supports reflection to provide the ability for
         expressions to access type information describing the structure of values.
         The type() function returns the type information for each element of the

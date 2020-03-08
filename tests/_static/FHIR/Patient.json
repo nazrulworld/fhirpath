@@ -10,6 +10,20 @@
             "family": "Saint"
         }
     ],
+    "contact": [
+        {
+            "gender": "male",
+            "name": {
+                "text": "Saint Contact Person",
+                "use": "usual",
+                "given": [
+                    "Contact",
+                    "Person"
+                ],
+                "family": "Saint"
+            }
+        }
+    ],
     "address": [
         {
             "use": "work",
