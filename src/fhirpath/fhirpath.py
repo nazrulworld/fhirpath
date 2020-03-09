@@ -1613,7 +1613,8 @@ class FHIRPath(object):
         """
         DeprecationWarning(
             "The is() function is supported for backwards compatibility "
-            "with previous implementations of FHIRPath")
+            "with previous implementations of FHIRPath"
+        )
         raise NotImplementedError
 
     def as_(self, type_cls: typing.Union[type, str]):
@@ -1630,7 +1631,8 @@ class FHIRPath(object):
         """
         DeprecationWarning(
             "The is() function is supported for backwards compatibility "
-            "with previous implementations of FHIRPath")
+            "with previous implementations of FHIRPath"
+        )
 
         raise NotImplementedError
 
