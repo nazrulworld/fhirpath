@@ -5,6 +5,10 @@ History
 0.5.0 (unreleased)
 ------------------
 
+New Features
+
+- ``FHIRPath`` (Normative Release) support available.
+
 Improvements
 
 - Add support for important FHIR search modifier ``:contains``. See https://github.com/nazrulworld/fhirpath/issues/1

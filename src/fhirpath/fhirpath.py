@@ -47,8 +47,8 @@ class SimpleTypeInfo:
 class ClassInfoElement:
     name: str
     type: TypeSpecifier
-    isOneBased: bool
-    _common_name: str
+    isOneBased: typing.Optional[bool]
+    _common_name: typing.Optional[str]
     _py_class: typing.Any
 
     def __init__(
@@ -1611,7 +1611,10 @@ class FHIRPath(object):
         than an identifier expression:
         ``Patient.contained.all($this.is(Patient) implies age > 10)``
         """
-        raise (NotImplementedError, DeprecationWarning)
+        DeprecationWarning(
+            "The is() function is supported for backwards compatibility "
+            "with previous implementations of FHIRPath")
+        raise NotImplementedError
 
     def as_(self, type_cls: typing.Union[type, str]):
         """6.3.4. as(type : type specifier)
@@ -1625,7 +1628,11 @@ class FHIRPath(object):
         Observation.component.where(value.as(Quantity) > 30 'mg')
         ``
         """
-        raise (NotImplementedError, DeprecationWarning)
+        DeprecationWarning(
+            "The is() function is supported for backwards compatibility "
+            "with previous implementations of FHIRPath")
+
+        raise NotImplementedError
 
     #   6.4. Collections
     def in_(self):
