@@ -422,7 +422,8 @@ class FHIRPath(object):
 
     def anyFalse(self):
         """5.1.7. anyFalse() : Boolean
-        Takes a collection of Boolean values and returns true if any of the items are false.
+        Takes a collection of Boolean values and returns true
+        if any of the items are false.
         If all the items are true, or if the input is empty ({ }), the result is false.
 
         he following example returns true if any of the components of the Observation
@@ -450,15 +451,19 @@ class FHIRPath(object):
 
     def supersetOf(self):
         """5.1.9. supersetOf(other : collection) : Boolean
-        Returns true if all items in the collection passed as the other argument are members
-        of the input collection. Membership is determined using the = (Equals) (=) operation.
+        Returns true if all items in the collection passed
+        as the other argument are members
+        of the input collection. Membership is determined using
+        the = (Equals) (=) operation.
 
-        Conceptually, this function is evaluated by testing each element in the other collection
-        for membership in the input collection, with a default of true.
+        Conceptually, this function is evaluated by testing each element
+        in the other collection for membership in the input collection,
+        with a default of true.
         This means that if the other collection is empty ({ }), the result is true,
         otherwise if the input collection is empty ({ }), the result is false.
 
-        The following example returns true if the tags defined in any contained resource are
+        The following example returns true
+        if the tags defined in any contained resource are
         a superset of the tags defined in the MedicationRequest resource:
         ``MedicationRequest.contained.meta.tag.supersetOf(MedicationRequest.meta.tag)``
         """
@@ -476,8 +481,8 @@ class FHIRPath(object):
     def distinct(self):
         """5.1.11. distinct() : collection
         Returns a collection containing only the unique items in the input collection.
-        To determine whether two items are the same, the = (Equals) (=) operator is used,
-        as defined below.
+        To determine whether two items are the same,
+        the = (Equals) (=) operator is used, as defined below.
 
         If the input collection is empty ({ }), the result is empty.
 
@@ -492,11 +497,12 @@ class FHIRPath(object):
     def isDistinct(self):
         """5.1.12. isDistinct() : Boolean
         Returns true if all the items in the input collection are distinct.
-        To determine whether two items are distinct, the = (Equals) (=) operator is used,
-        as defined below.
+        To determine whether two items are distinct,
+        the = (Equals) (=) operator is used, as defined below.
 
         Conceptually, this function is shorthand for a comparison of the count() of
-        the input collection against the count() of the distinct() of the input collection:
+        the input collection against the count() of the distinct()
+        of the input collection:
         ``X.count() = X.distinct().count()``
         This means that if the input collection is empty ({ }), the result is true.
         """
@@ -507,7 +513,7 @@ class FHIRPath(object):
         """5.2.1. where(criteria : expression) : collection
         Returns a collection containing only those elements in the input collection
         for which the stated criteria expression evaluates to true. Elements for which
-        the expression evaluates to false or empty ({ }) are not included in the result.
+        the expression evaluates to false or empty ({ }) are not included in the result
 
         If the input collection is empty ({ }), the result is empty.
         If the result of evaluating the condition is other than a single boolean value,
@@ -532,13 +538,15 @@ class FHIRPath(object):
         and that if the input collection is empty ({ }), the result is empty as well.
         ``Bundle.entry.select(resource as Patient)``
 
-        This example results in a collection with only the patient resources from the bundle.
+        This example results in a collection with only
+        the patient resources from the bundle.
         ``Bundle.entry.select((resource as Patient).telecom.where(system = 'phone'))``
 
         This example results in a collection with all the telecom
         elements with system of phone for all the patients in the bundle.
         ``Patient.name.where(use = 'usual').select(given.first() + ' ' + family)``
-        This example returns a collection containing, for each "usual" name for the Patient,
+        This example returns a collection containing,
+        for each "usual" name for the Patient,
         the concatenation of the first given and family names.
         """
         raise NotImplementedError
@@ -549,7 +557,8 @@ class FHIRPath(object):
         the output collection, as long as the
         projection yields new items (as determined by the = (Equals) (=) operator).
 
-        This function can be used to traverse a tree and selecting only specific children:
+        This function can be used to traverse
+        a tree and selecting only specific children:
         ``ValueSet.expansion.repeat(contains)``
 
         Will repeat finding children called contains, until no new nodes are found.
@@ -567,9 +576,10 @@ class FHIRPath(object):
 
     def ofType(self, type_cls: typing.Union[type, str]):
         """5.2.4. ofType(type : type specifier) : collection
-        Returns a collection that contains all items in the input collection that are of
-        the given type or a subclass thereof. If the input collection is empty ({ }),
-        the result is empty. The type argument is an identifier that must resolve to
+        Returns a collection that contains all items in
+        the input collection that are of the given type or a subclass thereof.
+        If the input collection is empty ({ }), the result is empty.
+        The type argument is an identifier that must resolve to
         the name of a type in a model. For implementations with compile-time typing,
         this requires special-case handling when processing the argument to treat it as
         type specifier rather than an identifier expression:
@@ -618,7 +628,8 @@ class FHIRPath(object):
         """5.3.2. single() : collection
         Will return the single item in the input if there is just one item.
         If the input collection is empty ({ }), the result is empty.
-        If there are multiple items, an error is signaled to the evaluation environment.
+        If there are multiple items, an error is signaled
+        to the evaluation environment.
         This function is useful for ensuring that an error is returned if an assumption
         about cardinality is violated at run-time.
 
@@ -654,9 +665,11 @@ class FHIRPath(object):
 
     def skip(self):
         """5.3.6. skip(num : Integer) : collection
-        Returns a collection containing all but the first num items in the input collection.
+        Returns a collection containing all but the first num items
+        in the input collection.
         Will return an empty collection if there are no items remaining after the
-        indicated number of items have been skipped, or if the input collection is empty.
+        indicated number of items have been skipped,
+        or if the input collection is empty.
         If num is less than or equal to zero, the input collection is simply returned.
         """
         raise NotImplementedError
@@ -673,14 +686,16 @@ class FHIRPath(object):
         """5.3.8. intersect(other: collection) : collection
         Returns the set of elements that are in both collections.
         Duplicate items will be eliminated by this function.
-        Order of items is not guaranteed to be preserved in the result of this function.
+        Order of items is not guaranteed to be preserved
+        in the result of this function.
         """
         raise NotImplementedError
 
     def exclude(self):
         """5.3.9. exclude(other: collection) : collection
         Returns the set of elements that are not in the other collection.
-        Duplicate items will not be eliminated by this function, and order will be preserved.
+        Duplicate items will not be eliminated by this function,
+        and order will be preserved.
         e.g. ``(1 | 2 | 3).exclude(2) returns (1 | 3)``.
         """
         raise NotImplementedError
@@ -688,11 +703,12 @@ class FHIRPath(object):
     #   5.4. Combining
     def union(self):
         """5.4.1. union(other : collection)
-        Merge the two collections into a single collection, eliminating any duplicate values
-        (using = (Equals) (=) to determine equality).
+        Merge the two collections into a single collection,
+        eliminating any duplicate values (using = (Equals) (=) to determine equality).
         There is no expectation of order in the resulting collection.
 
-        In other words, this function returns the distinct list of elements from both inputs.
+        In other words, this function returns the distinct list of
+        elements from both inputs.
         For example, consider two lists of integers A: 1, 1, 2, 3 and B: 2, 3:
         ``A union B // 1, 2, 3``
         ``A union { } // 1, 2, 3``
@@ -706,10 +722,11 @@ class FHIRPath(object):
 
     def combine(self):
         """5.4.2. combine(other : collection) : collection
-        Merge the input and other collections into a single collection without eliminating
-        duplicate values. Combining an empty collection with a non-empty collection will
-        return the non-empty collection. There is no expectation of order in the resulting
-        collection.
+        Merge the input and other collections into a single collection without
+         eliminating duplicate values.
+         Combining an empty collection with a non-empty collection will return
+         the non-empty collection.
+         There is no expectation of order in the resulting collection.
         """
         raise NotImplementedError
 
@@ -718,19 +735,22 @@ class FHIRPath(object):
         """5.5.1. iif(criterion: expression, true-result: collection [,
         otherwise-result: collection]) : collection
 
-        The iif function in FHIRPath is an immediate if, also known as a conditional operator
-        (such as C’s ? : operator).
+        The iif function in FHIRPath is an immediate if,
+        also known as a conditional operator (such as C’s ? : operator).
         The criterion expression is expected to evaluate to a Boolean.
-        If criterion is true, the function returns the value of the true-result argument.
+        If criterion is true, the function returns
+        the value of the true-result argument.
 
-        If criterion is false or an empty collection, the function returns otherwise-result,
-        unless the optional otherwise-result is not given, in which case the function returns
-        an empty collection.
+        If criterion is false or an empty collection,
+        the function returns otherwise-result,
+        unless the optional otherwise-result is not given,
+        in which case the function returns an empty collection.
 
-        Note that short-circuit behavior is expected in this function. In other words,
-        true-result should only be evaluated if the criterion evaluates to true, and
-        otherwise-result should only be evaluated otherwise. For implementations,
-        this means delaying evaluation of the arguments.
+        Note that short-circuit behavior is expected in this function.
+        In other words, true-result should only be evaluated
+        if the criterion evaluates to true, and
+        otherwise-result should only be evaluated otherwise.
+        For implementations, this means delaying evaluation of the arguments.
         """
         raise NotImplementedError
 
@@ -749,33 +769,35 @@ class FHIRPath(object):
           representations of Boolean values
 
         If the item is not one the above types, or the item is a String, Integer,
-        or Decimal, but is not equal to one of the possible values convertible to a Boolean,
-        the result is empty.
+        or Decimal, but is not equal to one of the possible
+        values convertible to a Boolean, the result is empty.
         @see: https://www.hl7.org/fhirpath/#boolean-conversion-functions
         """
         raise NotImplementedError
 
     def convertsToBoolean(self):
         """5.5.2. convertsToBoolean() : Boolean
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is a Boolean
-        - the item is an Integer that is equal to one of the possible integer representations
-          of Boolean values
+        - the item is an Integer that is equal to one of the possible
+          integer representations of Boolean values
         - the item is a Decimal that is equal to one of the possible decimal
           representations of Boolean values
         - the item is a String that is equal to one of the possible string
           representations of Boolean values
 
-        If the item is not one of the above types, or the item is a String, Integer,
-        or Decimal, but is not equal to one of the possible values convertible to a Boolean,
-        the result is false.
+        If the item is not one of the above types, or the item is a String,
+        Integer, or Decimal, but is not equal to one of the possible values
+        convertible to a Boolean, the result is false.
 
-        Possible values for Integer, Decimal, and String are described in the toBoolean()
-        function.
+        Possible values for Integer, Decimal,
+        and String are described in the toBoolean() function.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items,
+        the evaluation of the expression will end and signal an error
+        to the calling environment.
 
         If the input collection is empty, the result is empty.
         """
@@ -803,7 +825,8 @@ class FHIRPath(object):
 
     def convertsToInteger(self):
         """5.5.3 convertsToInteger() : Boolean
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is an Integer
         - the item is a String and is convertible to an Integer
@@ -813,8 +836,8 @@ class FHIRPath(object):
         but is not convertible to an Integer (using the regex format (\\+|-)?\\d+),
         the result is false.
 
-        If the input collection contains multiple items,
-        the evaluation of the expression will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation
+        of the expression will end and signal an error to the calling environment.
 
         If the input collection is empty, the result is empty.
         """
@@ -854,7 +877,8 @@ class FHIRPath(object):
         If the item is not one of the above types, or is not convertible to a Date
         (using the format YYYY-MM-DD), the result is false.
 
-        If the item contains a partial date (e.g. '2012-01'), the result is a partial date.
+        If the item contains a partial date (e.g. '2012-01'),
+        the result is a partial date.
 
         If the input collection contains multiple items, the evaluation of the
         expression will end and signal an error to the calling environment.
@@ -876,7 +900,8 @@ class FHIRPath(object):
 
         If the item is not one of the above types, the result is empty.
         If the item is a String, but the string is not convertible to a
-        DateTime (using the format YYYY-MM-DDThh:mm:ss.fff(+|-)hh:mm), the result is empty.
+        DateTime (using the format YYYY-MM-DDThh:mm:ss.fff(+|-)hh:mm),
+        the result is empty.
 
         If the item contains a partial datetime (e.g. '2012-01-01T10:00'),
         the result is a partial datetime.
@@ -890,7 +915,8 @@ class FHIRPath(object):
 
     def convertsToDateTime(self):
         """5.5.5. convertsToDateTime() : Boolean
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is a DateTime
         - the item is a Date
@@ -899,8 +925,8 @@ class FHIRPath(object):
         If the item is not one of the above types, or is not convertible to a DateTime
         (using the format YYYY-MM-DDThh:mm:ss.fff(+|-)hh:mm), the result is false.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of
+        the expression will end and signal an error to the calling environment.
 
         If the input collection is empty, the result is empty.
         """
@@ -914,7 +940,8 @@ class FHIRPath(object):
 
         - the item is an Integer or Decimal
         - the item is a String and is convertible to a Decimal
-        - the item is a Boolean, where true results in a 1.0 and false results in a 0.0.
+        - the item is a Boolean, where true results in a 1.0
+          and false results in a 0.0.
 
         If the item is not one of the above types, the result is empty.
 
@@ -965,12 +992,12 @@ class FHIRPath(object):
 
         to a Quantity using the following regex format:
         ``(?'value'(\\+|-)?\\d+(\\.\\d+)?)\\s*('(?'unit'[^']+)'|(?'time'[a-zA-Z]+))?``
-        then the result is empty. For example, the following are valid quantity strings:
-        ``'4 days'``
-        ``'10 \'mg[Hg]\''``
+        then the result is empty. For example,
+        the following are valid quantity strings: ``'4 days'`` ``'10 \'mg[Hg]\''``
 
         If the input collection contains multiple items,
-        the evaluation of the expression will end and signal an error to the calling environment.
+        the evaluation of the expression will end and signal
+        an error to the calling environment.
 
         If the input collection is empty, the result is empty.
         @see https://www.hl7.org/fhirpath/#toquantityunit-string-quantity
@@ -979,7 +1006,8 @@ class FHIRPath(object):
 
     def convertsToQuantity(self):
         """5.5.7. convertsToQuantity([unit : String]) : Boolean
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is an Integer, Decimal, or Quantity
         - the item is a String that is convertible to a Quantity
@@ -1018,7 +1046,8 @@ class FHIRPath(object):
 
     def convertsToString(self):
         """5.5.8. convertsToString() : String
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is a String
         - the item is an Integer, Decimal, Date, Time, or DateTime
@@ -1048,7 +1077,8 @@ class FHIRPath(object):
         If the item is a String, but the string is not convertible to a Time
         (using the format hh:mm:ss.fff(+|-)hh:mm), the result is empty.
 
-        If the item contains a partial time (e.g. '10:00'), the result is a partial time.
+        If the item contains a partial time (e.g. '10:00'),
+        the result is a partial time.
 
         If the input collection contains multiple items, the evaluation of
         the expression will end and signal an error to the calling environment.
@@ -1059,7 +1089,8 @@ class FHIRPath(object):
 
     def convertsToTime(self):
         """5.5.9 convertsToTime() : Boolean
-        If the input collection contains a single item, this function will return true if:
+        If the input collection contains a single item,
+        this function will return true if:
 
         - the item is a Time
         - the item is a String and is convertible to a Time
@@ -1101,17 +1132,18 @@ class FHIRPath(object):
         If length is given, will return at most length number of characters
         from the input string.
 
-        If start lies outside the length of the string, the function returns empty ({ }).
-        If there are less remaining characters in the string than indicated by length,
-        the function returns just the remaining characters.
+        If start lies outside the length of the string,
+        the function returns empty ({ }). If there are less remaining characters in the
+        string than indicated by length, the function returns just
+        the remaining characters.
 
         If the input or start is empty, the result is empty.
 
         If an empty length is provided, the behavior is the same as
         if length had not been provided.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
         ``
         'abcdefg'.substring(3) // 'defg'
@@ -1148,8 +1180,8 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
         ``
         'abcdefg'.endsWith('efg') // true
@@ -1217,15 +1249,18 @@ class FHIRPath(object):
 
     def replace(self):
         """5.6.8. replace(pattern : String, substitution : String) : String
-        Returns the input string with all instances of pattern replaced with substitution.
-        If the substitution is the empty string (''), instances of pattern are removed
-        from the result. If pattern is the empty string (''), every character in the input
-        string is surrounded by the substitution, e.g. 'abc'.replace('','x') becomes 'xaxbxcx'.
+        Returns the input string with all instances of pattern replaced
+        with substitution. If the substitution is the empty string (''),
+        instances of pattern are removed from the result.
+        If pattern is the empty string (''), every character in the input
+        string is surrounded by the substitution,
+        e.g. 'abc'.replace('','x') becomes 'xaxbxcx'.
 
-        If the input collection, pattern, or substitution are empty, the result is empty ({ }).
+        If the input collection, pattern, or substitution are empty,
+        the result is empty ({ }).
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
         ``
         'abcdefg'.replace('cde', '123') // 'ab123fg'
@@ -1255,17 +1290,18 @@ class FHIRPath(object):
         match with the substitution string. The substitution may refer to identified
         match groups in the regular expression.
 
-        If the input collection, regex, or substitution are empty, the result is empty ({ }).
+        If the input collection, regex, or substitution are empty,
+        the result is empty ({ }).
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation
+        of the expression will end and signal an error to the calling environment.
 
         This example of replaceMatches() will convert a string with a date
         formatted as MM/dd/yy to dd-MM-yy:
 
         ``
-        '11/30/1972'.replace('\\b(?<month>\\d{1,2})/(?<day>\\d{1,2})/(?<year>\\d{2,4})\\b',
-       '${day}-${month}-${year}')
+        '11/30/1972'.replace('\\b(?<month>\\d{1,2})/
+        (?<day>\\d{1,2})/(?<year>\\d{2,4})\\b', '${day}-${month}-${year}')
        ``
 
        note``
@@ -1320,8 +1356,8 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
         ``
         1.ceiling() // 1
@@ -1340,8 +1376,8 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation
+        of the expression will end and signal an error to the calling environment.
 
         ``
         0.exp() // 1.0
@@ -1375,8 +1411,8 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation
+        of the expression will end and signal an error to the calling environment.
         ``
         1.ln() // 0.0
         1.0.ln() // 0.0
@@ -1443,8 +1479,8 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
         ``
         1.round() // 1
@@ -1462,11 +1498,11 @@ class FHIRPath(object):
 
         If the input collection is empty, the result is empty.
 
-        If the input collection contains multiple items, the evaluation of the expression
-        will end and signal an error to the calling environment.
+        If the input collection contains multiple items, the evaluation of the
+        expression will end and signal an error to the calling environment.
 
-        Note that this function is equivalent to raising a number of the power of 0.5 using
-        the power() function.
+        Note that this function is equivalent to raising a number of the power
+        of 0.5 using the power() function.
 
         ``
         81.sqrt() // 9.0
@@ -1504,7 +1540,8 @@ class FHIRPath(object):
 
     def descendants(self):
         """5.8.2. descendants() : collection
-        Returns a collection with all descendant nodes of all items in the input collection.
+        Returns a collection with all descendant nodes of all items in
+        the input collection.
         The result does not include the nodes in the input collection themselves.
         This function is a shorthand for repeat(children()).
         Note that the ordering of the children is undefined and using
@@ -1512,10 +1549,11 @@ class FHIRPath(object):
         on different platforms.
 
         note``
-        Note: Many of these functions will result in a set of nodes of different underlying types.
+        Note: Many of these functions will result in a set of nodes of
+        different underlying types.
         It may be necessary to use ofType() as described in the previous section to
-        maintain type safety. See Type safety and strict evaluation for more information
-        about type safe use of FHIRPath expressions.
+        maintain type safety. See Type safety and strict evaluation for
+        more information about type safe use of FHIRPath expressions.
         ``
         """
         raise NotImplementedError
@@ -1594,8 +1632,9 @@ class FHIRPath(object):
         """6.4.2. in (membership)
         If the left operand is a collection with a single item,
         this operator returns true if the item is in the right
-        operand using equality semantics. If the left-hand side of the operator is empty,
-        the result is empty, if the right-hand side is empty, the result is false.
+        operand using equality semantics. If the left-hand side of the operator is
+        empty, the result is empty,
+        if the right-hand side is empty, the result is false.
         If the left operand has multiple items, an exception is thrown.
 
         The following example returns true if 'Joe'

@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from fhirpath.enums import FHIR_VERSION
 from fhirpath import fhirpath
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.utils import lookup_fhir_class
 
 from ._utils import FHIR_EXAMPLE_RESOURCES
