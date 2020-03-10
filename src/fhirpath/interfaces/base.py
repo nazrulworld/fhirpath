@@ -84,6 +84,13 @@ class ITypeSpecifier(Interface):
     """ """
 
 
+class ITypeInfoWithElements(Interface):
+    """ """
+
+    def get_elements():
+        """ """
+
+
 class IPathInfoContext(Interface):
     """ """
 

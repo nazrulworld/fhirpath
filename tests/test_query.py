@@ -1,11 +1,11 @@
 # _*_ coding: utf-8 _*_
 import pytest
 
+from fhirpath import Q_
 from fhirpath.engine import EngineResultRow
 from fhirpath.enums import SortOrderType
 from fhirpath.exceptions import MultipleResultsFound
 from fhirpath.exceptions import ValidationError
-from fhirpath.fhirpath import Q_
 from fhirpath.fql import T_
 from fhirpath.fql import V_
 from fhirpath.fql import ElementPath
@@ -38,7 +38,7 @@ def test_fetch_all(es_data, engine):
         assert resource.__class__.__name__ == "OrganizationModel"
         # test fetch all
     result = builder(async_result=False).fetchall()
-    result.__class__.__name__ == "EngineResult"
+    assert result.__class__.__name__ == "EngineResult"
 
 
 def test_exists_query(es_data, engine):

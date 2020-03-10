@@ -2,10 +2,13 @@
 """Main module."""
 import inspect
 import typing
+from functools import wraps
 
-from .query import Q_  # noqa: F401  lgtm[py/unused-import]
+from zope.interface import implementer
+
+from fhirpath.interfaces import ITypeInfoWithElements
+
 from .storage import MemoryStorage
-from .types import PrimitiveDataTypes
 from .types import TypeSpecifier
 
 
@@ -23,6 +26,21 @@ FHIRPATH_DATATYPES = {
     "time": "Time",
     "bytes": "String",
 }
+
+
+def collection_type_required(func):
+    """ """
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not isinstance(self.get_type(), ListTypeInfo):
+            raise ValueError(
+                f"You are allowed to use this method ´{func.__name__}´, "
+                "for collection(list) type value only"
+            )
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class SimpleTypeInfo:
@@ -68,9 +86,7 @@ class ClassInfoElement:
     def from_el_property_tuple(cls, prop_tuple):
         """("name", "json_name", type, type_name, is_list, "of_many", not_optional)"""
         name = prop_tuple[0]
-        is_one_based = None
-        if prop_tuple[3] not in PrimitiveDataTypes:
-            is_one_based = False
+        is_one_based = prop_tuple[4] is False
         tn = "{0}.{1}".format(FHIR_PREFIX, prop_tuple[3])
         if prop_tuple[4]:
             tn = "List<{0}>".format(tn)
@@ -79,6 +95,7 @@ class ClassInfoElement:
         return self
 
 
+@implementer(ITypeInfoWithElements)
 class ClassInfo:
     """ """
 
@@ -101,6 +118,22 @@ class ClassInfo:
         for el in elements:
             self._indexes.append(el.name)
         self.element = elements
+        # Ensure base in cache
+        base_bases = inspect.getmro(base)
+        if (
+            "FHIRAbstractBase" in str(base_bases)
+            and self.baseType not in FHIRPath.__storage__
+            and base.__name__ != "FHIRAbstractBase"
+        ):
+            base_obj = base()
+            base_elements = FHIRPath.build_elements(
+                base_obj, base_bases[1], ClassInfoElement
+            )
+            base_self = ClassInfo.from_object_base(
+                base_obj, base_bases[1], base_elements
+            )
+            FHIRPath.__storage__[self.baseType] = base_self
+
         return self
 
     def get_elements(self):
@@ -108,6 +141,7 @@ class ClassInfo:
         return self.element
 
 
+@implementer(ITypeInfoWithElements)
 class ListTypeInfo:
     """For collection types, the result is a ListTypeInfo:
     ``ListTypeInfo { elementType: TypeSpecifier }``
@@ -121,6 +155,14 @@ class ListTypeInfo:
 
     elementType: TypeSpecifier
 
+    @classmethod
+    def from_specifier(cls, specifier):
+        """ """
+        assert "." in specifier, "Must contains with prefix!"
+        self = cls()
+        self.elementType = specifier
+        return self
+
     def get_elements(self):
         """ """
         return FHIRPath.__storage__[self.elementType].get_elements()
@@ -130,6 +172,7 @@ class TupleTypeInfoElement(ClassInfoElement):
     """ """
 
 
+@implementer(ITypeInfoWithElements)
 class TupleTypeInfo:
     """Anonymous types are structured types that have no associated name,
     only the elements of the structure. For example, in FHIR, the Patient.contact
@@ -212,9 +255,46 @@ class FHIRPath(object):
         return self._obj
 
     @staticmethod
+    def element_from_predecessor(predecessor, prop_name):
+        """ """
+        if predecessor() is None:
+            raise NotImplementedError
+
+        predecessor_type = predecessor.get_type()
+        if not ITypeInfoWithElements.providedBy(predecessor_type):
+            raise NotImplementedError
+
+        for el in predecessor_type.get_elements():
+            if el.name == prop_name:
+                return el
+            elif el._common_name == prop_name:
+                # xxx: extra care required.
+                return el
+
+        def _from_base(specifier):
+            """ """
+            try:
+                klass_info = FHIRPath.__storage__[specifier]
+            except KeyError:
+                return
+            for el_ in klass_info.get_elements():
+                if el_.name == prop_name:
+                    return el_
+                elif el_._common_name == prop_name:
+                    # xxx: extra care
+                    return el_
+            return _from_base(klass_info.baseType)
+
+        el = _from_base(predecessor_type.baseType)
+        return el
+
+    @staticmethod
     def build_elements(obj, base_type, klass):
         """ """
-        base_properties = [item[0] for item in base_type().elementProperties()]
+        if base_type is not object:
+            base_properties = [item[0] for item in base_type().elementProperties()]
+        else:
+            base_properties = []
         elements = list()
         for item in obj.elementProperties():
             if item[0] in base_properties:
@@ -242,7 +322,7 @@ class FHIRPath(object):
         if "FHIRAbstractBase" in str(bases):
             # FHIR type!
             klass_info = FHIRPath.build_fhir_abstract_type_info(
-                obj=bases[0](), base_klass=bases[1]
+                klass=bases[0], base_klass=bases[1]
             )
         else:
             specifier = element.type
@@ -252,13 +332,14 @@ class FHIRPath(object):
         return klass_info
 
     @staticmethod
-    def build_fhir_abstract_type_info(obj, base_klass):
+    def build_fhir_abstract_type_info(klass, base_klass, is_one_based=True):
         """ """
-        key = ".".join([FHIR_PREFIX, type(obj).__name__])
+        obj = klass()
+        key = ".".join([FHIR_PREFIX, klass.__name__])
 
         if key not in FHIRPath.__storage__:
             mod_base_name = inspect.getmodule(obj).__name__.split(".")[-1]
-            if mod_base_name == type(obj).__name__.lower():
+            if mod_base_name == klass.__name__.lower():
                 elements = FHIRPath.build_elements(obj, base_klass, ClassInfoElement)
                 klass_info = ClassInfo.from_object_base(obj, base_klass, elements)
             else:
@@ -271,18 +352,44 @@ class FHIRPath(object):
             # cache it!
             FHIRPath.convert_and_cache_elements(elements)
             FHIRPath.__storage__[key] = klass_info
-        return FHIRPath.__storage__[key]
+        if is_one_based is False:
+            return ListTypeInfo.from_specifier(key)
+        else:
+            return FHIRPath.__storage__[key]
 
     def _assign_type_info(self):
         """("name", "json_name", type, type_name, is_list, "of_many", not_optional)"""
+        element = None
+        is_one_based = True
+
+        if self._prop_name and self._predecessor:
+            element = FHIRPath.element_from_predecessor(
+                self._predecessor, self._prop_name
+            )
+
+        if element is not None:
+            is_one_based = element.isOneBased
+
         if self._obj is None:
-            # No Type Assigment Required
-            return
-        bases = inspect.getmro(type(self._obj))
+            if element is not None:
+                bases = inspect.getmro(element._py_class)
+            else:
+                return
+
+        else:
+            bases = inspect.getmro(type(self._obj))
+            if element is None and isinstance(self._obj, list):
+                is_one_based = False
 
         if "FHIRAbstractBase" in str(bases):
             # FHIR type!
-            type_info = FHIRPath.build_fhir_abstract_type_info(self._obj, bases[1])
+            if self._obj is None:
+                klass = bases[0]
+            else:
+                klass = type(self._obj)
+            type_info = FHIRPath.build_fhir_abstract_type_info(
+                klass, bases[1], is_one_based
+            )
             object.__setattr__(self, "_type_info", type_info)
 
         elif isinstance(self._obj, list) and self._prop_name and self._predecessor:
@@ -354,7 +461,8 @@ class FHIRPath(object):
         return newone
 
     #   5.1. Existence
-    def empty(self):
+    @collection_type_required
+    def empty(self) -> bool:
         """5.1.1. empty() : Boolean
         Returns true if the input collection is empty ({ }) and false otherwise.
         """
@@ -469,14 +577,13 @@ class FHIRPath(object):
         """
         raise NotImplementedError
 
+    @collection_type_required
     def count(self) -> int:
         """5.1.10. count() : Integer
         Returns the integer count of the number of items in the input collection.
         Returns 0 when the input collection is empty.
         """
-        if isinstance(self.get_type(), ListTypeInfo):
-            return self._obj is not None and len(self._obj) or 0
-        raise NotImplementedError("Collection Type Required")
+        return self._obj is not None and len(self._obj) or 0
 
     def distinct(self):
         """5.1.11. distinct() : collection
@@ -1676,7 +1783,7 @@ class FHIRPath(object):
         The type() function returns the type information for each element of the
         input collection, using one of the following concrete subtypes of TypeInfo:
         """
-        if self._obj is not None and self._type_info is None:
+        if self._type_info is None:
             self._assign_type_info()
 
         return self._type_info

@@ -4,6 +4,7 @@ import os
 
 import pytest
 from pytest_docker_fixtures import IS_TRAVIS
+from pytest_docker_fixtures import images
 
 from fhirpath.connectors import create_connection
 from fhirpath.fhirspec import DEFAULT_SETTINGS
@@ -19,6 +20,26 @@ from ._utils import pg_image
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+images.configure(
+    "elasticsearch",
+    "docker.elastic.co/elasticsearch/elasticsearch",
+    "7.3.1",
+    env={
+        "xpack.security.enabled": None,  # unset
+        "discovery.type": "single-node",
+        "http.host": "0.0.0.0",
+        "transport.host": "127.0.0.1",
+    },
+)
+
+images.configure(
+    "postgresql",
+    "postgres",
+    "10.10",
+    env={"POSTGRES_USER": "postgres", "POSTGRES_DB": "fhir_db"},
+)
 
 
 @pytest.fixture

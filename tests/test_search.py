@@ -1,11 +1,11 @@
 # _*_ coding: utf-8 _*_
 from urllib.parse import urlencode
 
+from fhirpath import Q_
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.enums import OPERATOR
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
-from fhirpath.fhirpath import Q_
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.search import Search
 from fhirpath.search import SearchContext

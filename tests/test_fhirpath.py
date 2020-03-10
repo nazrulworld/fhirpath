@@ -26,6 +26,8 @@ def test_fhirpath_class_type_info():
     assert len(fpath.get_type().element) == 18
     assert fpath.get_type().name == "Patient"
     assert fpath.get_type().baseType == "FHIR.DomainResource"
+    # Test Element from Base
+    assert fpath.meta.get_type().name == "Meta"
 
 
 def test_fhirpath_list_type_info():
@@ -44,6 +46,16 @@ def test_fhirpath_list_type_info():
         fhirpath.FHIRPath(["mu", "mn"])
         assert "root fhirpath cannot be initialized" in exc_info.value.args[0]
 
+    obj.address = None
+    fpath = fhirpath.FHIRPath(obj)
+    assert isinstance(fpath.address.get_type(), fhirpath.ListTypeInfo)
+
+    obj.address = []
+    fpath = fhirpath.FHIRPath(obj)
+    assert isinstance(fpath.address.get_type(), fhirpath.ListTypeInfo)
+    assert isinstance(fpath.extension.get_type(), fhirpath.ListTypeInfo)
+    assert fpath.extension() is None
+
 
 def test_fhirpath_simple_type_info():
     """ """
@@ -56,6 +68,11 @@ def test_fhirpath_simple_type_info():
     assert fpath.active.get_type().name == "boolean"
 
     assert fpath.identifier[0].type.text.get_type().name == "string"
+    obj.gender = None
+    obj.active = None
+    fpath = fhirpath.FHIRPath(obj)
+    assert fpath.gender.get_type().name == "code"
+    assert fpath.active.get_type().name == "boolean"
 
 
 def test_fhirpath_tuple_type_info():

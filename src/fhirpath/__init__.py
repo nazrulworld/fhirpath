@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Top-level package for fhirpath."""
+from .fhirpath import FHIRPath  # noqa: F401  lgtm[py/unused-import]
+from .query import Q_  # noqa: F401  lgtm[py/unused-import]
 
 
 def get_version():

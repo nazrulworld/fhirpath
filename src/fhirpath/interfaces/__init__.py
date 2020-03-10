@@ -15,6 +15,7 @@ from .base import ISearch  # noqa: F401
 from .base import ISearchContext  # noqa: F401
 from .base import ISearchContextFactory  # noqa: F401
 from .base import IStorage  # noqa: F401
+from .base import ITypeInfoWithElements  # noqa: F401
 from .base import ITypeSpecifier  # noqa: F401
 from .connectors import IConnection  # noqa: F401
 from .dialects import IDialect  # noqa: F401
