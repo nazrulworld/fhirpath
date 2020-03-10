@@ -7,9 +7,9 @@ from zope.interface import implementer
 from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ConstraintNotSatisfied
 from fhirpath.exceptions import ValidationError
+from fhirpath.model import Model
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION
-from fhirpath.utils import Model
 from fhirpath.utils import builder
 
 from .constraints import required_finalized

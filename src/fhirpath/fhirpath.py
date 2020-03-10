@@ -8,6 +8,7 @@ from zope.interface import implementer
 
 from fhirpath.interfaces import ITypeInfoWithElements
 
+from .exceptions import MultipleResultsFound
 from .storage import MemoryStorage
 from .types import TypeSpecifier
 
@@ -466,8 +467,11 @@ class FHIRPath(object):
         """5.1.1. empty() : Boolean
         Returns true if the input collection is empty ({ }) and false otherwise.
         """
-        raise NotImplementedError
+        if self._obj is None:
+            return True
+        return len(self._obj) == 0
 
+    @collection_type_required
     def exists(self):
         """5.1.2. exists([criteria : expression]) : Boolean
         Returns true if the collection has any elements, and false otherwise.
@@ -731,6 +735,7 @@ class FHIRPath(object):
         except IndexError:
             pass
 
+    @collection_type_required
     def single(self):
         """5.3.2. single() : collection
         Will return the single item in the input if there is just one item.
@@ -745,32 +750,47 @@ class FHIRPath(object):
         an error is signaled to the evaluation environment:
         ``Patient.name.single()``
         """
-        raise NotImplementedError
+        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
+            return None
+        if len(self._obj) == 1:
+            return self[0]
 
+        raise MultipleResultsFound
+
+    @collection_type_required
     def first(self):
         """5.3.3. first() : collection
         Returns a collection containing only the first item in the input collection.
         This function is equivalent to item[0], so it will return an empty collection
         if the input collection has no items.
         """
-        raise NotImplementedError
+        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
+            return None
+        return self[0]
 
+    @collection_type_required
     def last(self):
         """5.3.4. last() : collection
         Returns a collection containing only the last item in the input collection.
         Will return an empty collection if the input collection has no items.
         """
-        raise NotImplementedError
+        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
+            return None
+        return self[-1]
 
+    @collection_type_required
     def tail(self):
         """5.3.5. tail() : collection
         Returns a collection containing all but the first item in the input collection.
         Will return an empty collection if the input collection has no items,
         or only one item.
         """
-        raise NotImplementedError
+        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) < 2):
+            return None
+        return self[1:]
 
-    def skip(self):
+    @collection_type_required
+    def skip(self, num: int):
         """5.3.6. skip(num : Integer) : collection
         Returns a collection containing all but the first num items
         in the input collection.
@@ -781,7 +801,8 @@ class FHIRPath(object):
         """
         raise NotImplementedError
 
-    def take(self):
+    @collection_type_required
+    def take(self, num: int):
         """5.3.7. take(num : Integer) : collection
         Returns a collection containing the first num items in the input collection,
         or less if there are less than num items. If num is less than or equal to 0,

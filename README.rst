@@ -32,7 +32,11 @@ Introduction
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
-FHIRPath_ Normative Release (v2.0.0) implementation in Python. This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
+FHIRPath_ Normative Release (v2.0.0) implementation in Python, along side it
+provides support for `FHIR Search <https://www.hl7.org/fhir/search.html>`_ API and
+Query (we called it ``fql(FHIR Query Language)``)
+API to fetch FHIR resources from any data-source(database).
+This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
 FHIRPath_ Normative Release (v2.0.0) specification compliance product.
 
 * Supports FHIR® ``STU3`` and ``R4``.
@@ -176,9 +180,7 @@ ToDo
 
 1. `fhirbase`_ engine aka provider implementation.
 
-2. https://stackoverflow.com/questions/27920911/elasticsearch-query-on-array-index
-
-
+2. All methods/functions are defined in `FHIRPath`_ specification, would be completed.
 
 Credits
 -------

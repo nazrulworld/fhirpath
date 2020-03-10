@@ -7,7 +7,8 @@ History
 
 New Features
 
-- ``FHIRPath`` (Normative Release) support available.
+- ``FHIRPath`` (Normative Release) support available. A dedicated class is now available ```fhirpath.FHIRPath``,
+  although it is working in progress (meaning that many methods/functions are yet to do complete.)
 
 Improvements
 
@@ -17,10 +18,16 @@ Improvements
 
 - Add support for ``:bellow`` FHIR search modifier and ``sa`` prefix. See https://github.com/nazrulworld/fhirpath/issues/2
 
+
 Bugfixes
 
 - Upgrade to this version is recommended as it includes couples of major bug fixes.
 
+
+Breaking
+
+- The ``fhirpath.navigator`` module has been removed and introduced new module ``fhirpath.model``.
+  ``fhirpath.utils.Model`` has been moved to `fhirpath.model``.
 
 
 0.4.1 (2019-11-05)
