@@ -1,6 +1,6 @@
 [project]
 name = "fhirpath"
-version = "0.4.2.dev0"
+version = "0.5.0.dev0"
 description = "FHIRPath implementation in Python."
 authors = [
     "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -15,7 +15,7 @@ documentation = "https://fhirpath.readthedocs.io/"
 keywords = ["fhirpath", "HL7", "FHIR", "healthcare", "IHE"]
 
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Topic :: Software Development",
     "Intended Audience :: Developers",
     "Intended Audience :: Healthcare Industry",
