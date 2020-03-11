@@ -57,10 +57,10 @@ fhirpath.fhirpath module
    :undoc-members:
    :show-inheritance:
 
-fhirpath.navigator module
--------------------------
+fhirpath.model module
+---------------------
 
-.. automodule:: fhirpath.navigator
+.. automodule:: fhirpath.model
    :members:
    :undoc-members:
    :show-inheritance:

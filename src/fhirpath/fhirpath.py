@@ -851,10 +851,10 @@ class FHIRPath(object):
     def combine(self):
         """5.4.2. combine(other : collection) : collection
         Merge the input and other collections into a single collection without
-         eliminating duplicate values.
-         Combining an empty collection with a non-empty collection will return
-         the non-empty collection.
-         There is no expectation of order in the resulting collection.
+        eliminating duplicate values.
+        Combining an empty collection with a non-empty collection will return
+        the non-empty collection.
+        There is no expectation of order in the resulting collection.
         """
         raise NotImplementedError
 
@@ -1425,20 +1425,18 @@ class FHIRPath(object):
         of the expression will end and signal an error to the calling environment.
 
         This example of replaceMatches() will convert a string with a date
-        formatted as MM/dd/yy to dd-MM-yy:
+        formatted as MM/dd/yy to dd-MM-yy::
 
-        ``
-        '11/30/1972'.replace('\\b(?<month>\\d{1,2})/
-        (?<day>\\d{1,2})/(?<year>\\d{2,4})\\b', '${day}-${month}-${year}')
+            '11/30/1972'.replace('\\b(?<month>\\d{1,2})/
+            (?<day>\\d{1,2})/(?<year>\\d{2,4})\\b', '${day}-${month}-${year}')
+
+
        ``
-
-       note``
        Note: Platforms will typically use native regular expression implementations.
        These are typically fairly similar, but there will always be small differences.
        As such, FHIRPath does not prescribe a particular dialect, but recommends the
        use of the [PCRE] flavor as the dialect most likely to be broadly supported
-       and understood.
-       ``
+       and understood.``
         """
         raise NotImplementedError
 

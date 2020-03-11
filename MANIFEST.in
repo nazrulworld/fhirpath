@@ -16,3 +16,6 @@ recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
 exclude Makefile .editorconfig Pipfile* tox.ini buildout.cfg .gitmodules .readthedocs.yml requirements_dev.txt .lgtm.yml
+exclude mypy.ini
+exclude  src/fhirpath/version.py
+

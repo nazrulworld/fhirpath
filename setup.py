@@ -78,11 +78,11 @@ docs_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.4.2.dev0",
+    version="0.5.0.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Healthcare Industry",
         "Intended Audience :: Information Technology",
@@ -110,7 +110,7 @@ setup(
         "docs": docs_requirements,
     },
     url="https://nazrul.me/fhirpath/",
-    python_requires=", ".join((">=3.5", )),
+    python_requires=", ".join((">3.5", )),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",
