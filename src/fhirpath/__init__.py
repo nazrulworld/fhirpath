@@ -15,7 +15,7 @@ def get_version():
             ln = line.strip()
             if not ln:
                 continue
-            if ln.startswith("version"):
+            if ln.startswith("__version__"):
                 return eval(ln.split("=")[1].strip())
 
 
