@@ -1,7 +1,7 @@
 {
   "resourceType": "MedicinalProductUndesirableEffect",
   "meta": {
-    "lastUpdated": "2020-02-22T11:15:16+06:00",
+    "lastUpdated": "2020-03-15T16:44:10+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -22,11 +22,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -56,11 +52,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -90,11 +82,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -117,6 +105,181 @@
             }
           }
         }
+      },
+      "population": {
+        "properties": {
+          "ageRange": {
+            "properties": {
+              "high": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              },
+              "low": {
+                "properties": {
+                  "value": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "unit": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "ageCodeableConcept": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard"
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "gender": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard"
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "race": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard"
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          },
+          "physiologicalCondition": {
+            "properties": {
+              "text": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "standard"
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "type": "nested"
       },
       "id": {
         "type": "keyword",

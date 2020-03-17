@@ -5,7 +5,14 @@ History
 0.5.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+New features
+
+- ``__main__`` module has been created, now possible to see version and/or initiated required FHIR versions.
+  For example ``python -m "fhirpath" --version``, ``python -m "fhirpath" --init-setup`` [nazrulworld]
+
+Improvements
+
+- Updated fix version of elasticsearch mappings.
 
 
 0.5.0 (2020-03-11)

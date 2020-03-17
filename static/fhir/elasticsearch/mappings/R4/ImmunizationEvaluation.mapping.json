@@ -1,7 +1,7 @@
 {
   "resourceType": "ImmunizationEvaluation",
   "meta": {
-    "lastUpdated": "2020-02-22T11:15:16+06:00",
+    "lastUpdated": "2020-03-15T16:44:10+06:00",
     "versionId": "R4"
   },
   "mapping": {
@@ -29,11 +29,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "standard",
-                "index_prefixes": {
-                  "min_chars": 1,
-                  "max_chars": 10
-                }
+                "analyzer": "standard"
               }
             }
           }
@@ -74,11 +70,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -117,11 +109,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -151,11 +139,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "standard",
-            "index_prefixes": {
-              "min_chars": 1,
-              "max_chars": 10
-            }
+            "analyzer": "standard"
           },
           "coding": {
             "type": "nested",
@@ -184,21 +168,13 @@
         "type": "text",
         "index": true,
         "store": false,
-        "analyzer": "standard",
-        "index_prefixes": {
-          "min_chars": 1,
-          "max_chars": 10
-        }
+        "analyzer": "standard"
       },
       "series": {
         "type": "text",
         "index": true,
         "store": false,
-        "analyzer": "standard",
-        "index_prefixes": {
-          "min_chars": 1,
-          "max_chars": 10
-        }
+        "analyzer": "standard"
       },
       "doseNumberPositiveInt": {
         "type": "integer",
@@ -208,11 +184,7 @@
         "type": "text",
         "index": true,
         "store": false,
-        "analyzer": "standard",
-        "index_prefixes": {
-          "min_chars": 1,
-          "max_chars": 10
-        }
+        "analyzer": "standard"
       },
       "seriesDosesPositiveInt": {
         "type": "integer",
@@ -222,11 +194,7 @@
         "type": "text",
         "index": true,
         "store": false,
-        "analyzer": "standard",
-        "index_prefixes": {
-          "min_chars": 1,
-          "max_chars": 10
-        }
+        "analyzer": "standard"
       },
       "id": {
         "type": "keyword",

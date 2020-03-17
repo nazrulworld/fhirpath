@@ -96,6 +96,12 @@ def test_fhir_search_spec():
 
     for param in resource_search_params:
         assert param in patient_params
+    encounter_params = storage.get("Encounter")
+
+    assert "length" in encounter_params
+
+    for param in resource_search_params:
+        assert param in encounter_params
 
 
 def test_lookup_fhir_resource_spec():
