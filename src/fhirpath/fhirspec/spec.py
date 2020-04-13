@@ -1,6 +1,6 @@
 # _*_ coding: utf-8 _*_
 """Most of codes are copied from https://github.com/nazrulworld/fhir-parser
-and modified in terms of styling, unnesessary codes cleanup
+and modified in terms of styling, unnecessary codes cleanup
 (those are not relevant for this package)
 """
 import datetime
@@ -24,6 +24,7 @@ logger = logging.getLogger("fhirpath.fhrspec")
 
 # allow to skip some profiles by matching against their url (used while WiP)
 skip_because_unsupported = [r"SimpleQuantity"]
+HTTP_URL = re.compile(r"^https?://", re.IGNORECASE)
 
 
 class FHIRSpec(object):
@@ -268,19 +269,28 @@ class FHIRVersionInfo(object):
         self.year = now.year
 
         self.version = None
-        infofile = directory / "version.info"
-        self.read_version(infofile)
+        self.version_raw = None
+        self.build = None
+        self.revision = None
+        info_file = directory / "version.info"
+        self.read_version(info_file)
 
     def read_version(self, filepath: pathlib.Path):
         """ """
-        assert filepath.is_file()
-        with io.open(str(filepath), "r", encoding="utf-8") as fp:
-            text = fp.read()
+        assert filepath.is_file
+        with io.open(str(filepath), "r", encoding="utf-8") as handle:
+            text = handle.read()
             for line in text.split("\n"):
                 if "=" in line:
                     (n, v) = line.strip().split("=", 2)
                     if "FhirVersion" == n:
+                        self.version_raw = v
+                    elif "version" == n:
                         self.version = v
+                    elif "buildId" == n:
+                        self.build = v
+                    elif "revision" == n:
+                        self.revision = v
 
 
 class FHIRValueSet(object):
@@ -422,6 +432,8 @@ class FHIRStructureDefinition(object):
         self.main_element = None
         self._class_map = {}
         self.classes = []
+        self.fhir_version = None
+        self.fhir_last_updated = None
         self._did_finalize = False
 
         if profile is not None:
@@ -449,6 +461,8 @@ class FHIRStructureDefinition(object):
 
         # parse structure
         self.url = profile.get("url")
+        self.fhir_version = profile.get("fhirVersion")
+        self.fhir_last_updated = profile.get("meta", {}).get("lastUpdated")
         logger.info('Parsing profile "{0}"'.format(profile.get("name")))
         self.structure = FHIRStructureDefinitionStructure(self, profile)
 
@@ -976,49 +990,81 @@ class FHIRElementType(object):
         if type_dict is not None:
             self.parse_from(type_dict)
 
-    def parse_from(self, type_dict):
-        self.code = type_dict.get("code")
-        ext_code = type_dict.get("_code")
-        if self.code is None and ext_code is not None:
-            json_ext = [
-                e
-                for e in ext_code.get("extension", [])
-                if e.get("url")
-                == (
-                    "http://hl7.org/fhir/StructureDefinition/"
-                    "structuredefinition-json-type"
-                )
-            ]
-            if len(json_ext) < 1:
-                raise Exception(
-                    'Expecting either "code" or "_code" and '
-                    f"a JSON type extension, found neither in {type_dict}"
-                )
-            if len(json_ext) > 1:
+    @staticmethod
+    def parse_extension(type_dict):
+        """ """
+        extensions = []
+        urls = [
+            "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+            "http://hl7.org/fhir/StructureDefinition/structuredefinition-json-type",
+        ]
+
+        if type_dict.get("_code", None) is not None:
+            extensions = type_dict["_code"].get("extension", [])
+
+        if len(extensions) == 0:
+            # New Style from R4
+            extensions = type_dict.get("extension", [])
+
+        if len(extensions) > 0:
+
+            extensions_ = [e for e in extensions if e.get("url") in urls]
+            if len(extensions_) == 1:
+                return extensions_[0]
+            elif len(extensions_) > 1:
                 raise Exception(
                     f"Found more than one structure definition JSON type in {type_dict}"
                 )
-            self.code = json_ext[0].get("valueString")
+
+    @staticmethod
+    def parse_target_profile(type_dict):
+        """ """
+        profile = type_dict.get("targetProfile", None)
+        if profile is None:
+            return
+        if isinstance(profile, (str, bytes)):
+            profile = [profile]
+
+        if not isinstance(profile, list):
+            raise Exception(
+                "Expecting a list for 'targetProfile' "
+                "definition of an element type, got {0} as {1}".format(
+                    profile, type(profile)
+                )
+            )
+        return profile
+
+    def parse_from(self, type_dict):
+        """ """
+        self.code = type_dict.get("code")
+        extension = FHIRElementType.parse_extension(type_dict)
+
+        if self.code and HTTP_URL.match(self.code):
+            if extension is None:
+                raise NotImplementedError
+            self.code = extension["valueUrl"]
+
+        elif self.code is None:
+            if extension is None:
+                raise Exception(
+                    'Expecting either "code" or "_code" and a JSON type extension, '
+                    f"found neither in {type_dict}"
+                )
+
+            self.code = extension["valueString"]
         if self.code is None:
             raise Exception(f"No JSON type found in {type_dict}")
+
         if not _is_string(self.code):
             raise Exception(
-                "Expecting a string for 'code' definition "
-                "of an element type, got {0} as {1}".format(self.code, type(self.code))
-            )
-        if not isinstance(type_dict.get("targetProfile"), (list,)):
-            self.profile = type_dict.get("targetProfile")
-            if (
-                self.profile is not None
-                and not _is_string(self.profile)
-                and not isinstance(type_dict.get("targetProfile"), (list,))
-            ):  # Added a check to make sure the targetProfile wasn't a list
-                raise Exception(
-                    "Expecting a string for 'targetProfile' "
-                    "definition of an element type, got {0} as {1}".format(
-                        self.profile, type(self.profile)
-                    )
+                "Expecting a string for 'code' definition of "
+                "an element type, got {0} as {1}".format(
+                    self.code, type(self.code)
                 )
+            )
+        profile = FHIRElementType.parse_target_profile(type_dict)
+        if profile is not None:
+            self.profile = profile
 
 
 class FHIRElementBinding(object):
@@ -1253,7 +1299,7 @@ class FHIRSearchSpec(object):
 
     def write(self):
         """ """
-        storage = self.storage.get(self.fhir_release.value)
+        storage = self.storage.get(self.fhir_release.name)
 
         for param_def in self.parameters_def:
             for resource_type in param_def.expression_map:
@@ -1273,7 +1319,7 @@ class FHIRSearchSpec(object):
 
     def apply_base_resource_params(self):
         """ """
-        storage = self.storage.get(self.fhir_release.value)
+        storage = self.storage.get(self.fhir_release.name)
         base_resource_params = storage.get("Resource")
 
         for resource_type in storage:

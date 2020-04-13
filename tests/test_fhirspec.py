@@ -32,11 +32,16 @@ internet_conn_required = pytest.mark.skipif(
 )
 
 
-def ensure_spec_jsons(release):
+def ensure_spec_jsons(release_name):
     """ """
-    if not (spec_directory / release).exists():
+    release = getattr(FHIR_VERSION, release_name)
+    spec_dir = spec_directory / release.name
+    if not spec_dir.exists():
+        spec_dir.mkdir()
+
+    if not (spec_dir / release.value).exists():
         if has_internet_connection():
-            download_and_extract(FHIR_VERSION[release], str(spec_directory))
+            download_and_extract(release, spec_dir)
         else:
             return False
     return True
@@ -44,36 +49,39 @@ def ensure_spec_jsons(release):
 
 def test_load_spec_json(fhir_spec_settings):
     """ """
-    release = "R4"
-    if not ensure_spec_jsons(release):
+    release = FHIR_VERSION["R4"]
+    if not ensure_spec_jsons(release.name):
         pytest.skip("Internet Connection is required")
 
-    source = str(spec_directory / release)
+    source = str(spec_directory / release.name / release.value)
     settings = attrdict() + fhir_spec_settings
     spec = FHIRSpec(source, settings)
-    assert spec.info.version == "4.0.0-a53ec6ee1b"
+    assert spec.info.version_raw == "4.0.1-9346c8cc45"
 
 
 def test_fhirspec_creation_using_factory(fhir_spec_settings):
     """ """
-    release = "R4"
-    if not ensure_spec_jsons(release):
+    release_name = "R4"
+    if not ensure_spec_jsons(release_name):
         pytest.skip("Internet Connection is required")
 
-    spec = FhirSpecFactory.from_release(release, fhir_spec_settings)
-    assert spec.info.version == "4.0.0-a53ec6ee1b"
+    spec = FhirSpecFactory.from_release(release_name, fhir_spec_settings)
+    assert spec.info.version_raw == "4.0.1-9346c8cc45"
 
 
 @internet_conn_required
 def test_fhir_spec_download_and_load():
     """ """
-    release = "STU3"
-    if (spec_directory / release).exists():
-        shutil.rmtree((spec_directory / release))
+    release = FHIR_VERSION["STU3"]
+    spec_dir = spec_directory / release.name
+    if not spec_dir.exists():
+        spec_dir.mkdir()
+    if (spec_dir / release.value).exists():
+        shutil.rmtree((spec_dir / release.value))
 
-    spec = FhirSpecFactory.from_release(release)
+    spec = FhirSpecFactory.from_release(release.name)
 
-    assert spec.info.version == "3.0.1.11917"
+    assert spec.info.version_raw == "3.0.2.11917"
 
 
 def test_fhir_search_spec():

@@ -126,11 +126,18 @@ SPEC_JSON_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
 
 def ensure_spec_jsons(release: FHIR_VERSION):
     """ """
-    if not (SPEC_JSON_DIR / release.value).exists():
+    if release == FHIR_VERSION.DEFAULT:
+        release = getattr(FHIR_VERSION, release.value)
+    version = release.value
+    spec_dir = SPEC_JSON_DIR / release.name
+    if not (spec_dir / version).exists():
         # Need download first
+        if not spec_dir.exists():
+            spec_dir.mkdir(parents=True)
+
         from .downloader import download_and_extract
 
-        download_and_extract(release, str(SPEC_JSON_DIR))
+        download_and_extract(release, spec_dir)
 
 
 class FhirSpecFactory:
@@ -140,6 +147,9 @@ class FhirSpecFactory:
     def from_release(release: str, settings: dict = None):
         """ """
         release_enum = FHIR_VERSION[release]
+        if release_enum == FHIR_VERSION.DEFAULT:
+            release_enum = getattr(FHIR_VERSION, release_enum.value)
+        version = release_enum.value
 
         ensure_spec_jsons(release_enum)
 
@@ -147,7 +157,9 @@ class FhirSpecFactory:
         if settings:
             default_settings += settings
 
-        spec = FHIRSpec(str(SPEC_JSON_DIR / release_enum.value), default_settings)
+        spec = FHIRSpec(
+            str(SPEC_JSON_DIR / release_enum.name / version), default_settings
+        )
 
         return spec
 
@@ -159,11 +171,13 @@ class FHIRSearchSpecFactory:
     def from_release(release: str):
         """ """
         release_enum = FHIR_VERSION[release]
-
+        if release_enum == FHIR_VERSION.DEFAULT:
+            release_enum = getattr(FHIR_VERSION, release_enum.value)
+        version = release_enum.value
         ensure_spec_jsons(release_enum)
 
         spec = FHIRSearchSpec(
-            (SPEC_JSON_DIR / release_enum.value),
+            (SPEC_JSON_DIR / release_enum.name / version),
             release_enum,
             SEARCH_PARAMETERS_STORAGE,
         )
@@ -198,12 +212,15 @@ def lookup_fhir_resource_spec(
         >>> dotted_path is None
         True
     """
-    storage = FHIR_RESOURCE_SPEC_STORAGE.get(fhir_release.value)
+    if fhir_release == FHIR_VERSION.DEFAULT:
+        fhir_release = getattr(FHIR_VERSION, fhir_release.value)
+
+    storage = FHIR_RESOURCE_SPEC_STORAGE.get(fhir_release.name)
 
     if storage.exists(resource_type) and cache:
         return storage.get(resource_type)
 
-    specs = FhirSpecFactory.from_release(fhir_release.value)
+    specs = FhirSpecFactory.from_release(fhir_release.name)
     try:
         return specs.profiles[resource_type.lower()]
     except KeyError:

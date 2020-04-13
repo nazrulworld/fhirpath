@@ -6,16 +6,16 @@ from typing import Callable
 from typing import Text
 
 
-__author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
 class FHIR_VERSION(enum.Enum):
-    """ """
+    """Release:str : Version:str """
 
-    DEFAULT: Text = "R4"
-    STU3: Text = "STU3"
-    R4: Text = "R4"
-    DSTU2: Text = "DSTU2"
+    DEFAULT: str = "R4"
+    STU3: str = "3.0.2"
+    R4: str = "4.0.1"
+    DSTU2: str = "1.0.2"
 
 
 @enum.unique

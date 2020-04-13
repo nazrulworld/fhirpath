@@ -53,7 +53,7 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
-    "fhir.resources>=5.0.1",
+    "fhir.resources>=5.1.0",
     "jsonpatch",
     "yarl"
 ]

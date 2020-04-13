@@ -215,13 +215,16 @@ class Search(object):
     @staticmethod
     def get_parameter_definition(fhir_release: FHIR_VERSION, resource_name: str):
         """ """
-        storage = SEARCH_PARAMETERS_STORAGE.get(fhir_release.value)
+        if fhir_release == FHIR_VERSION.DEFAULT:
+            fhir_release = getattr(FHIR_VERSION, fhir_release.value)
+
+        storage = SEARCH_PARAMETERS_STORAGE.get(fhir_release.name)
 
         if storage.empty():
             """Need to load first """
             from fhirpath.fhirspec import FHIRSearchSpecFactory
 
-            spec = FHIRSearchSpecFactory.from_release(fhir_release.value)
+            spec = FHIRSearchSpecFactory.from_release(fhir_release.name)
             spec.write()
 
         return storage.get(resource_name)

@@ -158,15 +158,18 @@ def lookup_fhir_class_path(
         >>> dotted_path is None
         True
     """
-    storage = FHIR_RESOURCE_CLASS_STORAGE.get(fhir_release.value)
+    if fhir_release == FHIR_VERSION.DEFAULT:
+        fhir_release = getattr(FHIR_VERSION, fhir_release.value)
+
+    storage = FHIR_RESOURCE_CLASS_STORAGE.get(fhir_release.name)
 
     if storage.exists(resource_type) and cache:
         return storage.get(resource_type)
 
     # Trying to get from entire modules
     prime_module: List[Text] = ["fhir", "resources"]
-    if FHIR_VERSION.DEFAULT != fhir_release:
-        prime_module.append(fhir_release.value)
+    if FHIR_VERSION["DEFAULT"].value != fhir_release.name:
+        prime_module.append(fhir_release.name)
 
     prime_module_level = len(prime_module)
     prime_module_path: Text = ".".join(prime_module)
