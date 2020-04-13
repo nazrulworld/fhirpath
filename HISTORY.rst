@@ -2,10 +2,14 @@
 History
 =======
 
-0.5.2 (unreleased)
+0.6.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Breaking
+
+- Minimum required ``fhir.resources`` version is now ``5.1.0`` meaning FHIR R4 4.0.1 and STU3 3.0.2.
+  Please follow changes log https://pypi.org/project/fhir.resources/5.1.0/.
+
 
 
 0.5.1 (2020-03-18)

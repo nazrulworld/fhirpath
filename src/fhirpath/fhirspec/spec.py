@@ -1058,9 +1058,7 @@ class FHIRElementType(object):
         if not _is_string(self.code):
             raise Exception(
                 "Expecting a string for 'code' definition of "
-                "an element type, got {0} as {1}".format(
-                    self.code, type(self.code)
-                )
+                "an element type, got {0} as {1}".format(self.code, type(self.code))
             )
         profile = FHIRElementType.parse_target_profile(type_dict)
         if profile is not None:
