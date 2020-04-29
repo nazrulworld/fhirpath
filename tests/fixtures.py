@@ -8,7 +8,7 @@ from pytest_docker_fixtures import IS_TRAVIS
 from pytest_docker_fixtures import images
 
 from fhirpath.connectors import create_connection
-from fhirpath.fhirspec import config
+from fhirpath.fhirspec import settings
 from fhirpath.utils import proxy
 
 from ._utils import TestElasticsearchEngine
@@ -55,9 +55,9 @@ def response():
 @pytest.fixture(scope="module")
 def fhir_spec_settings():
     """ """
-    settings = Configuration.from_module(config)
+    config = Configuration.from_module(settings)
 
-    yield settings
+    yield config
 
 
 @pytest.fixture(scope="session")

@@ -42,7 +42,7 @@ class FhirSpecFactory:
     """ """
 
     @staticmethod
-    def from_release(release: str, settings: Configuration = None):
+    def from_release(release: str, config: Configuration = None):
         """ """
         release_enum = FHIR_VERSION[release]
         if release_enum == FHIR_VERSION.DEFAULT:
@@ -50,14 +50,14 @@ class FhirSpecFactory:
         version = release_enum.value
         src_dir = SPEC_JSON_DIR / release_enum.name / version
         ensure_spec_jsons(release_enum)
-        from . import config
+        from . import settings
 
-        default_settings = Configuration.from_module(config)
-        if settings:
-            default_settings.update(settings.as_dict())
-        default_settings.update({"FHIR_DEFINITION_DIRECTORY": src_dir})
+        default_config = Configuration.from_module(settings)
+        if config:
+            default_config.update(config.as_dict())
+        default_config.update({"FHIR_DEFINITION_DIRECTORY": src_dir})
 
-        spec = FHIRSpec(default_settings, src_dir)
+        spec = FHIRSpec(default_config, src_dir)
 
         return spec
 
