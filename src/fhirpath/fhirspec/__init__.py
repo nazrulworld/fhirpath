@@ -86,7 +86,7 @@ def lookup_fhir_resource_spec(
     resource_type: typing.Text,
     cache: bool = True,
     fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
-) -> typing.Optional[FHIRStructureDefinition]:  # noqa: E999
+) -> typing.Optional[FHIRStructureDefinition]:
     """
 
     :arg resource_type: the resource type name (required). i.e Organization
