@@ -3,12 +3,12 @@
 import os
 
 import pytest
+from fhirspec import Configuration
 from pytest_docker_fixtures import IS_TRAVIS
 from pytest_docker_fixtures import images
 
 from fhirpath.connectors import create_connection
-from fhirpath.fhirspec import DEFAULT_SETTINGS
-from fhirpath.thirdparty import attrdict
+from fhirpath.fhirspec import config
 from fhirpath.utils import proxy
 
 from ._utils import TestElasticsearchEngine
@@ -55,7 +55,7 @@ def response():
 @pytest.fixture(scope="module")
 def fhir_spec_settings():
     """ """
-    settings = attrdict(DEFAULT_SETTINGS.copy())
+    settings = Configuration.from_module(config)
 
     yield settings
 

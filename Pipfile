@@ -16,7 +16,9 @@ flake8-isort = {version = "==2.7.0"}
 zc-buildout = {version = "==2.13.3"}
 setuptools = {version = "==45.2.0"}
 mypy = {version = "==0.761"}
+
 [packages]
+fhirspec = "*"
 fhir-resources = {version = "==5.0.1"}
 zope-interface = {version = "==4.6.0"}
 zope-component = {version = "==4.5"}

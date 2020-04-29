@@ -45,23 +45,3 @@ class Proxy(object):
         if attr not in self.__slots__:
             raise AttributeError("Cannot set attribute on proxy.")
         return super(Proxy, self).__setattr__(attr, value)
-
-
-class attrdict(dict):
-    def __getattr__(self, attr):
-        try:
-            return self[attr]
-        except KeyError:
-            raise AttributeError(attr)
-
-    def __setattr__(self, attr, value):
-        self[attr] = value
-
-    def __iadd__(self, rhs):
-        self.update(rhs)
-        return self
-
-    def __add__(self, rhs):
-        d = attrdict(self)
-        d.update(rhs)
-        return d

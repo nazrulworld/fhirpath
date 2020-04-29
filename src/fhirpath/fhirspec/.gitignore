@@ -3,3 +3,4 @@
 !./__init__.py
 !./downloader.py
 !./spec.py
+!./config.py

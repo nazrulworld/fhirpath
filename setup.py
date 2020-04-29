@@ -53,6 +53,7 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
+    "fhirspec",
     "fhir.resources>=5.1.0",
     "jsonpatch",
     "yarl"
@@ -89,9 +90,11 @@ setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Typing :: Typed"
     ],
     description="FHIRPath implementation in Python.",
     entry_points={"console_scripts": ["fhirpath=fhirpath.cli:main"]},

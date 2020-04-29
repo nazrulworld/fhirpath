@@ -4,14 +4,14 @@ import pathlib
 import shutil
 
 import pytest
+from fhirspec import Configuration
+from fhirspec import FHIRSpec
 
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.fhirspec import FHIRSearchSpecFactory
-from fhirpath.fhirspec import FHIRSpec
 from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.fhirspec.downloader import download_and_extract
 from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
-from fhirpath.thirdparty import attrdict
 
 from ._utils import has_internet_connection
 
@@ -53,9 +53,11 @@ def test_load_spec_json(fhir_spec_settings):
     if not ensure_spec_jsons(release.name):
         pytest.skip("Internet Connection is required")
 
-    source = str(spec_directory / release.name / release.value)
-    settings = attrdict() + fhir_spec_settings
-    spec = FHIRSpec(source, settings)
+    source = spec_directory / release.name / release.value
+    settings = fhir_spec_settings.as_dict()
+    settings.update({"FHIR_DEFINITION_DIRECTORY": source})
+
+    spec = FHIRSpec(Configuration(settings), source)
     assert spec.info.version_raw == "4.0.1-9346c8cc45"
 
 
@@ -115,7 +117,7 @@ def test_fhir_search_spec():
 def test_lookup_fhir_resource_spec():
     """ """
     from fhirpath.fhirspec import lookup_fhir_resource_spec
-    from fhirpath.fhirspec.spec import FHIRStructureDefinition
+    from fhirspec import FHIRStructureDefinition
 
     spec = lookup_fhir_resource_spec("Patient", False, FHIR_VERSION.R4)
     assert spec is not None

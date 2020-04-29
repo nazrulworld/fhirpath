@@ -7,6 +7,8 @@ History
 
 Breaking
 
+- Hard dependency on `fhirspec <https://pypi.org/project/fhirspec/>`_.
+- Minimum python version 3.7 is required.
 - Minimum required ``fhir.resources`` version is now ``5.1.0`` meaning FHIR R4 4.0.1 and STU3 3.0.2.
   Please follow changes log https://pypi.org/project/fhir.resources/5.1.0/.
 
