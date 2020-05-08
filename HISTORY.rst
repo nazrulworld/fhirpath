@@ -5,7 +5,9 @@ History
 0.6.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Bugfixes
+
+- fix: ``fhirpath.storage.FHIR_RESOURCE_CLASS_STORAGE``, ``fhirpath.storage.PATH_INFO_STORAGE``, ``fhirpath.storage.SEARCH_PARAMETERS_STORAGE`` and ``fhirpath.storage.FHIR_RESOURCE_SPEC_STORAGE`` took wrong FHIR release as keys.
 
 
 0.6.0 (2020-05-08)

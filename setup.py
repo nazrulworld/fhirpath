@@ -113,7 +113,7 @@ setup(
         "docs": docs_requirements,
     },
     url="https://nazrul.me/fhirpath/",
-    python_requires=", ".join((">3.5", )),
+    python_requires=", ".join((">3.6", )),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",
