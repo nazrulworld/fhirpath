@@ -3,7 +3,6 @@ import enum
 import operator
 from typing import Any
 from typing import Callable
-from typing import Text
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -22,34 +21,34 @@ class FHIR_VERSION(enum.Enum):
 class SortOrderType(enum.Enum):
     """ """
 
-    ASC: Text = "asc"
-    DESC: Text = "desc"
+    ASC: str = "asc"
+    DESC: str = "desc"
 
 
 @enum.unique
 class MatchType(enum.Enum):
     """ """
 
-    ANY: Text = "ANY"
-    ALL: Text = "ALL"
-    ONE: Text = "ONE"
-    NONE: Text = "NONE"
+    ANY: str = "ANY"
+    ALL: str = "ALL"
+    ONE: str = "ONE"
+    NONE: str = "NONE"
 
 
 @enum.unique
 class TermMatchType(enum.Enum):
     """ """
 
-    EXACT: Text = "EXACT"
-    STARTWITH: Text = "STARTWITH"
-    ENDWITH: Text = "ENDWITH"
-    FULLTEXT: Text = "FULLTEXT"
+    EXACT: str = "EXACT"
+    STARTWITH: str = "STARTWITH"
+    ENDWITH: str = "ENDWITH"
+    FULLTEXT: str = "FULLTEXT"
 
 
 @enum.unique
 class GroupType(enum.Enum):
-    DECOUPLED: Text = "DECOUPLED"
-    COUPLED: Text = "COUPLED"
+    DECOUPLED: str = "DECOUPLED"
+    COUPLED: str = "COUPLED"
 
 
 @enum.unique
@@ -57,20 +56,20 @@ class WhereConstraintType(enum.Enum):
     """ """
 
     # normal key, value conditional
-    T1: Text = "T1"
+    T1: str = "T1"
     # constraint certain FHIR Resource type
-    T2: Text = "T2"
+    T2: str = "T2"
     # complex constraint with subpath
-    T3: Text = "T3"
+    T3: str = "T3"
 
 
 @enum.unique
 class EngineQueryType(enum.Enum):
     """" """
 
-    DDL: Text = "DDL"
-    DML: Text = "DML"
-    COUNT: Text = "COUNT"
+    DDL: str = "DDL"
+    DML: str = "DML"
+    COUNT: str = "COUNT"
 
 
 def sa(a: Any, b: Any) -> Any:

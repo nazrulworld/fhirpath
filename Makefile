@@ -105,3 +105,4 @@ run-es:
 run-marklogic:
 
 # https://hub.docker.com/u/nazrulworld/content/sub-1e1d0737-2638-457f-817b-3c099f464ba0
+# https://docs.python.org/3/using/cmdline.html

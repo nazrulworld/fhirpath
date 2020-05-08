@@ -1,16 +1,11 @@
 # _*_ coding: utf-8 _*_
-import io
 import logging
 import pathlib
 import shutil
 import tempfile
 import zipfile
-from ast import literal_eval
-from http.client import HTTPResponse
-from urllib.error import HTTPError
-from urllib.parse import urlparse
-from urllib.request import Request
-from urllib.request import urlopen
+
+from fhirspec import download
 
 from fhirpath.enums import FHIR_VERSION
 
@@ -24,48 +19,6 @@ BASE_URL = (
 )
 
 
-def parse_filename(response: HTTPResponse) -> str:
-    """ """
-
-    def _from_url(url: str):
-        path_ = urlparse(url).path
-        return pathlib.Path(path_).name
-
-    content_type = response.headers.get("Content-Type", "")
-    if content_type.startswith("text/"):
-        return _from_url(response.geturl())
-    file_info = response.headers.get("Content-Disposition", "")
-    for part in file_info.split(";"):
-        part_ = part.strip()
-        if not part_:
-            continue
-        if part_.lower().startswith("filename="):
-            filename = part_.split("=", 1)[1].strip()
-            try:
-                # try escape " or '
-                filename = literal_eval(filename)
-            except ValueError:
-                # It's OK
-                pass
-            return filename
-    # always fall-back
-    return _from_url(response.geturl())
-
-
-def write_stream(output_dir: pathlib.Path, response: HTTPResponse) -> pathlib.Path:
-    """ """
-    filename = parse_filename(response)
-    filename_location = output_dir / filename
-    with io.open(str(filename_location), "wb") as fp:
-
-        while not response.closed:
-            chunk = response.read(io.DEFAULT_BUFFER_SIZE)
-            if not chunk:
-                break
-            fp.write(chunk)
-    return filename_location
-
-
 def download_archive(
     release: FHIR_VERSION, temp_location: pathlib.Path
 ) -> pathlib.Path:
@@ -74,18 +27,8 @@ def download_archive(
     release_name = release.name
     version = release.value
     fullurl = BASE_URL.format(release=release_name, version=version)
-
-    request = Request(url=fullurl, method="GET", unverifiable=False)
-
-    response: HTTPResponse
-    try:
-        response = urlopen(request)
-        assert response.status == 200
-    except HTTPError:
-        # xxx: handle nicely later
-        raise
     logger.info("Archive file has been downloaded from {0}".format(fullurl))
-    return write_stream(temp_location, response)
+    return download(fullurl, temp_location)
 
 
 def extract_spec_files(extract_location: pathlib.Path, archive_file: pathlib.Path):

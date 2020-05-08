@@ -2,13 +2,17 @@
 """©FHIR Data Primitive Types
 https://www.hl7.org/fhir/datatypes.html#primitive
 """
+from __future__ import annotations
+
 import base64
 import re
 from collections import deque
 from datetime import date
 from datetime import datetime
+from typing import Deque
 from typing import Optional
 from typing import Text
+from typing import Union
 
 import isodate
 from zope.interface import implementer
@@ -61,7 +65,7 @@ class FhirPrimitiveType(str):
     __visit_name__: Text
     __regex__: Optional[Text]
 
-    def _validate(self):
+    def _validate(self) -> None:
         """ """
         if self.__regex__ is not None:
             res = re.match(self.__regex__, self)
@@ -76,10 +80,10 @@ class FhirBoolean(FhirPrimitiveType):
     JSON representation: JSON boolean (true or false)
     """
 
-    __visit_name__ = "boolean"
-    __regex__ = r"true|false"
+    __visit_name__: str = "boolean"
+    __regex__: str = r"true|false"
 
-    def _validate(self):
+    def _validate(self) -> None:
         """ """
         res = re.match(self.__regex__, self)
         if not res:
@@ -100,10 +104,10 @@ class FhirInteger(FhirPrimitiveType):
     JSON representation: JSON number (with no decimal point)
     """
 
-    __visit_name__ = "integer"
-    __regex__ = r"[0]|[-+]?[1-9][0-9]*"
+    __visit_name__: str = "integer"
+    __regex__: str = r"[0]|[-+]?[1-9][0-9]*"
 
-    def _validate(self):
+    def _validate(self) -> None:
         """ """
         res = re.match(self.__regex__, self)
         if not res:
@@ -134,10 +138,10 @@ class FhirString(FhirPrimitiveType):
     JSON representation: JSON String
     """
 
-    __visit_name__ = "string"
-    __regex__ = r"[ \r\n\t\S]+"
+    __visit_name__: str = "string"
+    __regex__: str = r"[ \r\n\t\S]+"
 
-    def _validate(self):
+    def _validate(self) -> None:
         """ """
         res = re.match(self.__regex__, self)
         if not res:
@@ -146,7 +150,7 @@ class FhirString(FhirPrimitiveType):
                 "range −2,147,483,648..2,147,483,647"
             )
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """ """
         return str(self)
 
@@ -173,8 +177,8 @@ class FhirDecimal(FhirPrimitiveType):
     JSON representation: A JSON number (see below for limitations)
     """
 
-    __visit_name__ = "decimal"
-    __regex__ = r"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?"
+    __visit_name__: str = "decimal"
+    __regex__: str = r"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?"
 
     def _validate(self):
         """ """
@@ -198,10 +202,10 @@ class FhirURI(FhirPrimitiveType):
     JSON representation: A JSON string - a URI
     """
 
-    __visit_name__ = "uri"
-    __regex__ = r"\S*"
+    __visit_name__: str = "uri"
+    __regex__: str = r"\S*"
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """"""
         return str(self)
 
@@ -216,11 +220,11 @@ class FhirURL(FhirPrimitiveType):
     JSON representation: A JSON string - a URL
     """
 
-    __visit_name__ = "url"
+    __visit_name__: str = "url"
     # xxx: restricted to defined protocol
-    __regex__ = None
+    __regex__: Optional[str] = None
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """ """
         return str(self)
 
@@ -238,9 +242,9 @@ class FhirCanonical(FhirPrimitiveType):
     JSON representation: A JSON string - a canonical URL
     """
 
-    __visit_name__ = "canonical"
+    __visit_name__: str = "canonical"
 
-    __regex__ = None
+    __regex__: Optional[str] = None
 
     def to_python(self) -> Text:
         """ """
@@ -259,10 +263,10 @@ class FhirBase64Binary(bytes):
     JSON representation: A JSON string - base64 content
     """
 
-    __visit_name__: Text = "base64Binary"
-    __regex__: Text = r"(\s*([0-9a-zA-Z\+\=]){4}\s*)+"
+    __visit_name__: str = "base64Binary"
+    __regex__: str = r"(\s*([0-9a-zA-Z\+\=]){4}\s*)+"
 
-    def _validate(self):
+    def _validate(self) -> None:
         """ """
         res = re.match(self.__regex__, self.decode())
         if not res:
@@ -288,8 +292,8 @@ class FhirInstant(FhirPrimitiveType):
     JSON representation: A JSON string - an xs:dateTime
     """
 
-    __visit_name__ = "instant"
-    __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))"  # noqa: E501
+    __visit_name__: str = "instant"
+    __regex__: str = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))"  # noqa: E501
 
     def to_python(self) -> datetime:
         """ """
@@ -311,8 +315,8 @@ class FhirDate(FhirPrimitiveType):
     JSON representation: A JSON string - a union of xs:date, xs:gYearMonth, xs:gYear
     """
 
-    __visit_name__ = "date"
-    __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?"  # noqa: E501
+    __visit_name__: str = "date"
+    __regex__: str = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?"  # noqa: E501
 
     def to_python(self) -> date:
         """ """
@@ -336,8 +340,8 @@ class FhirDateTime(FhirPrimitiveType):
     xs:date, xs:gYearMonth, xs:gYear
     """
 
-    __visit_name__ = "dateTime"
-    __regex__ = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"  # noqa: E501
+    __visit_name__: str = "dateTime"
+    __regex__: str = r"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"  # noqa: E501
 
     def to_python(self) -> datetime:
         """ """
@@ -358,8 +362,8 @@ class FhirTime(FhirPrimitiveType):
     JSON representation: A JSON string - an xs:time
     """
 
-    __visit_name__ = "time"
-    __regex__ = r"([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?"
+    __visit_name__: str = "time"
+    __regex__: str = r"([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?"
 
     def to_python(self) -> float:
         """ """
@@ -379,10 +383,10 @@ class FhirCode(FhirPrimitiveType):
     JSON representation: JSON string
     """
 
-    __visit_name__ = "code"
-    __regex__ = r"[^\s]+(\s[^\s]+)*"
+    __visit_name__: str = "code"
+    __regex__: str = r"[^\s]+(\s[^\s]+)*"
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """ """
         self._validate()
 
@@ -396,10 +400,10 @@ class FhirOid(FhirPrimitiveType):
     JSON representation: JSON string - uri
     """
 
-    __visit_name__ = "oid"
-    __regex__ = r"urn:oid:[0-2](\.(0|[1-9][0-9]*))+"
+    __visit_name__: str = "oid"
+    __regex__: str = r"urn:oid:[0-2](\.(0|[1-9][0-9]*))+"
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """ """
         self._validate()
 
@@ -416,10 +420,10 @@ class FhirId(FhirPrimitiveType):
     JSON representation: JSON string
     """
 
-    __visit_name__ = "id"
-    __regex__ = r"[A-Za-z0-9\-\.]{1,64}"
+    __visit_name__: str = "id"
+    __regex__: str = r"[A-Za-z0-9\-\.]{1,64}"
 
-    def to_python(self) -> Text:
+    def to_python(self) -> str:
         """ """
         self._validate()
 
@@ -448,8 +452,8 @@ class FhirMarkdown(FhirPrimitiveType):
     JSON representation: JSON string
     """
 
-    __visit_name__ = "markdown"
-    __regex__ = r"\s*(\S|\s)*"
+    __visit_name__: str = "markdown"
+    __regex__: str = r"\s*(\S|\s)*"
 
     def to_python(self) -> Text:
         """"""
@@ -463,8 +467,8 @@ class FhirUnsignedInt(FhirPrimitiveType):
     JSON representation: JSON number
     """
 
-    __visit_name__ = "unsignedInt"
-    __regex__ = r"[0]|([1-9][0-9]*)"
+    __visit_name__: str = "unsignedInt"
+    __regex__: str = r"[0]|([1-9][0-9]*)"
 
     def to_python(self) -> int:
         """ """
@@ -480,8 +484,8 @@ class FhirPositiveInt(FhirPrimitiveType):
     JSON representation: JSON number
     """
 
-    __visit_name__ = "positiveInt"
-    __regex__ = r"\+?[1-9][0-9]*"
+    __visit_name__: str = "positiveInt"
+    __regex__: str = r"\+?[1-9][0-9]*"
 
     def to_python(self) -> int:
         """ """
@@ -498,8 +502,8 @@ class FhirUUID(FhirPrimitiveType):
     JSON representation: JSON string - uri
     """
 
-    __visit_name__ = "uuid"
-    __regex__ = None
+    __visit_name__: str = "uuid"
+    __regex__: Optional[str] = None
 
     def to_python(self) -> Text:
         """ """
@@ -507,7 +511,7 @@ class FhirUUID(FhirPrimitiveType):
 
 
 # FHIR Primitive Data Types
-PrimitiveDataTypes = ImmutableDict(
+PrimitiveDataTypes: ImmutableDict = ImmutableDict(
     [
         (FhirBoolean.__visit_name__, FhirBoolean),
         (FhirInteger.__visit_name__, FhirInteger),
@@ -537,7 +541,7 @@ class Empty:
 
     __slots__ = ()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<NO_VALUE>"
 
 
@@ -548,8 +552,10 @@ EMPTY_VALUE = Empty()
 class PrimitiveTypeCollection(object):
     """ """
 
-    __visit_name__ = "collection"
-    __regex__ = None
+    __visit_name__: str = "collection"
+    __regex__: Optional[str] = None
+    _container: Deque[FhirPrimitiveType]
+    _registered_visit: Optional[str]
     __slots__ = ("_container", "_registered_visit")
 
     def __init__(self, *members):
@@ -560,11 +566,11 @@ class PrimitiveTypeCollection(object):
         for member in members:
             self.add(member)
 
-    def add(self, item, position=None):
+    def add(self, item: FhirPrimitiveType, position: Optional[int] = None):
         """ """
         member = IFhirPrimitiveType(item)
         if self._registered_visit is None:
-            self._registered_visit = member.__visit_name__
+            self._registered_visit: Optional[str] = member.__visit_name__
 
         if member.__visit_name__ != self._registered_visit:
             raise ValueError
@@ -574,9 +580,12 @@ class PrimitiveTypeCollection(object):
         else:
             self._container.insert(position, member)
 
-    def remove(self, item=None, position=None):
+    def remove(
+        self, item: Optional[FhirPrimitiveType] = None, position: Optional[int] = None
+    ):
         """ """
         if item is None:
+            assert position is not None, "Position number is required!"
             try:
                 item = self._container[position]
             except IndexError:
@@ -585,7 +594,7 @@ class PrimitiveTypeCollection(object):
         self._container.remove(item)
 
     @property
-    def registered_visit(self):
+    def registered_visit(self) -> Union[str, None]:
         """ """
         return self._registered_visit
 
@@ -593,7 +602,7 @@ class PrimitiveTypeCollection(object):
         """ """
         return [member.to_python() for member in self._container]
 
-    def __len__(self):
+    def __len__(self) -> int:
         """ """
         return len(self._container)
 

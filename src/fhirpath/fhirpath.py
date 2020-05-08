@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Main module."""
+from __future__ import annotations
+
 import inspect
 import typing
 from functools import wraps
@@ -17,7 +19,7 @@ __author__ = "Md Nazrul Islam <email2nazrul>"
 
 FHIR_PREFIX = "FHIR"
 FHIRPathType = typing.TypeVar("FHIRPathType", bound="FHIRPath")
-FHIRPATH_DATATYPES = {
+FHIRPATH_DATA_TYPES = {
     "bool": "Boolean",
     "str": "String",
     "int": "Integer",
@@ -29,7 +31,7 @@ FHIRPATH_DATATYPES = {
 }
 
 
-def collection_type_required(func):
+def collection_type_required(func: typing.Callable):
     """ """
 
     @wraps(func)
@@ -188,7 +190,7 @@ class TupleTypeInfo:
         return self.element
 
 
-class FHIRPath(object):
+class FHIRPath(typing.Generic[FHIRPathType]):
     """http://hl7.org/fhirpath/N1"""
 
     # Global Cache
@@ -439,15 +441,17 @@ class FHIRPath(object):
                     raise NotImplementedError
                 object.__setattr__(self, "_type_info", type_info)
             else:
-                specifier = "System." + FHIRPATH_DATATYPES[bases[0].__name__]
+                specifier = "System." + FHIRPATH_DATA_TYPES[bases[0].__name__]
                 if specifier not in FHIRPath.__storage__:
                     type_info = SimpleTypeInfo.from_type_specifier(specifier)
                     FHIRPath.__storage__[specifier] = type_info
                 object.__setattr__(self, "_type_info", FHIRPath.__storage__[specifier])
 
-    def _create_successor(self, _obj, prop_name: str = None, of_many: bool = None):
+    def _create_successor(
+        self, _obj, prop_name: str = None, of_many: bool = None
+    ) -> FHIRPath:
         """ """
-        successor = FHIRPath(_obj, predecessor=self)
+        successor: FHIRPath = FHIRPath(_obj, predecessor=self)
         object.__setattr__(successor, "_prop_name", prop_name)
         object.__setattr__(successor, "_of_many", of_many)
         return successor
