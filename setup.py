@@ -79,7 +79,7 @@ docs_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.6.1.dev0",
+    version="0.6.1",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[

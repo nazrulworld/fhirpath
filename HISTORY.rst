@@ -2,7 +2,7 @@
 History
 =======
 
-0.6.1 (unreleased)
+0.6.1 (2020-05-09)
 ------------------
 A must update release (from ``0.6.0``)!
 
