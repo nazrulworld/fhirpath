@@ -16,6 +16,13 @@ class FHIR_VERSION(enum.Enum):
     R4: str = "4.0.1"
     DSTU2: str = "1.0.2"
 
+    @staticmethod
+    def normalize(item):
+        """ """
+        if item == FHIR_VERSION.DEFAULT:
+            item = getattr(FHIR_VERSION, item.value)
+        return item
+
 
 @enum.unique
 class SortOrderType(enum.Enum):

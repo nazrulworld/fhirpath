@@ -6,11 +6,15 @@ and modified in terms of styling, unnecessary codes cleanup
 import io
 import json
 import logging
+import pathlib
 import re
 from collections import defaultdict
 from copy import copy
+from typing import List
 
+from fhirpath.enums import FHIR_VERSION
 from fhirpath.interfaces import IStorage
+from fhirpath.storage import MemoryStorage
 from fhirpath.utils import reraise
 
 
@@ -25,13 +29,15 @@ class FHIRSearchSpec(object):
     """https://www.hl7.org/fhir/searchparameter-registry.html
     """
 
-    def __init__(self, source, fhir_release, storage):
+    def __init__(
+        self, source: pathlib.Path, fhir_release: FHIR_VERSION, storage: MemoryStorage
+    ):
         """ """
         self._finalized = False
         self.source = source
         self.storage = IStorage(storage)
-        self.fhir_release = fhir_release
-        self.parameters_def = list()
+        self.fhir_release = FHIR_VERSION.normalize(fhir_release)
+        self.parameters_def: List[SearchParameterDefinition] = list()
         self.prepare()
 
     def prepare(self):

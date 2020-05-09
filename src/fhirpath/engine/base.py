@@ -31,7 +31,7 @@ class Engine(object):
     def __init__(self, fhir_release, conn_factory, dialect_factory):
         """ """
         assert fhir_release in FHIR_VERSION
-        self.fhir_release = fhir_release
+        self.fhir_release = FHIR_VERSION.normalize(fhir_release)
 
         self.create_connection(conn_factory)
 

@@ -51,7 +51,7 @@ def test_term_normal(engine):
     # test parent path (Patient.address) context also created.
     pathname = "Patient.address"
     try:
-        context = PATH_INFO_STORAGE.get(engine.fhir_release.value).get(pathname)
+        context = PATH_INFO_STORAGE.get(engine.fhir_release.name).get(pathname)
     except KeyError:
         pytest.fail("Code should not come here! as cache should be already created")
 

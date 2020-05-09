@@ -215,9 +215,7 @@ class Search(object):
     @staticmethod
     def get_parameter_definition(fhir_release: FHIR_VERSION, resource_name: str):
         """ """
-        if fhir_release == FHIR_VERSION.DEFAULT:
-            fhir_release = getattr(FHIR_VERSION, fhir_release.value)
-
+        fhir_release = FHIR_VERSION.normalize(fhir_release)
         storage = SEARCH_PARAMETERS_STORAGE.get(fhir_release.name)
 
         if storage.empty():

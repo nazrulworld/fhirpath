@@ -158,8 +158,7 @@ def lookup_fhir_class_path(
         >>> dotted_path is None
         True
     """
-    if fhir_release == FHIR_VERSION.DEFAULT:
-        fhir_release = getattr(FHIR_VERSION, fhir_release.value)
+    fhir_release = FHIR_VERSION.normalize(fhir_release)
 
     storage = FHIR_RESOURCE_CLASS_STORAGE.get(fhir_release.name)
 
@@ -314,7 +313,9 @@ class PathInfoContext:
         if pathname == "*":
             return EMPTY_PATH_INFO_CONTEXT
 
-        storage = PATH_INFO_STORAGE.get(fhir_release.value)
+        fhir_release = FHIR_VERSION.normalize(fhir_release)
+
+        storage = PATH_INFO_STORAGE.get(fhir_release.name)
 
         if storage.exists(pathname):
             # trying from cache!

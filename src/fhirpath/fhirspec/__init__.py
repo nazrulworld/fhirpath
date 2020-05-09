@@ -24,8 +24,7 @@ SPEC_JSON_DIR = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
 
 def ensure_spec_jsons(release: FHIR_VERSION):
     """ """
-    if release == FHIR_VERSION.DEFAULT:
-        release = getattr(FHIR_VERSION, release.value)
+    release = FHIR_VERSION.normalize(release)
     version = release.value
     spec_dir = SPEC_JSON_DIR / release.name
     if not (spec_dir / version).exists():
@@ -110,8 +109,7 @@ def lookup_fhir_resource_spec(
         >>> dotted_path is None
         True
     """
-    if fhir_release == FHIR_VERSION.DEFAULT:
-        fhir_release = getattr(FHIR_VERSION, fhir_release.value)
+    fhir_release = FHIR_VERSION.normalize(fhir_release)
 
     storage = FHIR_RESOURCE_SPEC_STORAGE.get(fhir_release.name)
 

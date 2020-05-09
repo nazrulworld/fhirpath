@@ -53,7 +53,7 @@ class Query(object):
     ):
         """ """
 
-        self.fhir_release: FHIR_VERSION = fhir_release
+        self.fhir_release: FHIR_VERSION = FHIR_VERSION.normalize(fhir_release)
         self._from: FromClause = from_
         self._select: SelectClause = select
         self._where: WhereClause = where

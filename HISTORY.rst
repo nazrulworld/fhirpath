@@ -4,9 +4,11 @@ History
 
 0.6.1 (unreleased)
 ------------------
+A must update release (from ``0.6.0``)!
 
 Bugfixes
 
+- fix: issues, those arieses due to fix bellow issue.
 - fix: ``fhirpath.storage.FHIR_RESOURCE_CLASS_STORAGE``, ``fhirpath.storage.PATH_INFO_STORAGE``, ``fhirpath.storage.SEARCH_PARAMETERS_STORAGE`` and ``fhirpath.storage.FHIR_RESOURCE_SPEC_STORAGE`` took wrong FHIR release as keys.
 
 
