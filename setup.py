@@ -92,7 +92,7 @@ develop_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.6.2.dev0",
+    version="0.6.3.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
