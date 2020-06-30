@@ -2,7 +2,7 @@
 History
 =======
 
-0.6.2 (unreleased)
+0.6.2 (2020-06-30)
 ------------------
 
 - ``fhirspec`` and ``fhir.resources`` versions are pinned.
