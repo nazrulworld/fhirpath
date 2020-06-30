@@ -5,7 +5,7 @@ History
 0.6.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- ``fhirspec`` and ``fhir.resources`` versions are pinned.
 
 
 0.6.1 (2020-05-09)

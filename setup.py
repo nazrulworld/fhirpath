@@ -53,10 +53,10 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
-    "fhirspec",
-    "fhir.resources>=5.1.0",
+    "fhirspec==0.1.0",
+    "fhir.resources>=5.1.0,<6.0",
     "jsonpatch",
-    "yarl"
+    "yarl",
 ]
 
 setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
@@ -68,13 +68,26 @@ test_requirements = [
     "pytest-docker-fixtures",
     "psycopg2",
     "elasticsearch",
-    "SQLAlchemy"
+    "SQLAlchemy",
+    "aioelasticsearch",
+    "pytz",
 ]
 docs_requirements = [
     "sphinx",
     "sphinx-rtd-theme",
     "sphinxcontrib-httpdomain",
     "sphinxcontrib-httpexample",
+]
+
+develop_requirements = [
+    "black",
+    "isort",
+    "flake8",
+    "flake8-isort",
+    "setuptools",
+    "mypy",
+    "certifi",
+    "zest.releaser[recommended]",
 ]
 
 setup(
@@ -94,7 +107,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Typing :: Typed"
+        "Typing :: Typed",
     ],
     description="FHIRPath implementation in Python.",
     entry_points={"console_scripts": ["fhirpath=fhirpath.cli:main"]},
@@ -111,9 +124,13 @@ setup(
     extras_require={
         "test": test_requirements + setup_requirements,
         "docs": docs_requirements,
+        "all": test_requirements
+        + setup_requirements
+        + docs_requirements
+        + develop_requirements,
     },
     url="https://nazrul.me/fhirpath/",
-    python_requires=", ".join((">3.6", )),
+    python_requires=", ".join((">3.6",)),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",

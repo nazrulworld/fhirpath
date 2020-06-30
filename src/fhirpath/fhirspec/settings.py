@@ -129,7 +129,7 @@ MANUAL_PROFILES = [
         ["FHIRAbstractResource"],
     ),
     ("templates/fhirreference.py", "fhirreference", ["FHIRReference"]),
-    ("templates/fhirdate.py", "fhirdate", ["date", "dateTime", "instant", "time"],),
+    ("templates/fhirdate.py", "fhirdate", ["date", "dateTime", "instant", "time"]),
     ("templates/fhirsearch.py", "fhirsearch", ["FHIRSearch"]),
 ]
 FHIR_VALUESETS_FILE_NAME = "valuesets.min.json"

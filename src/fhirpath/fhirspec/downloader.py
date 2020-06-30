@@ -15,7 +15,7 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 logger = logging.getLogger("fhirpath.fhirspec.downloader")
 BASE_URL = (
     "https://github.com/nazrulworld/fhirpath_helpers"
-    "/raw/master/static/HL7/FHIR/spec/minified/{release}/{version}.zip"
+    "/raw/0.1.0/static/HL7/FHIR/spec/minified/{release}/{version}.zip"
 )
 
 
