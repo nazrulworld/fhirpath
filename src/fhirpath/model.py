@@ -6,8 +6,7 @@ from zope.interface import implementer
 from .enums import FHIR_VERSION
 from .fhirpath import FHIRPath
 from .interfaces import IModel
-from .utils import import_string
-from .utils import lookup_fhir_class_path
+from .utils import lookup_fhir_class
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -41,27 +40,13 @@ class ModelFactory(type):
 class Model:
     """ """
 
-    @classmethod
+    @staticmethod
     def create(
-        cls,
-        resource_type: typing.Text,
-        fhir_version: FHIR_VERSION = FHIR_VERSION.DEFAULT,
+        resource_type: typing.Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
     ):
         """ """
-        klass = import_string(
-            typing.cast(
-                typing.Text,
-                lookup_fhir_class_path(resource_type, fhir_release=fhir_version),
-            )
-        )
-        # xxx: should be cache?
-        model = ModelFactory(f"{klass.__name__}Model", (klass, cls), {})
+        model = lookup_fhir_class(resource_type, fhir_release)
+        if not IModel.implementedBy(model):
+            implementer(IModel)(model)
 
         return model
-
-    def fpath(self, expression: str = None) -> FHIRPath:
-        """ """
-        if expression is None:
-            return FHIRPath(self)
-
-        raise NotImplementedError

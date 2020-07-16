@@ -10,33 +10,12 @@ CLASS_MAP = {
     "Any": "Resource",
     # to avoid Practinioner.role and PractitionerRole generating the same class
     "Practitioner.role": "PractRole",
-    "boolean": "bool",
-    "integer": "int",
-    "positiveInt": "int",
-    "unsignedInt": "int",
-    "date": "FHIRDate",
-    "dateTime": "FHIRDate",
-    "instant": "FHIRDate",
-    "time": "FHIRDate",
-    "decimal": "float",
-    "string": "str",
-    "markdown": "str",
-    "id": "str",
-    "code": "str",  # for now we're not generating enums for these
-    "uri": "str",
-    "url": "str",
-    "canonical": "str",
-    "oid": "str",
-    "uuid": "str",
-    "xhtml": "str",
-    "base64Binary": "str",
+    "boolean": "bool"
 }
 
 # replacemap
 # Classes to be replaced with different ones at resource rendering time
-REPLACE_MAP = {
-    "Reference": "FHIRReference"  # `FHIRReference` adds differencing capabilities
-}
+REPLACE_MAP = {}
 # natives
 # Which class names are native to the language (or can be treated this way)
 NATIVES = ["bool", "int", "float", "str", "dict"]
@@ -47,8 +26,7 @@ JSON_MAP = {
     "str": "str",
     "int": "int",
     "bool": "bool",
-    "float": "float",
-    "FHIRDate": "str",
+    "float": "float"
 }
 # jsonmap_default
 JSON_MAP_DEFAULT = "dict"
@@ -90,11 +68,32 @@ WRITE_UNITTESTS = False
 # default_base
 DEFAULT_BASES = {
     # the class to use for "Element" types
-    "complex-type": "FHIRAbstractBase",
+    "complex-type": "FHIRAbstractModel",
     # the class to use for "Resource" types
-    "resource": "FHIRAbstractResource",
+    "resource": "FHIRResourceModel",
 }
-
+FHIR_PRIMITIVES = [
+    "boolean",
+    "string",
+    "base64Binary",
+    "code",
+    "id",
+    "decimal",
+    "integer",
+    "unsignedInt",
+    "positiveInt",
+    "uri",
+    "oid",
+    "uuid",
+    "canonical",
+    "url",
+    "markdown",
+    "xhtml",
+    "date",
+    "dateTime",
+    "instant",
+    "time",
+]
 # manual_profiles
 # All these files should be copied to `RESOURCE_TARGET_DIRECTORY`:
 # tuples of (path/to/file, module, array-of-class-names)
@@ -102,35 +101,13 @@ DEFAULT_BASES = {
 # class names will still be recognized and it is assumed the class is present.
 MANUAL_PROFILES = [
     (
-        "templates/fhirabstractbase.py",
-        "fhirabstractbase",
-        [
-            "boolean",
-            "string",
-            "base64Binary",
-            "code",
-            "id",
-            "decimal",
-            "integer",
-            "unsignedInt",
-            "positiveInt",
-            "uri",
-            "oid",
-            "uuid",
-            "canonical",
-            "url",
-            "markdown",
-            "FHIRAbstractBase",
-        ],
+        "templates/fhirresourcemodel.py",
+        "fhirresourcemodel",
+        ["FHIRResourceModel"],
     ),
-    (
-        "templates/fhirabstractresource.py",
-        "fhirabstractresource",
-        ["FHIRAbstractResource"],
-    ),
-    ("templates/fhirreference.py", "fhirreference", ["FHIRReference"]),
-    ("templates/fhirdate.py", "fhirdate", ["date", "dateTime", "instant", "time"]),
-    ("templates/fhirsearch.py", "fhirsearch", ["FHIRSearch"]),
+    ("templates/fhirabstractmodel.py", "fhirabstractmodel", ["FHIRAbstractModel"]),
+    ("templates/fhirprimitiveextension.py", "fhirprimitiveextension", ["FHIRPrimitiveExtension"]),
+    ("templates/fhirtypes.py", "fhirtypes", FHIR_PRIMITIVES),
 ]
 FHIR_VALUESETS_FILE_NAME = "valuesets.min.json"
 FHIR_PROFILES_FILE_NAMES = ["profiles-resources.min.json", "profiles-types.min.json"]

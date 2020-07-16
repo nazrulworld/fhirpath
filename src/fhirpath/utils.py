@@ -196,10 +196,21 @@ def lookup_fhir_class_path(
 def lookup_fhir_class(
     resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
 ):  # noqa: E999
-    klass_path: Optional[Text] = lookup_fhir_class_path(
-        resource_type, True, fhir_release
-    )
-    klass: type = import_string(cast(Text, klass_path))
+    factory_paths: List[str] = ["fhir", "resources"]
+    if (
+        FHIR_VERSION["DEFAULT"].value != fhir_release.name
+        and fhir_release != FHIR_VERSION.DEFAULT
+    ):
+        factory_paths.append(fhir_release.name)
+    factory_paths.append("get_fhir_model_class")
+
+    factory: type = import_string(".".join(factory_paths))
+    try:
+        klass = factory(resource_type)
+    except KeyError:
+        raise LookupError(
+            f"{resource_type} doesnt to be valid FHIRModel (element type) name!"
+        )
     return klass
 
 

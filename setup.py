@@ -53,8 +53,8 @@ requirements = [
     "zope.component>=4.5",
     "multidict",
     "decorator",
-    "fhirspec==0.1.0",
-    "fhir.resources>=5.1.0,<6.0",
+    "fhirspec>=0.2.1",
+    "fhir.resources>=6.0.0b2,<7.0",
     "jsonpatch",
     "yarl",
 ]
@@ -92,7 +92,7 @@ develop_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.6.3.dev0",
+    version="0.7.0.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
@@ -104,6 +104,7 @@ setup(
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -130,7 +131,7 @@ setup(
         + develop_requirements,
     },
     url="https://nazrul.me/fhirpath/",
-    python_requires=", ".join((">3.6",)),
+    python_requires=", ".join((">=3.6",)),
     project_urls={
         "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",
