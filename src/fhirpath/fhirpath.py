@@ -26,7 +26,7 @@ from .types import TypeSpecifier
 
 
 if TYPE_CHECKING:
-    from pydantic.main import BaseModel
+    from fhir.resources.fhirabstractmodel import FHIRAbstractModel
 
 __author__ = "Md Nazrul Islam <email2nazrul>"
 
@@ -86,7 +86,7 @@ class ClassInfoElement:
     # property name in python class
     _py_name: str
     # FHIR Resource Class
-    _model_class: Optional[Type["BaseModel"]]
+    _model_class: Optional[Type["FHIRAbstractModel"]]
 
     def __init__(
         self,
@@ -108,10 +108,24 @@ class ClassInfoElement:
     def from_model_field(cls, field: ModelField) -> "ClassInfoElement":
         """ """
         assert field.field_info.extra.get("element_property", False) is True
+        visit_name: Optional[str] = None
+        if TYPE_CHECKING:
+            is_primitive: Optional[bool] = None
+            model_class: Optional[Type["FHIRAbstractModel"]] = None
         name = field.alias
         py_name = field.name
         is_one_based = (getattr(field.outer_type_, "_name", None) == "List") is False
-        if getattr(field.type_, "__resource_type__", None):
+
+        if getattr(field.type_, "is_primitive", None) is None:
+            if field.type_ == bool:
+                visit_name = "boolean"
+                is_primitive = True
+            else:
+                raise NotImplementedError
+        else:
+            is_primitive = field.type_.is_primitive()
+
+        if is_primitive is False:
             # AbstractBaseType
             tn = "{0}.{1}".format(FHIR_PREFIX, field.type_.__resource_type__)
             model_class = lookup_fhir_class(
@@ -120,12 +134,7 @@ class ClassInfoElement:
             )
         else:
             # Primitive
-            visit_name = getattr(field.type_, "__visit_name__", None)
-            if visit_name is None and field.type_ == bool:
-                visit_name = "boolean"
-            if visit_name is None:
-                raise NotImplementedError
-
+            visit_name = getattr(field.type_, "__visit_name__", visit_name)
             tn = "{0}.{1}".format(FHIR_PREFIX, visit_name)
             model_class = None
         if is_one_based is False:
@@ -165,7 +174,7 @@ class ClassInfo:
     _indexes: typing.List[str]
 
     @classmethod
-    def from_model(cls, model_class: Type["BaseModel"]) -> "ClassInfo":
+    def from_model(cls, model_class: Type["FHIRAbstractModel"]) -> "ClassInfo":
         """ """
         self = cls()
         klass_name = model_class.__name__
@@ -197,12 +206,12 @@ class ClassInfo:
         return self.element
 
     @staticmethod
-    def build_elements(model_class: Type["BaseModel"]) -> List[ClassInfoElement]:
+    def build_elements(
+        model_class: Type["FHIRAbstractModel"]
+    ) -> List[ClassInfoElement]:
         """ """
         elements = list()
-        for field in model_class.__fields__.values():
-            if not field.field_info.extra.get("element_property", False):
-                continue
+        for field in model_class.element_properties():
             el = ClassInfoElement.from_model_field(field)
             elements.append(el)
 
@@ -264,7 +273,7 @@ class TupleTypeInfo:
     element: List[TupleTypeInfoElement]
 
     @classmethod
-    def from_model(cls, model_class: Type["BaseModel"]) -> "TupleTypeInfo":
+    def from_model(cls, model_class: Type["FHIRAbstractModel"]) -> "TupleTypeInfo":
         """ """
         self = cls()
         elements = TupleTypeInfo.build_elements(model_class)
@@ -276,12 +285,12 @@ class TupleTypeInfo:
         return self.element
 
     @staticmethod
-    def build_elements(model_class: Type["BaseModel"]) -> List[TupleTypeInfoElement]:
+    def build_elements(
+        model_class: Type["FHIRAbstractModel"]
+    ) -> List[TupleTypeInfoElement]:
         """ """
         elements = list()
-        for field in model_class.__fields__.values():
-            if not field.field_info.extra.get("element_property", False):
-                continue
+        for field in model_class.element_properties():
             el = cast(
                 TupleTypeInfoElement, TupleTypeInfoElement.from_model_field(field)
             )
@@ -415,7 +424,7 @@ class FHIRPath(ABC):
 
     @staticmethod
     def build_fhir_abstract_type_info(
-        klass: Type["BaseModel"], is_one_based: bool = True
+        klass: Type["FHIRAbstractModel"], is_one_based: bool = True
     ) -> Union[ClassInfo, ListTypeInfo, TupleTypeInfo]:
         """ """
         key = TypeSpecifier(".".join([FHIR_PREFIX, klass.__name__]))

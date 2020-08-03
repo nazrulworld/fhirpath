@@ -49,9 +49,9 @@ from fhirpath.utils import unwrap_proxy
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 has_dot_as = re.compile(r"\.as\((?P<type_name>[a-z]+)\)$", re.I | re.U)
-has_space_as = re.compile(r"^[a-z\.0-9]+ +as +[a-z0-9]+$", re.I | re.U)
+has_space_as = re.compile(r"^[a-z.0-9]+ +as +[a-z0-9]+$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
-has_dot_where = re.compile(r"\.where\([a-z\=\'\"\(\)\s\-]+\)", re.I | re.U)
+has_dot_where = re.compile(r"\.where\([a-z=\'\"()\s\-]+\)", re.I | re.U)
 
 contains_index = re.compile(r"\[[0-9]+\]", re.U)
 # first()last()Tail()count()Skip(1).Take(3)
@@ -142,7 +142,7 @@ class BaseTerm(object):
 
         # eq, ne, lt, le, gt, ge
         self.comparison_operator = None
-        # +,- (negetive, positive)
+        # +,- (negative, positive)
         self.unary_operator = None
         # and, or, xor
         self.arithmetic_operator = None
@@ -345,8 +345,8 @@ class Term(BaseTerm):
     def validate(self):
         """ """
         # xxx: required validate ```comparison_operator```
-        # lt,le,gt,ge only for Date,DateTime, Interger, Float
-        if IFhirPrimitiveType.implementedBy(self.path.context.type_class):
+        # lt,le,gt,ge only for Date,DateTime, Integer, Float
+        if self.path.context.type_is_primitive:
             if self.path.context.type_name not in (
                 "integer",
                 "decimal",
@@ -455,7 +455,7 @@ class NonFhirTerm(BaseTerm):
     def validate(self):
         """ """
         # xxx: required validate ```comparison_operator```
-        # lt,le,gt,ge only for Date,DateTime, Interger, Float
+        # lt,le,gt,ge only for Date,DateTime, Integer, Float
         if self.value.__visit_name__ not in (
             "integer",
             "decimal",
@@ -563,7 +563,7 @@ class ExistsTerm(object):
 
         # Path Context
         self.context = None
-        # +,- (negetive, positive)
+        # +,- (negative, positive)
         self.unary_operator = None
 
         if isinstance(path, str):
@@ -670,14 +670,7 @@ class TermValue(object):
         """context: PathInfoContext """
         required_not_finalized(self)
         path = IElementPath(path)
-        value = path.context.type_class(self.raw)
-
-        if IFhirPrimitiveType.providedBy(value):
-            self.value = value.to_python()
-        else:
-            # xxx: support for other value type
-            raise NotImplementedError
-
+        self.value = path.context.validate_value(self.raw)
         self._finalized = True
 
     def __call__(self):

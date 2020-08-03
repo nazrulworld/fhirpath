@@ -30,8 +30,6 @@ from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.interfaces.fql import ITerm
 from fhirpath.query import QueryBuilder
 from fhirpath.storage import PATH_INFO_STORAGE
-from fhirpath.utils import import_string
-from fhirpath.utils import lookup_fhir_class_path
 
 
 def test_term_normal(engine):
@@ -55,10 +53,8 @@ def test_term_normal(engine):
     except KeyError:
         pytest.fail("Code should not come here! as cache should be already created")
 
-    address_model = import_string(lookup_fhir_class_path("Address"))
-
     assert context.multiple is True
-    assert context.type_class == address_model
+    assert context.type_class.__name__ == "AddressType"
     assert context.prop_name == "address"
     assert context.optional is True
 

@@ -8,16 +8,21 @@ import re
 import sys
 import uuid
 from importlib import import_module
+from inspect import signature
 from types import ModuleType
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import List
 from typing import Match
 from typing import Optional
 from typing import Pattern
 from typing import Text
+from typing import Type
+from typing import Union
 from typing import cast
 
 import pkg_resources
+from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
 
@@ -28,6 +33,13 @@ from .interfaces import IPathInfoContext
 from .storage import FHIR_RESOURCE_CLASS_STORAGE
 from .storage import PATH_INFO_STORAGE
 from .types import PrimitiveDataTypes
+
+
+if TYPE_CHECKING:
+    from fhir.resources.fhirabstractmodel import FHIRAbstractModel
+    from pydantic.fields import ModelField
+    from pydantic.main import BaseConfig
+    from fhir.resources.fhirtypes import Primitive, AbstractType, AbstractBaseType
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -78,7 +90,7 @@ def force_bytes(
             return string.decode("utf8", errors).encode(encoding, errors)
 
     if not isinstance(string, str):
-        return string
+        string = str(string)
 
     return string.encode(encoding, errors)
 
@@ -91,7 +103,7 @@ def import_string(dotted_path: Text) -> type:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except (ValueError, AttributeError):
         msg = f"{dotted_path} doesnt look like a module path"
-        reraise(ImportError, msg)
+        return reraise(ImportError, msg)
 
     module: ModuleType = import_module(module_path)
     cls: type
@@ -99,7 +111,7 @@ def import_string(dotted_path: Text) -> type:
         cls = getattr(module, class_name)
     except AttributeError:
         msg = f'Module "{module_path}" does not define a "{class_name}" attribute/class'
-        reraise(ImportError, msg)
+        return reraise(ImportError, msg)
     return cls
 
 
@@ -195,7 +207,7 @@ def lookup_fhir_class_path(
 
 def lookup_fhir_class(
     resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
-):  # noqa: E999
+) -> Type["FHIRAbstractModel"]:  # noqa: E999
     factory_paths: List[str] = ["fhir", "resources"]
     if (
         FHIR_VERSION["DEFAULT"].value != fhir_release.name
@@ -215,7 +227,7 @@ def lookup_fhir_class(
 
 
 CONTAINS_PY_PACKAGE: Pattern = re.compile(
-    r"^\$\{(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE
+    r"^\${(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE
 )
 
 
@@ -241,7 +253,7 @@ def expand_path(path_: Text) -> Text:
             msg = "Invalid package `{0}`! as provided in {1}".format(
                 package_name, path_
             )
-            reraise(LookupError, msg)
+            return reraise(LookupError, msg)
 
     else:
         real_path = path_
@@ -285,6 +297,7 @@ class EmptyPathInfoContext:
         self.type_class = None
         self.optional = None
         self.multiple = None
+        self.type_is_primitive = None
 
 
 EMPTY_PATH_INFO_CONTEXT = EmptyPathInfoContext()
@@ -296,30 +309,40 @@ class PathInfoContext:
 
     def __init__(
         self,
-        path,
-        fhir_release,
-        prop_name,
-        prop_original,
-        type_name,
-        type_class,
-        optional,
-        multiple,
+        path: str,
+        fhir_release: FHIR_VERSION,
+        prop_name: str,
+        prop_original: str,
+        type_name: str,
+        type_class: Union[bool, "AbstractBaseType", "AbstractType", "Primitive"],
+        type_field: "ModelField",
+        type_model_config: Type["BaseConfig"],
+        optional: bool,
+        multiple: bool,
+        type_is_primitive: bool,
     ):
         """ """
-        self._parent = None
-        self._children = list()
-        self._path = path
+        self._parent: Optional[str] = None
+        self._children: List[str] = list()
+        self._path: str = path
 
-        self.fhir_release = fhir_release
-        self.prop_name = prop_name
-        self.prop_original = prop_original
-        self.type_name = type_name
-        self.type_class = type_class
-        self.optional = optional
-        self.multiple = multiple
+        self.fhir_release: FHIR_VERSION = fhir_release
+        self.prop_name: str = prop_name
+        self.prop_original: str = prop_original
+        self.type_name: str = type_name
+        self.type_class: Union[
+            bool, "AbstractBaseType", "AbstractType", "Primitive"
+        ] = type_class
+        self.type_field: "ModelField" = type_field
+        self.type_model_config: Type["BaseConfig"] = type_model_config
+        self.optional: bool = optional
+        self.multiple: bool = multiple
+        self.type_is_primitive: bool = type_is_primitive
 
     @classmethod
-    def context_from_path(cls, pathname: Text, fhir_release: FHIR_VERSION):
+    def context_from_path(
+        cls, pathname: Text, fhir_release: FHIR_VERSION
+    ) -> Union["PathInfoContext", "EmptyPathInfoContext"]:
         """ """
         if pathname == "*":
             return EMPTY_PATH_INFO_CONTEXT
@@ -334,51 +357,67 @@ class PathInfoContext:
 
         parts = pathname.split(".")
         model_path = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
-        model_type: type = import_string(cast(Text, model_path))
+        model_class: Type["FHIRAbstractModel"] = cast(
+            Type["FHIRAbstractModel"], import_string(cast(Text, model_path))
+        )
         new_path: Text = parts[0]
-        context = None
+        context: Optional["PathInfoContext"] = None
 
         for index, part in enumerate(parts[1:], 1):
 
             new_path = "{0}.{1}".format(new_path, part)
             if storage.exists(new_path):
                 context = storage.get(new_path)
+                if TYPE_CHECKING:
+                    assert context
                 if context.type_name in PrimitiveDataTypes:
                     if (index + 1) < len(parts):
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
                 else:
-                    model_type = context.type_class
+                    model_class = lookup_fhir_class(
+                        context.type_class.__resource_type__,  # type: ignore
+                        FHIR_VERSION[
+                            context.type_class.__fhir_release__  # type: ignore
+                        ],
+                    )
                     continue
 
-            for (
-                name,
-                jsname,
-                typ,
-                typ_name,
-                is_list,
-                of_many,
-                not_optional,
-            ) in model_type().elementProperties():
+            for field in model_class.element_properties():
 
-                if part != jsname:
+                if part != field.alias:
                     continue
-                if typ_name in PrimitiveDataTypes:
-                    type_class = PrimitiveDataTypes.get(typ_name)
-                    is_primitive = True
-                else:
-                    type_class = typ
+                type_model_config = model_class.__config__
+                multiple = getattr(field.outer_type_, "_name", None) == "List"
+                if getattr(field.type_, "__resource_type__", None):
+                    # AbstractModelType
+                    model_class = lookup_fhir_class(
+                        field.type_.__resource_type__,
+                        FHIR_VERSION[field.type_.__fhir_release__],
+                    )
+                    type_name = field.type_.__resource_type__
                     is_primitive = False
+                else:
+                    is_primitive = True
+                    # Primitive
+                    type_name = getattr(field.type_, "__visit_name__", None)
+                    if type_name is None and field.type_ == bool:
+                        type_name = "boolean"
+                    if type_name is None:
+                        raise NotImplementedError
 
                 context = cls(
                     new_path,
                     fhir_release=fhir_release,
-                    prop_name=name,
-                    prop_original=jsname,
-                    type_name=typ_name,
-                    type_class=type_class,
-                    optional=(not not_optional),
-                    multiple=is_list,
+                    prop_name=field.name,
+                    prop_original=field.alias,
+                    type_name=type_name,
+                    type_class=field.type_,
+                    type_field=field,
+                    type_model_config=type_model_config,
+                    optional=(not field.required),
+                    multiple=multiple,
+                    type_is_primitive=is_primitive,
                 )
                 if index > 1:
                     context.parent = ".".join(new_path.split(".")[:-1])
@@ -388,15 +427,16 @@ class PathInfoContext:
                     parent_context.add_child(new_path)  # type: ignore
 
                 storage.insert(new_path, context)
-                if not is_primitive:
-                    model_type = cast(type, type_class)
-                else:
+
+                if is_primitive:
                     if (index + 1) < len(parts):
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
             # important! even context is None, that means not valid path (part)
             if context is None:
                 break
+        if TYPE_CHECKING:
+            assert context
         return context
 
     def __proxy__(self):
@@ -407,9 +447,13 @@ class PathInfoContext:
         """ """
         self._parent = dotted_path
 
-    def _get_parent(self):
+    def _get_parent(self) -> "PathInfoContext":
         """ """
-        return PathInfoContext.context_from_path(self._parent, self.fhir_release)
+        assert self._parent
+        parent = PathInfoContext.context_from_path(self._parent, self.fhir_release)
+        if TYPE_CHECKING:
+            assert isinstance(parent, PathInfoContext)
+        return parent
 
     parent = property(_get_parent, _set_parent)
 
@@ -446,6 +490,23 @@ class PathInfoContext:
     def __str__(self):
         """ """
         return str(self._path)
+
+    def validate_value(self, value):
+        """``pydantic`` way to validate value"""
+        if self.type_class == bool:
+            return bool_validator(value)
+        for validator in self.type_class.__get_validators__():
+            sig = signature(validator)
+            args = list(sig.parameters.keys())
+            if len(args) == 1:
+                value = validator(value)
+            elif len(args) == 2:
+                value = validator(value, self.type_field)
+            elif len(args) == 3:
+                value = validator(value, self.type_field, self.type_model_config)
+            else:
+                raise NotImplementedError
+        return value
 
 
 class PathInfoContextProxy(Proxy):

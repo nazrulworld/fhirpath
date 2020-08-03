@@ -206,9 +206,9 @@ class QueryBuilder(object):
         if len(self._from) > 0:
             # info: we are allowing single resource only
             raise ValidationError("from_ value already assigned!")
-
-        model = Model.create(resource_type)
-        alias = alias or model.resource_type
+        assert self._engine
+        model = Model.create(resource_type, fhir_release=self._engine.fhir_release)
+        alias = alias or model.__name__  # xxx: model.get_resource_type()
         self._from.append((alias, model))
 
     @builder
