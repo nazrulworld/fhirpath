@@ -10,7 +10,7 @@ CLASS_MAP = {
     "Any": "Resource",
     # to avoid Practinioner.role and PractitionerRole generating the same class
     "Practitioner.role": "PractRole",
-    "boolean": "bool"
+    "boolean": "bool",
 }
 
 # replacemap
@@ -22,12 +22,7 @@ NATIVES = ["bool", "int", "float", "str", "dict"]
 
 # jsonmap
 # Which classes are to be expected from JSON decoding
-JSON_MAP = {
-    "str": "str",
-    "int": "int",
-    "bool": "bool",
-    "float": "float"
-}
+JSON_MAP = {"str": "str", "int": "int", "bool": "bool", "float": "float"}
 # jsonmap_default
 JSON_MAP_DEFAULT = "dict"
 
@@ -100,13 +95,13 @@ FHIR_PRIMITIVES = [
 # If the path is None, no file will be copied but the
 # class names will still be recognized and it is assumed the class is present.
 MANUAL_PROFILES = [
-    (
-        "templates/fhirresourcemodel.py",
-        "fhirresourcemodel",
-        ["FHIRResourceModel"],
-    ),
+    ("templates/fhirresourcemodel.py", "fhirresourcemodel", ["FHIRResourceModel"],),
     ("templates/fhirabstractmodel.py", "fhirabstractmodel", ["FHIRAbstractModel"]),
-    ("templates/fhirprimitiveextension.py", "fhirprimitiveextension", ["FHIRPrimitiveExtension"]),
+    (
+        "templates/fhirprimitiveextension.py",
+        "fhirprimitiveextension",
+        ["FHIRPrimitiveExtension"],
+    ),
     ("templates/fhirtypes.py", "fhirtypes", FHIR_PRIMITIVES),
 ]
 FHIR_VALUESETS_FILE_NAME = "valuesets.min.json"

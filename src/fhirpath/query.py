@@ -1,6 +1,9 @@
 # _*_ coding: utf-8 _*_
+from abc import ABC
 from copy import copy
+from typing import TYPE_CHECKING
 from typing import Optional
+from typing import Union
 
 from zope.interface import implementer
 
@@ -35,11 +38,14 @@ from .interfaces import ISortTerm
 from .interfaces import ITerm
 
 
+if TYPE_CHECKING:
+    from fhirpath.engine.base import Engine
+
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
 @implementer(IQuery, ICloneable)
-class Query(object):
+class Query(ABC):
     """ """
 
     def __init__(
@@ -61,11 +67,11 @@ class Query(object):
         self._limit: LimitClause = limit
 
     @classmethod
-    def _builder(cls, engine: Optional[object] = None) -> object:
+    def _builder(cls, engine: Optional["Engine"] = None) -> "QueryBuilder":
         return QueryBuilder(engine)
 
     @classmethod
-    def from_builder(cls, builder: object):
+    def from_builder(cls, builder: "QueryBuilder") -> "Query":
         """Create Query object from QueryBuilder.
         Kind of reverse process"""
         if not IQueryBuilder(builder)._finalized:
@@ -82,31 +88,31 @@ class Query(object):
         )
         return query
 
-    def get_where(self):
+    def get_where(self) -> WhereClause:
         """ """
         return self._where
 
-    def get_from(self):
+    def get_from(self) -> FromClause:
         """ """
         return self._from
 
-    def get_select(self):
+    def get_select(self) -> SelectClause:
         """ """
         return self._select
 
-    def get_sort(self):
+    def get_sort(self) -> SortClause:
         """ """
         return self._sort
 
-    def get_limit(self):
+    def get_limit(self) -> LimitClause:
         """ """
         return self._limit
 
-    def clone(self):
+    def clone(self) -> "Query":
         """ """
         return self.__copy__()
 
-    def __copy__(self):
+    def __copy__(self) -> "Query":
         """ """
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
@@ -128,30 +134,30 @@ class Query(object):
 
 
 @implementer(IQueryBuilder)
-class QueryBuilder(object):
+class QueryBuilder(ABC):
     """ """
 
-    def __init__(self, engine=None):
+    def __init__(self, engine: Optional["Engine"] = None):
         """ """
-        self._engine = engine
-        self._finalized = False
+        self._engine: Optional["Engine"] = engine
+        self._finalized: bool = False
 
-        self._from = FromClause()
-        self._select = SelectClause()
-        self._where = WhereClause()
-        self._sort = SortClause()
-        self._limit = LimitClause()
+        self._from: FromClause = FromClause()
+        self._select: SelectClause = SelectClause()
+        self._where: WhereClause = WhereClause()
+        self._sort: SortClause = SortClause()
+        self._limit: LimitClause = LimitClause()
 
-    def bind(self, engine):
+    def bind(self, engine: "Engine"):
         """ """
         # might be clone
         self._engine = engine
 
-    def clone(self):
+    def clone(self) -> "QueryBuilder":
         """ """
         return self.__copy__()
 
-    def finalize(self, engine=None):
+    def finalize(self, engine: Optional["Engine"] = None):
         """ """
         self._pre_check()
 
@@ -182,7 +188,7 @@ class QueryBuilder(object):
 
         self._finalized = True
 
-    def __copy__(self):
+    def __copy__(self) -> "QueryBuilder":
         """ """
         newone = type(self).__new__(type(self))
         newone.__dict__.update(self.__dict__)
@@ -199,7 +205,7 @@ class QueryBuilder(object):
         return newone
 
     @builder
-    def from_(self, resource_type, alias=None):
+    def from_(self, resource_type: str, alias: Optional[str] = None):
         """ """
         required_not_finalized(self)
 
@@ -262,7 +268,7 @@ class QueryBuilder(object):
                     sort_path = sort_(sort_path)
             self._sort.append(sort_path)
 
-    def get_query(self):
+    def get_query(self) -> "Query":
         """ """
         required_finalized(self)
 
@@ -280,7 +286,12 @@ class QueryBuilder(object):
 
         return self.__fql__()
 
-    def __call__(self, unrestricted=False, engine=None, async_result=False):
+    def __call__(
+        self,
+        unrestricted: bool = False,
+        engine: Optional["Engine"] = None,
+        async_result: bool = False,
+    ) -> Union["QueryResult", "AsyncQueryResult"]:
         """ """
         if not self._finalized and (engine or self._engine):
             self.finalize(engine)
@@ -289,7 +300,8 @@ class QueryBuilder(object):
         result_factory = QueryResult
         if async_result is True:
             result_factory = AsyncQueryResult
-
+        if TYPE_CHECKING:
+            assert self._engine
         result = result_factory(
             query=query, engine=self._engine, unrestricted=unrestricted
         )
@@ -306,7 +318,7 @@ class QueryBuilder(object):
         if any([el.star for el in self._select]) and len(self._select) > 1:
             raise ValidationError("select(*) cannot co-exists other select element!")
 
-    def _validate_root_path(self, path_string):
+    def _validate_root_path(self, path_string: str):
         """ """
         match = False
         for alias, model in self._from:
@@ -330,14 +342,14 @@ class QueryBuilder(object):
 
 
 @implementer(IQueryResult)
-class QueryResult(object):
+class QueryResult(ABC):
     """ """
 
-    def __init__(self, query: Query, engine, unrestricted=False):
+    def __init__(self, query: Query, engine: "Engine", unrestricted: bool = False):
         """ """
-        self._query = query
-        self._engine = engine
-        self._unrestricted = unrestricted
+        self._query: Query = query
+        self._engine: "Engine" = engine
+        self._unrestricted: bool = unrestricted
 
     def fetchall(self):
         """ """
@@ -466,7 +478,7 @@ class QueryResult(object):
         model_class = self._query.get_from()[0][1]
         for row in result.body:
             if self._query.get_select()[0].star:
-                yield model_class(row[0])
+                yield model_class(**row[0])
             else:
                 yield row
 
@@ -485,7 +497,7 @@ class AsyncQueryResult(QueryResult):
         model_class = self._query.get_from()[0][1]
         for row in result.body:
             if self._query.get_select()[0].star:
-                yield model_class(row[0])
+                yield model_class(**row[0])
             else:
                 yield row
 

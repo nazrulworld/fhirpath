@@ -345,8 +345,11 @@ class ElasticSearchDialect(DialectBase):
             )
 
         elif ITerm.providedBy(term):
-
-            if IFhirPrimitiveType.implementedBy(term.path.context.type_class):
+            if term.path.context.type_class is bool:
+                primitive_type = True
+            else:
+                primitive_type = term.path.context.type_class.is_primitive()
+            if primitive_type:
 
                 if term.path.context.type_name in (
                     "string",
@@ -422,7 +425,7 @@ class ElasticSearchDialect(DialectBase):
                 )
                 return qr, unary_operator
             else:
-                raise NotImplementedError("Line 288")
+                raise NotImplementedError("Line 425")
 
         elif INonFhirTerm.providedBy(term):
             assert IFhirPrimitiveType.providedBy(term.value)

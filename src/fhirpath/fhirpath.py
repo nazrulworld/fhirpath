@@ -207,7 +207,7 @@ class ClassInfo:
 
     @staticmethod
     def build_elements(
-        model_class: Type["FHIRAbstractModel"]
+        model_class: Type["FHIRAbstractModel"],
     ) -> List[ClassInfoElement]:
         """ """
         elements = list()
@@ -286,7 +286,7 @@ class TupleTypeInfo:
 
     @staticmethod
     def build_elements(
-        model_class: Type["FHIRAbstractModel"]
+        model_class: Type["FHIRAbstractModel"],
     ) -> List[TupleTypeInfoElement]:
         """ """
         elements = list()

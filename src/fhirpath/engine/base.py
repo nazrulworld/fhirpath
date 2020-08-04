@@ -1,5 +1,6 @@
 # _*_ coding: utf-8 _*_
 import time
+from abc import ABC
 from collections import deque
 
 from zope.interface import implementer
@@ -18,7 +19,7 @@ __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
 @implementer(IEngine)
-class Engine(object):
+class Engine(ABC):
     """Idea:
     # 1.) https://docs.sqlalchemy.org/en/13/core/\
     # connections.html#sqlalchemy.engine.Engine.connect

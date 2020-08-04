@@ -35,7 +35,7 @@ def test_fetch_all(es_data, engine):
     )
 
     for resource in builder(async_result=False):
-        assert resource.__class__.__name__ == "OrganizationModel"
+        assert resource.__class__.__name__ == "Organization"
         # test fetch all
     result = builder(async_result=False).fetchall()
     assert result.__class__.__name__ == "EngineResult"
