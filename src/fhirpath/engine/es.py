@@ -1,5 +1,6 @@
 # _*_ coding: utf-8 _*_
 import re
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -40,7 +41,7 @@ def navigate_indexed_path(source, path_):
 class ElasticsearchEngine(Engine):
     """Elasticsearch Engine"""
 
-    def get_index_name(self):
+    def get_index_name(self, resource_type: Optional[str] = None):
         """ """
         raise NotImplementedError
 

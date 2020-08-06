@@ -599,19 +599,7 @@ class Search(object):
             return self.single_valued_coding_term(path_1, value, modifier)
 
     def create_address_term(self, path_, param_value, modifier):
-        """Multiple Resources:
-        Patient: A server defined search that may match any of the
-        string fields in the Address, including line, city, district, state,
-        country, postalCode, and/or text
-        Person: A server defined search that may match any of the
-        string fields in the Address, including line, city, district,
-        state, country, postalCode, and/or text
-        Practitioner: A server defined search that may match any of
-        the string fields in the Address, including line, city, district,
-        state, country, postalCode, and/or text
-        RelatedPerson: A server defined search that may match any of
-        the string fields in the Address, including line, city, district,
-        state, country, postalCode, and/or text"""
+        """ """
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:

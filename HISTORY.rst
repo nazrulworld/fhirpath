@@ -5,7 +5,9 @@ History
 0.7.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+Improvements
+
+- Issue#5: Now ``ElasticsearchEngine::get_index_name`` takes one optional parameter ``resource_type``.
 
 
 0.6.2 (2020-06-30)
