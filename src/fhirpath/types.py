@@ -2,8 +2,6 @@
 """©FHIR Data Primitive Types
 https://www.hl7.org/fhir/datatypes.html#primitive
 """
-from __future__ import annotations
-
 import base64
 import re
 from collections import deque

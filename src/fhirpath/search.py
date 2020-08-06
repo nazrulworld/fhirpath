@@ -274,10 +274,13 @@ class Search(object):
         if modifier in ("missing", "exists"):
             term = self.create_exists_term(path_, param_value, modifier)
 
-        elif not IFhirPrimitiveType.implementedBy(path_.context.type_class):
+        elif (
+            getattr(path_.context.type_class, "is_primitive", None)
+            and not path_.context.type_class.is_primitive()
+        ):
             # we need normalization
-            klass_name = path_.context.type_class.__name__
-            if klass_name == "FHIRReference":
+            klass_name = path_.context.type_class.fhir_type_name()
+            if klass_name == "Reference":
                 path_ = path_ / "reference"
                 term_factory = self.create_term
             elif klass_name == "Identifier":
@@ -597,7 +600,11 @@ class Search(object):
             return self.single_valued_coding_term(path_1, value, modifier)
 
     def create_address_term(self, path_, param_value, modifier):
-        """ """
+        """Multiple Resources:
+        Patient: A server defined search that may match any of the string fields in the Address, including line, city, district, state, country, postalCode, and/or text
+        Person: A server defined search that may match any of the string fields in the Address, including line, city, district, state, country, postalCode, and/or text
+        Practitioner: A server defined search that may match any of the string fields in the Address, including line, city, district, state, country, postalCode, and/or text
+        RelatedPerson: A server defined search that may match any of the string fields in the Address, including line, city, district, state, country, postalCode, and/or text"""
         if isinstance(param_value, list):
             terms = list()
             for value in param_value:
@@ -895,7 +902,10 @@ class Search(object):
 
     def create_term(self, path_, value, modifier):
         """ """
-        assert IFhirPrimitiveType.implementedBy(path_.context.type_class)
+        assert path_.context.type_class is bool or (
+            getattr(path_.context.type_class, "is_primitive", None)
+            and path_.context.type_class.is_primitive() is True
+        )
 
         if isinstance(value, tuple):
             operator_, original_value = value

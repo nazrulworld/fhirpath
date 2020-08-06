@@ -20,6 +20,7 @@ from typing import Text
 from typing import Type
 from typing import Union
 from typing import cast
+from typing import Dict
 
 import pkg_resources
 from pydantic.validators import bool_validator
@@ -524,17 +525,14 @@ class BundleWrapper:
     def __init__(self, engine, result, url: URL, bundle_type="searchset"):
         """ """
         self.fhir_version = engine.fhir_release
-        self.bundle = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)()
-        self.bundle.id = str(uuid.uuid4())
+        self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
+        self.data: Dict[str, Any] = dict()
+        self.data["id"] = str(uuid.uuid4())
 
-        self.bundle.meta = lookup_fhir_class("Meta", fhir_release=self.fhir_version)()
+        self.data["meta"] = {"lastUpdated": datetime.datetime.utcnow()}
 
-        fhir_dt = lookup_fhir_class("FHIRDate", fhir_release=self.fhir_version)()
-        fhir_dt.date = datetime.datetime.now()
-        self.bundle.meta.lastModified = fhir_dt
-
-        self.bundle.type = bundle_type
-        self.bundle.total = result.header.total
+        self.data["type"] = bundle_type
+        self.data["total"] = result.header.total
 
         self.attach_entry(result, "match")
 
@@ -542,32 +540,33 @@ class BundleWrapper:
 
     def attach_entry(self, result, mode="match"):
         """ """
-        if not self.bundle.entry:
-            self.bundle.entry = list()
+        if "entry" not in self.data:
+            self.data["entry"] = list()
 
         for row in result.body:
-            entry = row[0]
-            resource = lookup_fhir_class(
-                entry["resourceType"], fhir_release=self.fhir_version
-            )(entry)
+            resource = row[0]
+            if isinstance(resource, dict):
+                resource_id = resource["id"]
+                resource_type = resource["resourceType"]
+            else:
+                resource_id = resource.id
+                resource_type = resource.resource_type
+            # entry = BundleEntry
+            entry = dict()
+            entry["fullUrl"] = "{0}/{1}".format(resource_type, resource_id)
+            entry["resource"] = resource
+            # search = BundleEntrySearch
+            search = {"mode": mode}
+            entry["search"] = search
 
-            item = lookup_fhir_class("BundleEntry", fhir_release=self.fhir_version)()
-            item.fullUrl = "{0}/{1}".format(resource.resource_type, resource.id)
-            item.resource = resource
-
-            item.search = lookup_fhir_class(
-                "BundleEntrySearch", fhir_release=self.fhir_version
-            )()
-            item.search.mode = mode
-
-            self.bundle.entry.append(item)
+            self.data["entry"].append(entry)
 
     def attach_links(self, url, entries_count):
         """ """
         container = list()
 
         _max_count = int(url.query.get("_count", 100))
-        _total_results = self.bundle.total
+        _total_results = self.data["total"]
         _current_offset = int(url.query.get("search-offset", 0))
         url_params = {}
 
@@ -577,7 +576,7 @@ class BundleWrapper:
         if _total_results > _max_count:
             # Yes pagination is required!
             url_params["_count"] = _max_count
-            url_params["search-id"] = self.bundle.id
+            url_params["search-id"] = self.data["id"]
 
             # first page
             if _current_offset != 0:
@@ -605,28 +604,26 @@ class BundleWrapper:
                 url_params["search-offset"] = last_offset
                 container.append(self.make_link("last", url, url_params))
 
-        self.bundle.link = container
+        self.data["link"] = container
 
     def make_link(self, relation, url, params={}):
         """ """
-        item = lookup_fhir_class("BundleLink", fhir_release=self.fhir_version)()
-        item.relation = relation
+        # link = BundleLink
+        link = {"relation": relation}
         # fix: params
         existing_params = url.query.copy()
         for key in params:
             existing_params[key] = params[key]
 
         new_url = url.with_query(existing_params)
-        item.url = str(new_url)
+        link["url"] = str(new_url)
 
-        return item
+        return link
 
     def __call__(self):
         """ """
-        # Validation purpose
-        self.as_json()
-        return self.bundle
+        return self.bundle_model.parse_obj(self.data)
 
-    def as_json(self):
+    def json(self):
         """ """
-        return self.bundle.as_json()
+        return self.__call__().json()
