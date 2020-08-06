@@ -12,6 +12,7 @@ from inspect import signature
 from types import ModuleType
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import Match
 from typing import Optional
@@ -20,7 +21,6 @@ from typing import Text
 from typing import Type
 from typing import Union
 from typing import cast
-from typing import Dict
 
 import pkg_resources
 from pydantic.validators import bool_validator

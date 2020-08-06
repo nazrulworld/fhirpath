@@ -408,7 +408,7 @@ def test_search_result(es_data, engine):
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search()
-    ## assert bundle.total == 1
+    assert bundle.total == 1
 
 
 def test_search_missing_modifier(es_data, engine):
@@ -421,7 +421,7 @@ def test_search_missing_modifier(es_data, engine):
     assert len(bundle.entry) == 1
 
 
-def offtest_in_search(es_data, engine):
+def test_in_search(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Organization")
     params = (
@@ -462,7 +462,7 @@ def test_codeableconcept_with_not_modifier(es_data, engine):
     assert bundle.total == 0
 
 
-def offtest_search_result_with_below_modifier(es_data, engine):
+def test_search_result_with_below_modifier(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Organization")
     params = (("name:below", "Burge"),)
@@ -492,7 +492,7 @@ def offtest_search_result_with_below_modifier(es_data, engine):
     assert bundle.total == 1
 
 
-def offtest_search_result_with_above_modifier(es_data, engine):
+def test_search_result_with_above_modifier(es_data, engine):
     """ """
     # little bit complex
     search_context = SearchContext(engine, "Patient")
@@ -513,7 +513,7 @@ def offtest_search_result_with_above_modifier(es_data, engine):
     assert bundle.total == 1
 
 
-def offtest_search_result_with_contains_modifier(es_data, engine):
+def test_search_result_with_contains_modifier(es_data, engine):
     """ """
     # little bit complex
     search_context = SearchContext(engine, "Patient")

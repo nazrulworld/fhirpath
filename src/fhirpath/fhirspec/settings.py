@@ -1,5 +1,7 @@
 import os
 import pathlib
+from typing import Any
+from typing import Dict
 
 
 """Variable Start Here """
@@ -15,7 +17,7 @@ CLASS_MAP = {
 
 # replacemap
 # Classes to be replaced with different ones at resource rendering time
-REPLACE_MAP = {}
+REPLACE_MAP: Dict[str, Any] = {}
 # natives
 # Which class names are native to the language (or can be treated this way)
 NATIVES = ["bool", "int", "float", "str", "dict"]
@@ -95,7 +97,7 @@ FHIR_PRIMITIVES = [
 # If the path is None, no file will be copied but the
 # class names will still be recognized and it is assumed the class is present.
 MANUAL_PROFILES = [
-    ("templates/fhirresourcemodel.py", "fhirresourcemodel", ["FHIRResourceModel"],),
+    ("templates/fhirresourcemodel.py", "fhirresourcemodel", ["FHIRResourceModel"]),
     ("templates/fhirabstractmodel.py", "fhirabstractmodel", ["FHIRAbstractModel"]),
     (
         "templates/fhirprimitiveextension.py",

@@ -2,6 +2,7 @@
 import ast
 import datetime
 import re
+from abc import ABC
 from collections import deque
 from copy import copy
 
@@ -92,7 +93,7 @@ class SortClause(FqlClause):
 
 
 @implementer(IFqlClause)
-class LimitClause(object):
+class LimitClause(ABC):
     """ """
 
     __slots__ = ("_limit", "_offset")
@@ -129,7 +130,7 @@ class LimitClause(object):
 
 
 @implementer(IBaseTerm, IValuedClass)
-class BaseTerm(object):
+class BaseTerm(ABC):
     """ """
 
     def __init__(self, path, value=EMPTY_VALUE, match_type=None):

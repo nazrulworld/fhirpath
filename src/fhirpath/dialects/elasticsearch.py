@@ -87,9 +87,7 @@ class ElasticSearchDialect(DialectBase):
         qr = query_
 
         while True:
-            if path_context.multiple and not IFhirPrimitiveType.implementedBy(
-                path_context.type_class
-            ):
+            if path_context.multiple and not path_context.type_is_primitive:
                 path_ = ElasticSearchDialect.apply_path_replacement(
                     str(path_context._path), root_replacer
                 )
@@ -345,11 +343,8 @@ class ElasticSearchDialect(DialectBase):
             )
 
         elif ITerm.providedBy(term):
-            if term.path.context.type_class is bool:
-                primitive_type = True
-            else:
-                primitive_type = term.path.context.type_class.is_primitive()
-            if primitive_type:
+
+            if term.path.context.type_is_primitive:
 
                 if term.path.context.type_name in (
                     "string",

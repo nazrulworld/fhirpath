@@ -27,3 +27,11 @@ class DialectBase(object):
     def pre_compile(self, query):
         """xxx: validation placeholder"""
         pass
+
+    @staticmethod
+    def is_fhir_primitive_type(klass):
+        """ """
+        if klass is bool:
+            return True
+        else:
+            return klass.is_primitive()
