@@ -4,7 +4,6 @@ import typing
 from zope.interface import implementer
 
 from .enums import FHIR_VERSION
-from .fhirpath import FHIRPath
 from .interfaces import IModel
 from .utils import lookup_fhir_class
 

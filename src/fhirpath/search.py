@@ -29,7 +29,6 @@ from fhirpath.fql import not_exists_
 from fhirpath.fql import sa_
 from fhirpath.fql import sort_
 from fhirpath.fql.types import ElementPath
-from fhirpath.interfaces import IFhirPrimitiveType
 from fhirpath.interfaces import IGroupTerm
 from fhirpath.interfaces import ISearch
 from fhirpath.interfaces import ISearchContext

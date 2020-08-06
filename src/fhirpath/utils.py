@@ -37,10 +37,10 @@ from .types import PrimitiveDataTypes
 
 
 if TYPE_CHECKING:
-    from fhir.resources.fhirabstractmodel import FHIRAbstractModel
-    from pydantic.fields import ModelField
-    from pydantic.main import BaseConfig
-    from fhir.resources.fhirtypes import Primitive, AbstractType, AbstractBaseType
+    from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
+    from pydantic.fields import ModelField  # noqa: F401
+    from pydantic.main import BaseConfig  # noqa: F401
+    from fhir.resources.fhirtypes import Primitive, AbstractType, AbstractBaseType  # noqa: F401,E501
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"

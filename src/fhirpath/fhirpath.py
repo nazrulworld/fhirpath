@@ -26,7 +26,7 @@ from .types import TypeSpecifier
 
 
 if TYPE_CHECKING:
-    from fhir.resources.fhirabstractmodel import FHIRAbstractModel
+    from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
 
 __author__ = "Md Nazrul Islam <email2nazrul>"
 
