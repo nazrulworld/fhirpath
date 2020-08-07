@@ -71,6 +71,7 @@ test_requirements = [
     "SQLAlchemy",
     "aioelasticsearch",
     "pytz",
+    "isodate"
 ]
 docs_requirements = [
     "sphinx",
