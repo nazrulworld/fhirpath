@@ -174,9 +174,9 @@ def sort_(path, order=EMPTY_VALUE):
 def fql(obj):
     """ """
     try:
-        func = getattr(obj, "__fql__")
+        func = obj.__fql__
         try:
-            getattr(func, "__self__")
+            func.__self__
         except AttributeError:
             reraise(
                 ValueError, "__fql__ is not bound method, make sure class initialized!"

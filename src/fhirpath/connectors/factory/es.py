@@ -66,8 +66,10 @@ class ElasticsearchConnection(Connection):
 
     def fetch(self, index, compiled_query):
         """xxx: must have use scroll+slice
-        https://stackoverflow.com/questions/43211387/what-does-elasticsearch-automatic-slicing-do
-        https://stackoverflow.com/questions/50376713/elasticsearch-scroll-api-with-multi-threading
+        https://stackoverflow.com/questions/43211387/
+        what-does-elasticsearch-automatic-slicing-do
+        https://stackoverflow.com/questions/50376713/
+        elasticsearch-scroll-api-with-multi-threading
         """
         search_params = self.finalize_search_params(compiled_query, EngineQueryType.DML)
         conn = self.raw_connection

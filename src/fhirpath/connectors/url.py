@@ -150,7 +150,7 @@ class URL(object):
         else:
             return self.drivername.split("+")[1]
 
-    def translate_connect_args(self, names=[], **kw):
+    def translate_connect_args(self, names=None, **kw):
         r"""Translate url attributes into a dictionary of connection arguments.
 
         Returns attributes of this url (`host`, `database`, `username`,
@@ -163,7 +163,7 @@ class URL(object):
         :param names: Deprecated.  Same purpose as the keyword-based alternate
             names, but correlates the name to the original positionally.
         """
-
+        names = names or list()
         translated = {}
         attribute_names = ["host", "database", "username", "password", "port"]
         for sname in attribute_names:

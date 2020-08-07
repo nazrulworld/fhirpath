@@ -661,7 +661,7 @@ class ElasticSearchDialect(DialectBase):
     @staticmethod
     def apply_from_constraint(query, body_structure, root_replacer=None):
         """We force apply resource type boundary"""
-        for res_name, res_klass in query.get_from():
+        for res_name, _res_klass in query.get_from():
             path_ = "{0}.resourceType".format(root_replacer or res_name)
             term = {"term": {path_: res_name}}
             body_structure["query"]["bool"]["filter"].append(term)

@@ -54,7 +54,7 @@ requirements = [
     "multidict",
     "decorator",
     "fhirspec>=0.2.1",
-    "fhir.resources>=6.0.0b2,<7.0",
+    "fhir.resources>=6.0.0b3,<7.0",
     "jsonpatch",
     "yarl",
 ]
@@ -79,15 +79,19 @@ docs_requirements = [
     "sphinxcontrib-httpexample",
 ]
 
-develop_requirements = [
-    "black",
-    "isort",
-    "flake8",
-    "flake8-isort",
-    "setuptools",
-    "mypy",
+development_requirements = [
+    "Jinja2==2.11.1",
+    "MarkupSafe==1.1.1",
+    "requests==2.23.0",
+    "colorlog==2.10.0",
     "certifi",
-    "zest.releaser[recommended]",
+    "flake8==3.8.3",
+    "flake8-isort==3.0.0",
+    "flake8-bugbear==20.1.4",
+    "isort==4.3.21",
+    "black",
+    "mypy",
+    "zest-releaser[recommended]",
 ]
 
 setup(
@@ -128,7 +132,7 @@ setup(
         "all": test_requirements
         + setup_requirements
         + docs_requirements
-        + develop_requirements,
+        + development_requirements,
     },
     url="https://nazrul.me/fhirpath/",
     python_requires=", ".join((">=3.6",)),

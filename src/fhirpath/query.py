@@ -321,7 +321,7 @@ class QueryBuilder(ABC):
     def _validate_root_path(self, path_string: str):
         """ """
         match = False
-        for alias, model in self._from:
+        for alias, _model in self._from:
             if path_string.split(".")[0] == alias:
                 match = True
                 break

@@ -157,9 +157,7 @@ class ElasticsearchEngine(Engine):
         # for now we support single from resource
         query_copy = query.clone()
 
-        resource_type = (
-            query.get_from()[0][1].__fields__["resource_type"].default
-        )  # xxx: query.get_from()[0][1].get_resource_type()
+        resource_type = query.get_from()[0][1].get_resource_type()
         field_index_name = self.calculate_field_index_name(resource_type)
 
         if unrestricted is False:

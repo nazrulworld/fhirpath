@@ -192,7 +192,7 @@ def lookup_fhir_class_path(
 
     prime_module_type: ModuleType = import_module(prime_module_path)
 
-    for importer, module_name, ispkg in pkgutil.walk_packages(
+    for _importer, module_name, ispkg in pkgutil.walk_packages(
         prime_module_type.__path__,  # type: ignore
         prime_module_type.__name__ + ".",
         onerror=lambda x: None,
@@ -202,7 +202,7 @@ def lookup_fhir_class_path(
 
         module_type: ModuleType = import_module(module_name)
 
-        for klass_name, klass in inspect.getmembers(module_type, inspect.isclass):
+        for klass_name, _klass in inspect.getmembers(module_type, inspect.isclass):
 
             if klass_name == resource_type:
                 storage.insert(resource_type, f"{module_name}.{resource_type}")
@@ -272,7 +272,7 @@ def expand_path(path_: Text) -> Text:
 def proxy(obj):
     """Making proxy of any object"""
     try:
-        return getattr(obj, "__proxy__")()
+        return obj.__proxy__()
     except AttributeError:
         # trying to make ourself
         p_obj = Proxy()
@@ -610,8 +610,9 @@ class BundleWrapper:
 
         self.data["link"] = container
 
-    def make_link(self, relation, url, params={}):
+    def make_link(self, relation, url, params=None):
         """ """
+        params = params or {}
         # link = BundleLink
         link = {"relation": relation}
         # fix: params
