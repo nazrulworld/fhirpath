@@ -5,7 +5,7 @@ History
 0.7.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- added missing ``isodate`` package dependency.
 
 
 0.7.0 (2020-08-07)

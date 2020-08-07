@@ -57,6 +57,7 @@ requirements = [
     "fhir.resources>=6.0.0b3,<7.0",
     "jsonpatch",
     "yarl",
+    "isodate",
 ]
 
 setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
@@ -71,7 +72,6 @@ test_requirements = [
     "SQLAlchemy",
     "aioelasticsearch",
     "pytz",
-    "isodate"
 ]
 docs_requirements = [
     "sphinx",
