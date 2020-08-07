@@ -5,22 +5,15 @@ https://www.hl7.org/fhir/datatypes.html#primitive
 import base64
 import re
 from collections import deque
-from datetime import date
-from datetime import datetime
-from typing import Deque
-from typing import Optional
-from typing import Text
-from typing import Union
+from datetime import date, datetime
+from typing import Deque, Optional, Text, Union
 
 import isodate
 from zope.interface import implementer
 
 from fhirpath.thirdparty import ImmutableDict
 
-from .interfaces import IFhirPrimitiveType
-from .interfaces import IPrimitiveTypeCollection
-from .interfaces import ITypeSpecifier
-
+from .interfaces import IFhirPrimitiveType, IPrimitiveTypeCollection, ITypeSpecifier
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

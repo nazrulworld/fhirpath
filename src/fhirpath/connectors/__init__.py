@@ -1,11 +1,9 @@
 # _*_ coding: utf-8 _*_
 from zope.interface import Invalid
 
-from fhirpath.utils import import_string
-from fhirpath.utils import reraise
+from fhirpath.utils import import_string, reraise
 
 from .url import _parse_rfc1738_args
-
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 

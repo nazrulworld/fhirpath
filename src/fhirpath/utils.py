@@ -10,17 +10,19 @@ import uuid
 from importlib import import_module
 from inspect import signature
 from types import ModuleType
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Match
-from typing import Optional
-from typing import Pattern
-from typing import Text
-from typing import Type
-from typing import Union
-from typing import cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Match,
+    Optional,
+    Pattern,
+    Text,
+    Type,
+    Union,
+    cast,
+)
 
 import pkg_resources
 from pydantic.validators import bool_validator
@@ -31,10 +33,8 @@ from fhirpath.thirdparty import Proxy
 
 from .enums import FHIR_VERSION
 from .interfaces import IPathInfoContext
-from .storage import FHIR_RESOURCE_CLASS_STORAGE
-from .storage import PATH_INFO_STORAGE
+from .storage import FHIR_RESOURCE_CLASS_STORAGE, PATH_INFO_STORAGE
 from .types import PrimitiveDataTypes
-
 
 if TYPE_CHECKING:
     from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401

@@ -4,14 +4,7 @@ import inspect
 import typing
 from abc import ABC
 from functools import wraps
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import DefaultDict
-from typing import List
-from typing import Optional
-from typing import Type
-from typing import Union
-from typing import cast
+from typing import TYPE_CHECKING, Any, DefaultDict, List, Optional, Type, Union, cast
 
 from pydantic.fields import ModelField
 from zope.interface import implementer
@@ -23,7 +16,6 @@ from fhirpath.utils import lookup_fhir_class
 from .exceptions import MultipleResultsFound
 from .storage import MemoryStorage
 from .types import TypeSpecifier
-
 
 if TYPE_CHECKING:
     from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401

@@ -3,9 +3,7 @@ from zope.interface import implementer
 
 from fhirpath.utils import import_string
 
-from ..interfaces import IURL
-from ..interfaces import IConnectionFactory
-
+from ..interfaces import IURL, IConnectionFactory
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 

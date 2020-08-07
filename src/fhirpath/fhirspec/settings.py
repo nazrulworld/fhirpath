@@ -1,8 +1,6 @@
 import os
 import pathlib
-from typing import Any
-from typing import Dict
-
+from typing import Any, Dict
 
 """Variable Start Here """
 BASE_PATH = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))

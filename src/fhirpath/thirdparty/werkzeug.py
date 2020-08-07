@@ -1,7 +1,6 @@
 """https://github.com/pallets/werkzeug/blob/master/src/werkzeug/_compat.py"""
 from itertools import repeat
 
-
 iteritems = lambda d, *args, **kwargs: iter(d.items(*args, **kwargs))  # noqa: E731
 
 

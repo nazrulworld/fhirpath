@@ -10,7 +10,6 @@ from ..connection import Connection
 from ..url import _parse_rfc1738_args
 from . import ConnectionFactory
 
-
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 logger = logging.getLogger("fhirpath.providers.plone.engine")

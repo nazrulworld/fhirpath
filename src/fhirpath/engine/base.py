@@ -7,13 +7,14 @@ from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.interfaces import IEngine
-from fhirpath.interfaces.engine import IEngineResult
-from fhirpath.interfaces.engine import IEngineResultBody
-from fhirpath.interfaces.engine import IEngineResultHeader
-from fhirpath.interfaces.engine import IEngineResultRow
+from fhirpath.interfaces.engine import (
+    IEngineResult,
+    IEngineResultBody,
+    IEngineResultHeader,
+    IEngineResultRow,
+)
 from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
-
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

@@ -3,12 +3,13 @@
 from fhirpath.connectors.connection import Connection
 from fhirpath.enums import FHIR_VERSION
 
-from .base import Engine
-from .base import EngineResult
-from .base import EngineResultBody
-from .base import EngineResultHeader
-from .base import EngineResultRow
-
+from .base import (
+    Engine,
+    EngineResult,
+    EngineResultBody,
+    EngineResultHeader,
+    EngineResultRow,
+)
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 

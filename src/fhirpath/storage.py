@@ -9,7 +9,6 @@ from .enums import FHIR_VERSION
 from .interfaces import IStorage
 from .types import EMPTY_VALUE
 
-
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 

@@ -1,9 +1,7 @@
 # _*_ coding: utf-8 _*_
 import enum
 import operator
-from typing import Any
-from typing import Callable
-
+from typing import Any, Callable
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

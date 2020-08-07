@@ -1,9 +1,7 @@
 # _*_ coding: utf-8 _*_
 from fhirpath.exceptions import ConstraintNotSatisfied
 
-from .interfaces import IBaseClass
-from .interfaces import IValuedClass
-
+from .interfaces import IBaseClass, IValuedClass
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

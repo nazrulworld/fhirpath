@@ -7,7 +7,6 @@ from .enums import FHIR_VERSION
 from .interfaces import IModel
 from .utils import lookup_fhir_class
 
-
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 

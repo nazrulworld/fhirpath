@@ -7,45 +7,48 @@ from collections import deque
 from copy import copy
 
 import isodate
-from zope.interface import implementer
-from zope.interface import implementer_only
+from zope.interface import implementer, implementer_only
 
-from fhirpath.constraints import required_finalized
-from fhirpath.constraints import required_not_finalized
-from fhirpath.constraints import required_value_not_assigned
-from fhirpath.enums import OPERATOR
-from fhirpath.enums import GroupType
-from fhirpath.enums import MatchType
-from fhirpath.enums import SortOrderType
-from fhirpath.enums import TermMatchType
-from fhirpath.enums import WhereConstraintType
+from fhirpath.constraints import (
+    required_finalized,
+    required_not_finalized,
+    required_value_not_assigned,
+)
+from fhirpath.enums import (
+    OPERATOR,
+    GroupType,
+    MatchType,
+    SortOrderType,
+    TermMatchType,
+    WhereConstraintType,
+)
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IElementPath
 from fhirpath.interfaces.base import IFhirPrimitiveType
-from fhirpath.interfaces.fql import IBaseTerm
-from fhirpath.interfaces.fql import IExistsGroupTerm
-from fhirpath.interfaces.fql import IExistsTerm
-from fhirpath.interfaces.fql import IFqlClause
-from fhirpath.interfaces.fql import IGroupTerm
-from fhirpath.interfaces.fql import IInTerm
-from fhirpath.interfaces.fql import INonFhirTerm
-from fhirpath.interfaces.fql import IPathConstraint
-from fhirpath.interfaces.fql import ISortTerm
-from fhirpath.interfaces.fql import ITerm
-from fhirpath.interfaces.fql import ITermValue
-from fhirpath.interfaces.fql import IValuedClass
-from fhirpath.types import EMPTY_VALUE
-from fhirpath.types import FhirBoolean
-from fhirpath.types import FhirDate
-from fhirpath.types import FhirDateTime
-from fhirpath.types import FhirDecimal
-from fhirpath.types import FhirInteger
-from fhirpath.types import FhirString
-from fhirpath.utils import EmptyPathInfoContext
-from fhirpath.utils import PathInfoContext
-from fhirpath.utils import proxy
-from fhirpath.utils import unwrap_proxy
-
+from fhirpath.interfaces.fql import (
+    IBaseTerm,
+    IExistsGroupTerm,
+    IExistsTerm,
+    IFqlClause,
+    IGroupTerm,
+    IInTerm,
+    INonFhirTerm,
+    IPathConstraint,
+    ISortTerm,
+    ITerm,
+    ITermValue,
+    IValuedClass,
+)
+from fhirpath.types import (
+    EMPTY_VALUE,
+    FhirBoolean,
+    FhirDate,
+    FhirDateTime,
+    FhirDecimal,
+    FhirInteger,
+    FhirString,
+)
+from fhirpath.utils import EmptyPathInfoContext, PathInfoContext, proxy, unwrap_proxy
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 

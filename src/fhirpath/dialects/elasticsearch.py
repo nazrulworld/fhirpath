@@ -6,22 +6,18 @@ import re
 import isodate
 from zope.interface import alsoProvides
 
-from fhirpath.enums import OPERATOR
-from fhirpath.enums import GroupType
-from fhirpath.enums import MatchType
-from fhirpath.enums import SortOrderType
-from fhirpath.enums import TermMatchType
-from fhirpath.interfaces import IFhirPrimitiveType
-from fhirpath.interfaces import IPrimitiveTypeCollection
+from fhirpath.enums import OPERATOR, GroupType, MatchType, SortOrderType, TermMatchType
+from fhirpath.interfaces import IFhirPrimitiveType, IPrimitiveTypeCollection
 from fhirpath.interfaces.dialects import IIgnoreNestedCheck
-from fhirpath.interfaces.fql import IExistsTerm
-from fhirpath.interfaces.fql import IGroupTerm
-from fhirpath.interfaces.fql import IInTerm
-from fhirpath.interfaces.fql import INonFhirTerm
-from fhirpath.interfaces.fql import ITerm
+from fhirpath.interfaces.fql import (
+    IExistsTerm,
+    IGroupTerm,
+    IInTerm,
+    INonFhirTerm,
+    ITerm,
+)
 
 from .base import DialectBase
-
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 logger = logging.getLogger("fhirpath.dialects.elasticsearch")

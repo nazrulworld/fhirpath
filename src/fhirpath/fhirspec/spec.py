@@ -17,7 +17,6 @@ from fhirpath.interfaces import IStorage
 from fhirpath.storage import MemoryStorage
 from fhirpath.utils import reraise
 
-
 logger = logging.getLogger("fhirpath.fhrspec")
 
 # allow to skip some profiles by matching against their url (used while WiP)

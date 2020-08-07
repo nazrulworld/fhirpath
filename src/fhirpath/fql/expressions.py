@@ -1,19 +1,19 @@
 # _*_ coding: utf-8 _*_
 from fhirpath.enums import OPERATOR
-from fhirpath.interfaces.fql import IGroupTerm
-from fhirpath.interfaces.fql import ITerm
+from fhirpath.interfaces.fql import IGroupTerm, ITerm
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import reraise
 
-from .types import ExistsGroupTerm
-from .types import ExistsTerm
-from .types import GroupTerm
-from .types import InTerm
-from .types import NonFhirTerm
-from .types import SortTerm
-from .types import Term
-from .types import TermValue
-
+from .types import (
+    ExistsGroupTerm,
+    ExistsTerm,
+    GroupTerm,
+    InTerm,
+    NonFhirTerm,
+    SortTerm,
+    Term,
+    TermValue,
+)
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

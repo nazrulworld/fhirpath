@@ -5,15 +5,16 @@ from typing import Optional
 from zope.interface import implementer
 
 from fhirpath.engine import EngineResultRow
-from fhirpath.engine.base import Engine
-from fhirpath.engine.base import EngineResult
-from fhirpath.engine.base import EngineResultBody
-from fhirpath.engine.base import EngineResultHeader
+from fhirpath.engine.base import (
+    Engine,
+    EngineResult,
+    EngineResultBody,
+    EngineResultHeader,
+)
 from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
-
 
 CONTAINS_INDEX_OR_FUNCTION = re.compile(r"[a-z09_]+(\[[0-9]+\])|(\([0-9]*\))$", re.I)
 CONTAINS_INDEX = re.compile(r"[a-z09_]+\[[0-9]+\]$", re.I)

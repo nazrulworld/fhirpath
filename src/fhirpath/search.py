@@ -1,40 +1,36 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
-from typing import Dict
-from typing import Pattern
-from typing import Set
-from typing import Text
+from typing import Dict, Pattern, Set, Text
 from urllib.parse import unquote_plus
 
-from multidict import MultiDict
-from multidict import MultiDictProxy
-from zope.interface import Invalid
-from zope.interface import implementer
+from multidict import MultiDict, MultiDictProxy
+from zope.interface import Invalid, implementer
 
-from fhirpath.enums import FHIR_VERSION
-from fhirpath.enums import GroupType
-from fhirpath.enums import MatchType
-from fhirpath.enums import SortOrderType
-from fhirpath.enums import WhereConstraintType
+from fhirpath.enums import (
+    FHIR_VERSION,
+    GroupType,
+    MatchType,
+    SortOrderType,
+    WhereConstraintType,
+)
 from fhirpath.exceptions import ValidationError
-from fhirpath.fql import G_
-from fhirpath.fql import T_
-from fhirpath.fql import V_
-from fhirpath.fql import contains_
-from fhirpath.fql import eb_
-from fhirpath.fql import exists_
-from fhirpath.fql import not_
-from fhirpath.fql import not_exists_
-from fhirpath.fql import sa_
-from fhirpath.fql import sort_
+from fhirpath.fql import (
+    G_,
+    T_,
+    V_,
+    contains_,
+    eb_,
+    exists_,
+    not_,
+    not_exists_,
+    sa_,
+    sort_,
+)
 from fhirpath.fql.types import ElementPath
-from fhirpath.interfaces import IGroupTerm
-from fhirpath.interfaces import ISearch
-from fhirpath.interfaces import ISearchContext
+from fhirpath.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.query import Q_
 from fhirpath.storage import SEARCH_PARAMETERS_STORAGE
-
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

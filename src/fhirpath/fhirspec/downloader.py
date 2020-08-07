@@ -9,7 +9,6 @@ from fhirspec import download
 
 from fhirpath.enums import FHIR_VERSION
 
-
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 logger = logging.getLogger("fhirpath.fhirspec.downloader")

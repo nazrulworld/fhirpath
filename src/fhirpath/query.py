@@ -1,42 +1,41 @@
 # _*_ coding: utf-8 _*_
 from abc import ABC
 from copy import copy
-from typing import TYPE_CHECKING
-from typing import Optional
-from typing import Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from zope.interface import implementer
 
 from fhirpath.enums import EngineQueryType
-from fhirpath.exceptions import ConstraintNotSatisfied
-from fhirpath.exceptions import ValidationError
+from fhirpath.exceptions import ConstraintNotSatisfied, ValidationError
 from fhirpath.model import Model
 from fhirpath.thirdparty import Proxy
-from fhirpath.utils import FHIR_VERSION
-from fhirpath.utils import builder
+from fhirpath.utils import FHIR_VERSION, builder
 
-from .constraints import required_finalized
-from .constraints import required_from_resource
-from .constraints import required_not_finalized
+from .constraints import (
+    required_finalized,
+    required_from_resource,
+    required_not_finalized,
+)
 from .exceptions import MultipleResultsFound
-from .fql.expressions import and_
-from .fql.expressions import fql
-from .fql.expressions import sort_
-from .fql.types import ElementPath
-from .fql.types import FromClause
-from .fql.types import LimitClause
-from .fql.types import SelectClause
-from .fql.types import SortClause
-from .fql.types import WhereClause
-from .interfaces import ICloneable
-from .interfaces import IElementPath
-from .interfaces import IGroupTerm
-from .interfaces import IQuery
-from .interfaces import IQueryBuilder
-from .interfaces import IQueryResult
-from .interfaces import ISortTerm
-from .interfaces import ITerm
-
+from .fql.expressions import and_, fql, sort_
+from .fql.types import (
+    ElementPath,
+    FromClause,
+    LimitClause,
+    SelectClause,
+    SortClause,
+    WhereClause,
+)
+from .interfaces import (
+    ICloneable,
+    IElementPath,
+    IGroupTerm,
+    IQuery,
+    IQueryBuilder,
+    IQueryResult,
+    ISortTerm,
+    ITerm,
+)
 
 if TYPE_CHECKING:
     from fhirpath.engine.base import Engine

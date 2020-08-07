@@ -11,7 +11,6 @@ from ..interfaces import IURL
 from ..url import _parse_rfc1738_args
 from . import ConnectionFactory
 
-
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 logger = logging.getLogger("fhirpath.connectors.factory.pg")

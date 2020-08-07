@@ -1,9 +1,7 @@
 # _*_ coding: utf-8 _*_
 from zope.interface import implementer
 
-from fhirpath.interfaces import IConnection
-from fhirpath.interfaces import IDialect
-
+from fhirpath.interfaces import IConnection, IDialect
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

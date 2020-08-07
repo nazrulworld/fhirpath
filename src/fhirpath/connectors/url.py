@@ -11,16 +11,13 @@ the MIT License: http://www.opensource.org/licenses/mit-license.php
 """
 import re
 from collections import Iterable
-from urllib.parse import parse_qsl
-from urllib.parse import unquote
+from urllib.parse import parse_qsl, unquote
 
-from zope.interface import Invalid
-from zope.interface import implementer
+from zope.interface import Invalid, implementer
 
 from fhirpath.utils import force_str
 
 from .interfaces import IURL
-
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
