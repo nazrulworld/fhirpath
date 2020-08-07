@@ -393,7 +393,7 @@ class PathInfoContext:
                 if part != field.alias:
                     continue
                 type_model_config = model_class.__config__
-                multiple = getattr(field.outer_type_, "_name", None) == "List"
+                multiple = str(field.outer_type_)[:12] == "typing.List["
                 if getattr(field.type_, "__resource_type__", None):
                     # AbstractModelType
                     model_class = lookup_fhir_class(

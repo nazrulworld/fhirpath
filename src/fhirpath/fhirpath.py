@@ -106,7 +106,7 @@ class ClassInfoElement:
             model_class: Optional[Type["FHIRAbstractModel"]] = None
         name = field.alias
         py_name = field.name
-        is_one_based = (getattr(field.outer_type_, "_name", None) == "List") is False
+        is_one_based = (str(field.outer_type_)[:12] == "typing.List[") is False
 
         if getattr(field.type_, "is_primitive", None) is None:
             if field.type_ == bool:
