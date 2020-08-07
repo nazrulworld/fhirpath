@@ -9,6 +9,12 @@ Improvements
 
 - Issue#5: Now ``ElasticsearchEngine::get_index_name`` takes one optional parameter ``resource_type``.
 
+- Add supports for python version 3.6.
+
+Breaking
+
+- Make full capability with `fhir.resources <https://pypi.org/project/fhir.resources/>`_ version ``6.x.x``,
+  please have a look of revolutionary changes of ``fhir.resources``.
 
 0.6.2 (2020-06-30)
 ------------------
