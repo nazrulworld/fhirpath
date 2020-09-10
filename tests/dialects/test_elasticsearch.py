@@ -15,7 +15,12 @@ async def test_raw_es_query_generation_from_search(engine, es_data):
 
     fhir_search = Search(context, params=params)
     result = fhir_search.build()
-    engine.dialect.compile(result._query, mapping=engine.get_mapping("Patient"))
+
+    engine.dialect.compile(
+        result._query,
+        calculate_field_index_name=engine.calculate_field_index_name,
+        get_mapping=engine.get_mapping,
+    )
 
 
 async def test_dialect_generated_raw_query(es_data, engine):
@@ -36,8 +41,8 @@ async def test_dialect_generated_raw_query(es_data, engine):
 
     compiled = search_context.engine.dialect.compile(
         result_query._query,
-        mapping=engine.get_mapping("Organization"),
-        root_replacer="organization_resource",
+        calculate_field_index_name=engine.calculate_field_index_name,
+        get_mapping=engine.get_mapping,
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     conn = engine.connection.raw_connection
@@ -61,8 +66,8 @@ async def test_dialect_generated_raw_query(es_data, engine):
 
     compiled = search_context.engine.dialect.compile(
         result_query._query,
-        mapping=engine.get_mapping("Patient"),
-        root_replacer="patient_resource",
+        calculate_field_index_name=engine.calculate_field_index_name,
+        get_mapping=engine.get_mapping,
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
@@ -81,8 +86,8 @@ async def test_dialect_generated_raw_query(es_data, engine):
 
     compiled = search_context.engine.dialect.compile(
         result_query._query,
-        mapping=engine.get_mapping("ChargeItem"),
-        root_replacer="chargeitem_resource",
+        calculate_field_index_name=engine.calculate_field_index_name,
+        get_mapping=engine.get_mapping,
     )
     search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
