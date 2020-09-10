@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
 from abc import ABC
 from copy import copy
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from zope.interface import implementer
 
@@ -204,17 +204,18 @@ class QueryBuilder(ABC):
         return newone
 
     @builder
-    def from_(self, resource_type: str, alias: Optional[str] = None):
+    def from_(self, resource_type: Union[str, List[str]]):
         """ """
         required_not_finalized(self)
 
-        if len(self._from) > 0:
-            # info: we are allowing single resource only
-            raise ValidationError("from_ value already assigned!")
         assert self._engine
-        model = Model.create(resource_type, fhir_release=self._engine.fhir_release)
-        alias = alias or model.__name__  # xxx: model.get_resource_type()
-        self._from.append((alias, model))
+        if isinstance(resource_type, str):
+            model = Model.create(resource_type, fhir_release=self._engine.fhir_release)
+            self._from.append((resource_type, model))
+        else:
+            for r_type in resource_type:
+                model = Model.create(r_type, fhir_release=self._engine.fhir_release)
+                self._from.append((r_type, model))
 
     @builder
     def select(self, *args):
@@ -308,7 +309,8 @@ class QueryBuilder(ABC):
 
     def _pre_check(self):
         """ """
-        required_from_resource(self)
+        # TODO can we modify this check somehow?
+        # required_from_resource(self)
         required_not_finalized(self)
 
     def _validate(self):
@@ -319,16 +321,17 @@ class QueryBuilder(ABC):
 
     def _validate_root_path(self, path_string: str):
         """ """
-        match = False
-        for alias, _model in self._from:
-            if path_string.split(".")[0] == alias:
-                match = True
-                break
-        if match is False:
+        root_path = path_string.split(".")[0]
+
+        if self._from:
+            match = any(alias == root_path for alias, _ in self._from)
+        else:
+            # FIXME: find a better way to validate that we're searching on all resources
+            match = root_path == "Resource"
+
+        if not match:
             raise ValidationError(
-                "Root path '{0!s}' must be matched with from models".format(
-                    path_string.split(".")[0]
-                )
+                f"Root path '{root_path}' must be matched with from models"
             )
 
     def _validate_term_path(self, term):
@@ -534,7 +537,7 @@ class AsyncQueryResult(QueryResult):
         return self.count()
 
 
-def Q_(resource=None, engine=None):
+def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
     """ """
     builder = Query._builder(engine)
     if resource is not None:
