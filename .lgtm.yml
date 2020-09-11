@@ -1,0 +1,11 @@
+extraction:
+  python:
+    prepare:
+      packages: libssl1.0-dev
+    python_setup:
+      version: 3
+      requirements:
+        - pip
+      requirements_files:
+        - requirements_dev.txt
+      setup_py: setup.py
