@@ -10,4 +10,5 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Jason Paumier <jason@arkhn.com>
+* Simon Vadée <simon@arkhn.com>
