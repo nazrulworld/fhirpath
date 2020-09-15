@@ -144,7 +144,14 @@ def _setup_es_index(es_conn):
                     "path_tokenizer": {"delimiter": "/", "type": "path_hierarchy"},
                     "fhir_reference_tokenizer": {"type": "pattern", "pattern": "/"},
                 },
-            }
+            },
+            "index": {
+                "mapping": {
+                    "total_fields": {"limit": 2500},
+                    "depth": {"limit": 50},
+                    "nested_fields": {"limit": 500},
+                }
+            },
         },
         "mappings": {
             "dynamic": False,
@@ -170,11 +177,13 @@ def _setup_es_index(es_conn):
     patient_mapping = fhir_resource_mapping("Patient")
     chargeitem_mapping = fhir_resource_mapping("ChargeItem")
     observation_mapping = fhir_resource_mapping("Observation")
+    task_mapping = fhir_resource_mapping("Task")
 
     body["mappings"]["properties"]["organization_resource"] = org_mapping
     body["mappings"]["properties"]["patient_resource"] = patient_mapping
     body["mappings"]["properties"]["chargeitem_resource"] = chargeitem_mapping
     body["mappings"]["properties"]["observation_resource"] = observation_mapping
+    body["mappings"]["properties"]["task_resource"] = task_mapping
 
     conn.indices.create(ES_INDEX_NAME_REAL, body=body)
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
@@ -264,6 +273,14 @@ def _load_es_data(es_conn):
     bulk_data = [
         {"index": {"_id": observation_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
         observation_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    task_data = _make_index_item("Task")
+    bulk_data = [
+        {"index": {"_id": task_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        task_data,
     ]
     res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
     assert res["errors"] is False

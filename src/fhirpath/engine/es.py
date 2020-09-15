@@ -144,7 +144,7 @@ class ElasticsearchEngine(Engine):
         elif isinstance(source, (bytes, str)):
             if not CONTAINS_FUNCTION.match(path_):
                 raise ValidationError(
-                    f"Invalid path {path_} has been supllied!"
+                    f"Invalid path {path_} has been supplied!"
                     "Path should contain function if source type is list"
                 )
             parts = path_.split("(")

@@ -306,8 +306,8 @@ class ElasticSearchDialect(DialectBase):
                 )
             )
         if len(query_fragments) == 0:
-            # Search on all types: available searchparams use "Resource"
-            # as path.context.resource_type
+            # Search on all types: available searchparams use
+            # "Resource" as path.context.resource_type
             # Use "*" as root_replacer to match any resource across the ES mapping.
             return self.compile_for_single_resource_type(
                 query,
