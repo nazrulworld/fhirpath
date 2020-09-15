@@ -5,7 +5,7 @@ History
 0.7.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- enable search on several resource types (_type search param)
 
 
 0.7.1 (2020-08-07)

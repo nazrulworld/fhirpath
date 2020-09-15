@@ -135,6 +135,7 @@ def test_select_muiltipaths(es_data, engine):
     builder = builder.where(T_("Organization.active") == V_("true"))
     result = builder(async_result=False).fetchall()
 
+    # FIXME looks like we changed how things are built here
     assert len(result.body[0]) == 2
 
 

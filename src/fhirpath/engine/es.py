@@ -50,16 +50,17 @@ class ElasticsearchEngine(Engine):
         """ """
         raise NotImplementedError
 
-    def _add_result_headers(
-        self, query, result, source_filters, compiled, field_index_name
-    ):
+    def _add_result_headers(self, query, result, compiled):
         """ """
         # Process additional meta
         result.header.raw_query = self.connection.finalize_search_params(compiled)
+
+        source_filters = self._get_source_filters(query.get_select())
         if len(source_filters) == 0:
             return
 
         resource_type = query.get_from()[0][0]
+        field_index_name = self.calculate_field_index_name(resource_type)
         selects = list()
         for path_ in source_filters:
             if not path_.startswith(field_index_name):
@@ -73,24 +74,25 @@ class ElasticsearchEngine(Engine):
 
         result.header.selects = selects
 
-    def _get_source_filters(self, query, field_index_name):
+    def _get_source_filters(self, selects):
         """ """
         source_filters = []
-        for el_path in query.get_select():
+        for el_path in selects:
             if el_path.star:
-                source_filters.append(field_index_name)
+                source_filters.append("*")
                 break
             if el_path.non_fhir is True:
                 # No replacer for Non Fhir Path
                 source_filters.append(el_path.path)
                 continue
             parts = el_path._raw.split(".")
-            source_filters.append(".".join([field_index_name] + parts[1:]))
+            source_filters.append(
+                ".".join([self.calculate_field_index_name(parts[0]), *parts[1:]])
+            )
         return source_filters
 
     def _traverse_for_value(self, source, path_):
-        """Looks path_ is innocent string key, but may content expression, function.
-        """
+        """Looks path_ is innocent string key, but may content expression, function."""
         if isinstance(source, dict):
             # xxx: validate path, not blindly sending None
             if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
@@ -102,6 +104,9 @@ class ElasticsearchEngine(Engine):
                 )
             if CONTAINS_INDEX.match(path_):
                 return navigate_indexed_path(source, path_)
+            if path_ == "*":
+                # TODO check if we can have other keys than resource
+                return source[list(source.keys())[0]]
 
             return source.get(path_, None)
 
@@ -155,22 +160,16 @@ class ElasticsearchEngine(Engine):
 
     def _execute(self, query, unrestricted, query_type):
         """ """
-        # for now we support single from resource
         query_copy = query.clone()
-
-        resource_type = query.get_from()[0][1].get_resource_type()
-        field_index_name = self.calculate_field_index_name(resource_type)
 
         if unrestricted is False:
             self.build_security_query(query_copy)
 
-        params = {
-            "query": query_copy,
-            "root_replacer": field_index_name,
-            "mapping": self.get_mapping(resource_type),
-        }
-
-        compiled = self.dialect.compile(**params)
+        compiled = self.dialect.compile(
+            query_copy,
+            calculate_field_index_name=self.calculate_field_index_name,
+            get_mapping=self.get_mapping,
+        )
         if query_type == EngineQueryType.DML:
             raw_result = self.connection.fetch(self.get_index_name(), compiled)
         elif query_type == EngineQueryType.COUNT:
@@ -178,25 +177,17 @@ class ElasticsearchEngine(Engine):
         else:
             raise NotImplementedError
 
-        return raw_result, field_index_name, compiled
+        return raw_result, compiled
 
     def execute(self, query, unrestricted=False, query_type=EngineQueryType.DML):
         """ """
-        raw_result, field_index_name, compiled = self._execute(
-            query, unrestricted, query_type
-        )
-        if query_type == EngineQueryType.COUNT:
-            source_filters = []
-        else:
-            source_filters = self._get_source_filters(query, field_index_name)
-
+        raw_result, compiled = self._execute(query, unrestricted, query_type)
+        selects = query.get_select()
         # xxx: process result
-        result = self.process_raw_result(raw_result, source_filters)
+        result = self.process_raw_result(raw_result, selects, query_type)
 
         # Process additional meta
-        self._add_result_headers(
-            query, result, source_filters, compiled, field_index_name
-        )
+        self._add_result_headers(query, result, compiled)
         return result
 
     def build_security_query(self, query):
@@ -206,31 +197,34 @@ class ElasticsearchEngine(Engine):
     def calculate_field_index_name(self, resource_type):
         raise NotImplementedError
 
-    def extract_hits(self, selects, hits, container, doc_type="_doc"):
+    def extract_hits(self, source_filters, hits, container, doc_type="_doc"):
         """ """
         for res in hits:
             if res["_type"] != doc_type:
                 continue
             row = EngineResultRow()
-            for fullpath in selects:
+            for fullpath in source_filters:
                 source = res["_source"]
                 for path_ in fullpath.split("."):
                     source = self._traverse_for_value(source, path_)
                     if source is None:
                         break
                 row.append(source)
+
             container.add(row)
 
-    def process_raw_result(self, rawresult, selects):
+    def process_raw_result(self, rawresult, selects, query_type):
         """ """
-        if len(selects) == 0 and "count" in rawresult:
-            # Might be count API
+        if query_type == EngineQueryType.COUNT:
             total = rawresult["count"]
+            source_filters = []
         # let´s make some compabilities
         elif isinstance(rawresult["hits"]["total"], dict):
             total = rawresult["hits"]["total"]["value"]
+            source_filters = self._get_source_filters(selects)
         else:
             total = rawresult["hits"]["total"]
+            source_filters = self._get_source_filters(selects)
 
         result = EngineResult(
             header=EngineResultHeader(total=total), body=EngineResultBody()
@@ -239,7 +233,8 @@ class ElasticsearchEngine(Engine):
             # Nothing would be in body
             return result
         # extract primary data
-        self.extract_hits(selects, rawresult["hits"]["hits"], result.body)
+        if query_type != EngineQueryType.COUNT:
+            self.extract_hits(source_filters, rawresult["hits"]["hits"], result.body)
 
         if "_scroll_id" in rawresult and result.header.total > len(
             rawresult["hits"]["hits"]
@@ -253,7 +248,7 @@ class ElasticsearchEngine(Engine):
                 if len(raw_res["hits"]["hits"]) == 0:
                     break
 
-                self.extract_hits(selects, raw_res["hits"]["hits"], result.body)
+                self.extract_hits(source_filters, raw_res["hits"]["hits"], result.body)
 
                 consumed += len(raw_res["hits"]["hits"])
 

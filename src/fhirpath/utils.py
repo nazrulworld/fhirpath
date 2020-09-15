@@ -325,6 +325,7 @@ class PathInfoContext:
         optional: bool,
         multiple: bool,
         type_is_primitive: bool,
+        resource_type: str,
     ):
         """ """
         self._parent: Optional[str] = None
@@ -343,6 +344,7 @@ class PathInfoContext:
         self.optional: bool = optional
         self.multiple: bool = multiple
         self.type_is_primitive: bool = type_is_primitive
+        self.resource_type: str = resource_type
 
     @classmethod
     def context_from_path(
@@ -361,7 +363,8 @@ class PathInfoContext:
             return storage.get(pathname)
 
         parts = pathname.split(".")
-        model_path = lookup_fhir_class_path(parts[0], fhir_release=fhir_release)
+        resource_type = parts[0]
+        model_path = lookup_fhir_class_path(resource_type, fhir_release=fhir_release)
         model_class: Type["FHIRAbstractModel"] = cast(
             Type["FHIRAbstractModel"], import_string(cast(Text, model_path))
         )
@@ -423,6 +426,7 @@ class PathInfoContext:
                     optional=(not field.required),
                     multiple=multiple,
                     type_is_primitive=is_primitive,
+                    resource_type=resource_type,
                 )
                 if index > 1:
                     context.parent = ".".join(new_path.split(".")[:-1])

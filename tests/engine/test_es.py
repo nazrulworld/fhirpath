@@ -11,7 +11,7 @@ def test_hit_extraction(engine):
     """ """
     result = EngineResultBody()
     selects = ["organization_resource.name", "organization_resource.address"]
-    engine.extract_hits(selects, [DATASET_1], result)
+    engine.extract_hits(selects, hits=[DATASET_1], container=result)
 
     assert result[0][0] == "Burgers University Medical Center"
 
@@ -24,7 +24,7 @@ def test_hit_extraction_with_index(engine):
         "organization_resource.telecom[0]",
         "organization_resource.address.Skip(0).Take(0).line[0]",
     ]
-    engine.extract_hits(selects, [DATASET_1], result)
+    engine.extract_hits(selects, hits=[DATASET_1], container=result)
 
     name_length = len("Burgers University Medical Center")
     assert result[0][0] == name_length
