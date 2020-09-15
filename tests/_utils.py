@@ -72,6 +72,12 @@ class TestElasticsearchEngine(ElasticsearchEngine):
         """ """
         return yarl.URL("http://nohost/@fhir")
 
+    def extract_hits(self, selects, hits, container):
+        """ """
+        return ElasticsearchEngine.extract_hits(
+            self, selects, hits, container, DOC_TYPE
+        )
+
 
 def has_internet_connection():
     """ """
