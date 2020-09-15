@@ -306,10 +306,14 @@ class ElasticSearchDialect(DialectBase):
                 )
             )
         if len(query_fragments) == 0:
-            # Search on all types: available searchparams use "Resource" as path.context.resource_type
+            # Search on all types: available searchparams use "Resource"
+            # as path.context.resource_type
             # Use "*" as root_replacer to match any resource across the ES mapping.
             return self.compile_for_single_resource_type(
-                query, resource_type="Resource", mapping=None, root_replacer="*",
+                query,
+                resource_type="Resource",
+                mapping=None,
+                root_replacer="*",
             )
         elif len(query_fragments) > 1:
             return {
@@ -482,7 +486,7 @@ class ElasticSearchDialect(DialectBase):
 
     def resolve_datetime_term(self, term, root_replacer=None):
         """TODO: 1.) Value Conversion(stringify) based of context.type_name
-        i.e date or dateTime or Time """
+        i.e date or dateTime or Time"""
         qr = dict()
         if INonFhirTerm.providedBy(term):
             type_name = term.value.__visit_name__

@@ -1510,29 +1510,29 @@ class FHIRPath(ABC):
 
     def replaceMatches(self):
         """5.6.10. replaceMatches(regex : String, substitution: String) : String
-        Matches the input using the regular expression in regex and replaces each
-        match with the substitution string. The substitution may refer to identified
-        match groups in the regular expression.
+         Matches the input using the regular expression in regex and replaces each
+         match with the substitution string. The substitution may refer to identified
+         match groups in the regular expression.
 
-        If the input collection, regex, or substitution are empty,
-        the result is empty ({ }).
+         If the input collection, regex, or substitution are empty,
+         the result is empty ({ }).
 
-        If the input collection contains multiple items, the evaluation
-        of the expression will end and signal an error to the calling environment.
+         If the input collection contains multiple items, the evaluation
+         of the expression will end and signal an error to the calling environment.
 
-        This example of replaceMatches() will convert a string with a date
-        formatted as MM/dd/yy to dd-MM-yy::
+         This example of replaceMatches() will convert a string with a date
+         formatted as MM/dd/yy to dd-MM-yy::
 
-            '11/30/1972'.replace('\\b(?<month>\\d{1,2})/
-            (?<day>\\d{1,2})/(?<year>\\d{2,4})\\b', '${day}-${month}-${year}')
+             '11/30/1972'.replace('\\b(?<month>\\d{1,2})/
+             (?<day>\\d{1,2})/(?<year>\\d{2,4})\\b', '${day}-${month}-${year}')
 
 
-       ``
-       Note: Platforms will typically use native regular expression implementations.
-       These are typically fairly similar, but there will always be small differences.
-       As such, FHIRPath does not prescribe a particular dialect, but recommends the
-       use of the [PCRE] flavor as the dialect most likely to be broadly supported
-       and understood.``
+        ``
+        Note: Platforms will typically use native regular expression implementations.
+        These are typically fairly similar, but there will always be small differences.
+        As such, FHIRPath does not prescribe a particular dialect, but recommends the
+        use of the [PCRE] flavor as the dialect most likely to be broadly supported
+        and understood.``
         """
         raise NotImplementedError
 

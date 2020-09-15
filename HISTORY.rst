@@ -2,10 +2,17 @@
 History
 =======
 
-0.7.2 (unreleased)
+0.8.0 (unreleased)
 ------------------
 
-- enable search on several resource types (_type search param)
+Improvements
+
+- enable search on several resource types (_type search param) [Jasopaum]
+
+Breaking
+
+- ``fhirpath.search.SearchContext.resource_name`` has been changed ``fhirpath.search.SearchContext.resource_type`` and
+  now datatype is List instead of string. Please check your API. [Jasopaum]
 
 
 0.7.1 (2020-08-07)

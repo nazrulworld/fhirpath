@@ -12,10 +12,10 @@ from fhirpath.storage import FHIR_RESOURCE_SPEC_STORAGE, SEARCH_PARAMETERS_STORA
 
 from .spec import (  # noqa: F401
     FHIRSearchSpec,
-    SearchParameter,
     ResourceSearchParameterDefinition,
+    SearchParameter,
+    logger,
 )
-from .spec import logger
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 

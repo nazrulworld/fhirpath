@@ -11,11 +11,7 @@ from fhirpath.model import Model
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION, builder
 
-from .constraints import (
-    required_finalized,
-    required_from_resource,
-    required_not_finalized,
-)
+from .constraints import required_finalized, required_not_finalized
 from .exceptions import MultipleResultsFound
 from .fql.expressions import and_, fql, sort_
 from .fql.types import (

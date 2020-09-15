@@ -1,15 +1,7 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Pattern,
-    Set,
-    Text,
-    Tuple,
-)
+from typing import Dict, List, Optional, Pattern, Set, Text, Tuple
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
@@ -25,8 +17,8 @@ from fhirpath.enums import (
 from fhirpath.exceptions import ValidationError
 from fhirpath.fhirspec import (
     FHIRSearchSpecFactory,
-    SearchParameter,
     ResourceSearchParameterDefinition,
+    SearchParameter,
 )
 from fhirpath.fql import (
     G_,
@@ -52,7 +44,7 @@ uri_scheme: Pattern = re.compile(r"^https?://", re.I)
 value_prefixes: Set[str] = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as: Pattern = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
 has_dot_is: Pattern = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
-has_dot_where: Pattern = re.compile(r"\.where\([a-z\=\'\"()]+\)", re.I ^ re.U)
+has_dot_where: Pattern = re.compile(r"\.where\([a-z=\'\"()]+\)", re.I ^ re.U)
 parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
@@ -86,7 +78,8 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self, fhir_release: FHIR_VERSION,
+        self,
+        fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -96,7 +89,8 @@ class SearchContext(object):
             spec = FHIRSearchSpecFactory.from_release(fhir_release.name)
             spec.write()
 
-        # if self.resource_types is empty, return the searchparams definitions of the generic "Resource" type.
+        # if self.resource_types is empty, return the searchparams
+        # definitions of the generic "Resource" type.
         return [
             storage.get(resource_type)
             for resource_type in (self.resource_types or ["Resource"])
