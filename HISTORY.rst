@@ -9,6 +9,10 @@ Improvements
 
 - enable search on several resource types (_type search param) [Jasopaum]
 
+- Issue #8 `Add search support for without any params or query string if context has resource type <https://github.com/nazrulworld/fhirpath/issues/8>`_ [nazrulworld]
+
+- Issue #9 `multiple negative not working <https://github.com/nazrulworld/fhirpath/issues/9>`_ [nazrulworld]
+
 Breaking
 
 - ``fhirpath.search.SearchContext.resource_name`` has been changed ``fhirpath.search.SearchContext.resource_type`` and

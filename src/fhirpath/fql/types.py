@@ -749,7 +749,6 @@ class GroupTerm(object):
             if all(
                 [
                     (isinstance(t, Term) and t.unary_operator == OPERATOR.neg)
-                    or (isinstance(t, GroupType) and t.match_operator == MatchType.NONE)
                     for t in self.terms
                 ]
             ):

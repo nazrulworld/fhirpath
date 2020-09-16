@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Pattern, Set, Text, Tuple
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
-from zope.interface import Invalid, implementer
+from zope.interface import implementer
 
 from fhirpath.enums import (
     FHIR_VERSION,
@@ -286,8 +286,9 @@ class Search(object):
         Search.validate_params(context, query_string, params)
 
         self.context = ISearchContext(context)
+        all_params = None
         if isinstance(params, MultiDict):
-            pass
+            all_params = params
         elif isinstance(query_string, str):
             all_params = Search.parse_query_string(query_string, False)
         elif isinstance(params, (tuple, list)):
@@ -296,8 +297,6 @@ class Search(object):
             all_params = MultiDict(params.items())
         elif isinstance(params, MultiDictProxy):
             all_params = params.copy()
-        else:
-            raise Invalid
 
         self.result_params: Dict = dict()
         self.search_params = None
@@ -317,11 +316,6 @@ class Search(object):
                 "fhirpath.interfaces.ISearchContext interface"
             )
 
-        if query_string is None and params is None:
-            raise ValidationError(
-                "At least one of value is required, "
-                "either ´query_string´ or search ´params´ "
-            )
         if query_string and params:
             raise ValidationError(
                 "Only value from one of arguments "
@@ -342,6 +336,8 @@ class Search(object):
         _contained
         _containedType
         """
+        if all_params is None:
+            return
         _sort = all_params.popall("_sort", [])
         if len(_sort) > 0:
             self.result_params["_sort"] = ",".join(_sort)
@@ -1190,8 +1186,10 @@ class Search(object):
                 )
 
     def attach_where_terms(self, builder):
+        if self.search_params is None:
+            # xxx: should add resources condition here?
+            return builder
         terms_container = list()
-
         # we make sure that there are no duplicate keys!
         for param_name in set(self.search_params):
             raw_value = list(self.search_params.getall(param_name, []))
