@@ -243,7 +243,11 @@ class ElasticSearchDialect(DialectBase):
         conditional_terms = [
             w
             for w in query.get_where()
-            if w.path.context.resource_type == resource_type
+            if (
+                not INonFhirTerm.providedBy(w)
+                and w.path.context.resource_type == resource_type
+            )
+            or INonFhirTerm.providedBy(w)
         ]
         for term in conditional_terms:
             q, unary_operator = self.resolve_term(term, mapping, root_replacer)

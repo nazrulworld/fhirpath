@@ -112,7 +112,7 @@ class SearchContext(object):
         if search_param.expression is None:
             raise NotImplementedError
 
-        # Some Safegurds
+        # Some Safeguards
         if search_param.type == "composite":
             raise NotImplementedError
 
@@ -141,6 +141,7 @@ class SearchContext(object):
 
         normalized_params: List[Tuple[ElementPath, str, Optional[str]]] = []
         search_params_def = self._get_search_param_definitions(param_name_)
+
         for sp in search_params_def:
             # Look out for any composite or combo type parameter
             if sp.type == "composite":
@@ -1101,7 +1102,10 @@ class Search(object):
                     terms_.append(term_)
                 # IN Like Group
                 group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-                return group
+                if modifier == "not":
+                    return group.match_no_one()
+                else:
+                    return group.match_any()
 
             term = T_(path_)
             if modifier == "not":

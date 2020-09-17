@@ -746,15 +746,7 @@ class GroupTerm(object):
             self.type = GroupType.COUPLED
 
         if self.match_operator is None:
-            if all(
-                [
-                    (isinstance(t, Term) and t.unary_operator == OPERATOR.neg)
-                    for t in self.terms
-                ]
-            ):
-                self.match_operator = MatchType.NONE
-            else:
-                self.match_operator = MatchType.ANY
+            self.match_operator = MatchType.ANY
 
         self._finalized = True
 
@@ -785,6 +777,11 @@ class GroupTerm(object):
     def match_any(self):
         """ """
         self.match_operator = MatchType.ANY
+        return self.clone()
+
+    def match_no_one(self):
+        """ """
+        self.match_operator = MatchType.NONE
         return self.clone()
 
 
@@ -863,6 +860,11 @@ class ExistsGroupTerm(object):
     def match_any(self):
         """ """
         self.match_operator = MatchType.ANY
+        return self.clone()
+
+    def match_no_one(self):
+        """ """
+        self.match_operator = MatchType.NONE
         return self.clone()
 
 
