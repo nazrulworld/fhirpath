@@ -429,6 +429,7 @@ class Search(object):
         builder = Q_(self.context.resource_types, self.context.engine)
 
         builder = self.attach_where_terms(builder)
+        builder = self.attach_sort_terms(builder)
         builder = self.attach_limit_terms(builder)
 
         return builder(
