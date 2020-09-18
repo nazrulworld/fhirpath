@@ -27,7 +27,9 @@ HTTP_URL = re.compile(r"^https?://", re.IGNORECASE)
 class FHIRSearchSpec(object):
     """https://www.hl7.org/fhir/searchparameter-registry.html"""
 
-    def __init__(self, source: pathlib.Path, fhir_release: FHIR_VERSION, storage: MemoryStorage):
+    def __init__(
+        self, source: pathlib.Path, fhir_release: FHIR_VERSION, storage: MemoryStorage
+    ):
         """ """
         self._finalized = False
         self.source = source
@@ -44,7 +46,9 @@ class FHIRSearchSpec(object):
 
         for entry in spec_dict["entry"]:
 
-            self.parameters_def.append(SearchParameterDefinition.from_dict(self, entry["resource"]))
+            self.parameters_def.append(
+                SearchParameterDefinition.from_dict(self, entry["resource"])
+            )
 
     def write(self):
         """ """
@@ -53,7 +57,9 @@ class FHIRSearchSpec(object):
         for param_def in self.parameters_def:
             for resource_type in param_def.expression_map:
                 if not storage.exists(resource_type):
-                    storage.insert(resource_type, ResourceSearchParameterDefinition(resource_type))
+                    storage.insert(
+                        resource_type, ResourceSearchParameterDefinition(resource_type)
+                    )
                 obj = storage.get(resource_type)
                 # add search param code to obj
                 setattr(
@@ -260,7 +266,9 @@ class ResourceSearchParameterDefinition(object):
         try:
             return self.__storage__[item]
         except KeyError:
-            msg = "Object from {0!s} has no attribute `{1}`".format(self.__class__.__name__, item)
+            msg = "Object from {0!s} has no attribute `{1}`".format(
+                self.__class__.__name__, item
+            )
             reraise(AttributeError, msg)
 
     def __setattr__(self, name, value):
@@ -278,7 +286,9 @@ class ResourceSearchParameterDefinition(object):
         try:
             del self.__storage__[item]
         except KeyError:
-            msg = "Object from {0!s} has no attribute `{1}`".format(self.__class__.__name__, item)
+            msg = "Object from {0!s} has no attribute `{1}`".format(
+                self.__class__.__name__, item
+            )
             reraise(AttributeError, msg)
 
     def __add__(self, other):
@@ -291,7 +301,9 @@ class ResourceSearchParameterDefinition(object):
                 )
 
             if copied.xpath and other.resource_type in copied.xpath:
-                copied.xpath = copied.xpath.replace(other.resource_type, self.resource_type)
+                copied.xpath = copied.xpath.replace(
+                    other.resource_type, self.resource_type
+                )
 
             self.__storage__[key] = copied
 

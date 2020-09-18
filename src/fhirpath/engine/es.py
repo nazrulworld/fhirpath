@@ -87,14 +87,18 @@ class ElasticsearchEngine(Engine):
                 source_filters.append(el_path.path)
                 continue
             parts = el_path._raw.split(".")
-            source_filters.append(".".join([self.calculate_field_index_name(parts[0]), *parts[1:]]))
+            source_filters.append(
+                ".".join([self.calculate_field_index_name(parts[0]), *parts[1:]])
+            )
         return source_filters
 
     def _traverse_for_value(self, source, path_):
         """Looks path_ is innocent string key, but may content expression, function."""
         if isinstance(source, dict):
             # xxx: validate path, not blindly sending None
-            if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(path_):
+            if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
+                path_
+            ):
                 raise ValidationError(
                     f"Invalid path {path_} has been supllied!"
                     "Path cannot contain function if source type is dict"
@@ -223,7 +227,9 @@ class ElasticsearchEngine(Engine):
             total = rawresult["hits"]["total"]
             source_filters = self._get_source_filters(selects)
 
-        result = EngineResult(header=EngineResultHeader(total=total), body=EngineResultBody())
+        result = EngineResult(
+            header=EngineResultHeader(total=total), body=EngineResultBody()
+        )
         if len(selects) == 0:
             # Nothing would be in body
             return result
@@ -231,7 +237,9 @@ class ElasticsearchEngine(Engine):
         if query_type != EngineQueryType.COUNT:
             self.extract_hits(source_filters, rawresult["hits"]["hits"], result.body)
 
-        if "_scroll_id" in rawresult and result.header.total > len(rawresult["hits"]["hits"]):
+        if "_scroll_id" in rawresult and result.header.total > len(
+            rawresult["hits"]["hits"]
+        ):
             # we need to fetch all!
             consumed = len(rawresult["hits"]["hits"])
 

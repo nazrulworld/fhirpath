@@ -61,7 +61,9 @@ class FhirPrimitiveType(str):
         if self.__regex__ is not None:
             res = re.match(self.__regex__, self)
             if not res:
-                raise ValueError("Invalid FHIR '{0}' value!".format(self.__visit_name__))
+                raise ValueError(
+                    "Invalid FHIR '{0}' value!".format(self.__visit_name__)
+                )
 
 
 class FhirBoolean(FhirPrimitiveType):
@@ -76,7 +78,9 @@ class FhirBoolean(FhirPrimitiveType):
         """ """
         res = re.match(self.__regex__, self)
         if not res:
-            raise ValueError(f"Invalid boolean value: expected true or false, got {self}")
+            raise ValueError(
+                f"Invalid boolean value: expected true or false, got {self}"
+            )
 
     def to_python(self) -> bool:
         """ """
@@ -569,7 +573,9 @@ class PrimitiveTypeCollection(object):
         else:
             self._container.insert(position, member)
 
-    def remove(self, item: Optional[FhirPrimitiveType] = None, position: Optional[int] = None):
+    def remove(
+        self, item: Optional[FhirPrimitiveType] = None, position: Optional[int] = None
+    ):
         """ """
         if item is None:
             assert position is not None, "Position number is required!"

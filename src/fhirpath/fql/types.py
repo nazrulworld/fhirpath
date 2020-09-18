@@ -745,7 +745,10 @@ class GroupTerm(object):
 
         if self.match_operator is None:
             if all(
-                [(isinstance(t, Term) and t.unary_operator == OPERATOR.neg) for t in self.terms]
+                [
+                    (isinstance(t, Term) and t.unary_operator == OPERATOR.neg)
+                    for t in self.terms
+                ]
             ):
                 self.match_operator = MatchType.NONE
             else:
@@ -1026,7 +1029,9 @@ class ElementPath(object):
             ctx = EmptyPathInfoContext()
             ctx._path = self._raw
         else:
-            ctx = proxy(PathInfoContext.context_from_path(self._path, context.fhir_release))
+            ctx = proxy(
+                PathInfoContext.context_from_path(self._path, context.fhir_release)
+            )
         self.context = ctx
         self._finalized = True
 

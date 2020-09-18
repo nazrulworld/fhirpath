@@ -81,8 +81,7 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self,
-        fhir_release: FHIR_VERSION,
+        self, fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -95,7 +94,8 @@ class SearchContext(object):
         # if self.resource_types is empty, return the searchparams
         # definitions of the generic "Resource" type.
         return [
-            storage.get(resource_type) for resource_type in (self.resource_types or ["Resource"])
+            storage.get(resource_type)
+            for resource_type in (self.resource_types or ["Resource"])
         ]
 
     def augment_with_types(self, resource_types: List[str]):
@@ -118,7 +118,9 @@ class SearchContext(object):
         if search_param.type == "composite":
             raise NotImplementedError
 
-        if search_param.type in ("token", "composite") and search_param.code.startswith("combo-"):
+        if search_param.type in ("token", "composite") and search_param.code.startswith(
+            "combo-"
+        ):
             raise NotImplementedError
 
         dotted_path = search_param.expression
@@ -145,7 +147,9 @@ class SearchContext(object):
             # Look out for any composite or combo type parameter
             if sp.type == "composite":
                 normalized_params.append(
-                    self._normalize_composite_param(raw_value, param_def=sp, modifier=modifier_)
+                    self._normalize_composite_param(
+                        raw_value, param_def=sp, modifier=modifier_
+                    )
                 )
                 continue
 
@@ -316,7 +320,8 @@ class Search(object):
         """ """
         if not ISearchContext.providedBy(context):
             raise ValidationError(
-                ":context must be implemented " "fhirpath.interfaces.ISearchContext interface"
+                ":context must be implemented "
+                "fhirpath.interfaces.ISearchContext interface"
             )
 
         if query_string is None and params is None:
@@ -325,7 +330,8 @@ class Search(object):
             )
         if query_string and params:
             raise ValidationError(
-                "Only value from one of arguments " "(´query_string´, ´params´) is accepted"
+                "Only value from one of arguments "
+                "(´query_string´, ´params´) is accepted"
             )
 
     @staticmethod
@@ -562,7 +568,9 @@ class Search(object):
                 )
 
             # Compute the resources which may be included in the join query
-            included_resources = [target_ref_type] if target_ref_type else ref_param.target
+            included_resources = (
+                [target_ref_type] if target_ref_type else ref_param.target
+            )
 
             # Extract reference IDs from the main query result
             ids = main_query_result.extract_references(ref_param)
@@ -708,7 +716,9 @@ class Search(object):
             elif klass_name == "Money":
                 term_factory = self.create_money_term
             else:
-                raise NotImplementedError(f"Can't perform search on element of type {klass_name}")
+                raise NotImplementedError(
+                    f"Can't perform search on element of type {klass_name}"
+                )
             term = term_factory(path_, param_value, modifier)
         else:
             term = self.create_term(path_, param_value, modifier)
@@ -718,7 +728,10 @@ class Search(object):
     def create_identifier_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_identifier_term(path_, value, modifier) for value in param_value]
+            terms = [
+                self.create_identifier_term(path_, value, modifier)
+                for value in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -731,7 +744,8 @@ class Search(object):
         operator_, original_value = value
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_identifier_term(path_, val, modifier) for val in original_value
+                self.single_valued_identifier_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
@@ -787,7 +801,10 @@ class Search(object):
     def create_quantity_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_quantity_term(path_, value, modifier) for value in param_value]
+            terms = [
+                self.create_quantity_term(path_, value, modifier)
+                for value in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -801,7 +818,8 @@ class Search(object):
 
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_quantity_term(path_, val, modifier) for val in original_value
+                self.single_valued_quantity_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
@@ -863,7 +881,9 @@ class Search(object):
     def create_coding_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_coding_term(path_, value, modifier) for value in param_value]
+            terms = [
+                self.create_coding_term(path_, value, modifier) for value in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -871,12 +891,17 @@ class Search(object):
 
         raise NotImplementedError
 
-    def single_valued_coding_term(self, path_, value, modifier, ignore_not_modifier=False):
+    def single_valued_coding_term(
+        self, path_, value, modifier, ignore_not_modifier=False
+    ):
         """ """
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms = [self.single_valued_coding_term(path_, val, modifier) for val in original_value]
+            terms = [
+                self.single_valued_coding_term(path_, val, modifier)
+                for val in original_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         has_pipe = "|" in original_value
@@ -933,7 +958,8 @@ class Search(object):
         """ """
         if isinstance(param_value, list):
             terms = [
-                self.create_codeableconcept_term(path_, value, modifier) for value in param_value
+                self.create_codeableconcept_term(path_, value, modifier)
+                for value in param_value
             ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
@@ -978,7 +1004,9 @@ class Search(object):
     def create_address_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_address_term(path_, val, modifier) for val in param_value]
+            terms = [
+                self.create_address_term(path_, val, modifier) for val in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -991,7 +1019,8 @@ class Search(object):
         operator_, original_value = value
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_address_term(path_, val, modifier) for val in original_value
+                self.single_valued_address_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
@@ -1016,7 +1045,10 @@ class Search(object):
     def create_contactpoint_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_contactpoint_term(path_, val, modifier) for val in param_value]
+            terms = [
+                self.create_contactpoint_term(path_, val, modifier)
+                for val in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -1030,7 +1062,8 @@ class Search(object):
 
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_contactpoint_term(path_, val, modifier) for val in original_value
+                self.single_valued_contactpoint_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
@@ -1041,7 +1074,9 @@ class Search(object):
             assert path_._where.name == "system"
 
             terms = [
-                self.create_term(path_ / "system", (value[0], path_._where.value), None),
+                self.create_term(
+                    path_ / "system", (value[0], path_._where.value), None
+                ),
                 self.create_term(path_ / "value", value, None),
             ]
         else:
@@ -1061,7 +1096,9 @@ class Search(object):
     def create_humanname_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_humanname_term(path_, val, modifier) for val in param_value]
+            terms = [
+                self.create_humanname_term(path_, val, modifier) for val in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
@@ -1075,7 +1112,8 @@ class Search(object):
 
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_humanname_term(path_, val, modifier) for val in original_value
+                self.single_valued_humanname_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
@@ -1100,7 +1138,10 @@ class Search(object):
     def create_reference_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_reference_term(path_, value, modifier) for value in param_value]
+            terms = [
+                self.create_reference_term(path_, value, modifier)
+                for value in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         elif isinstance(param_value, tuple):
@@ -1112,7 +1153,8 @@ class Search(object):
 
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_reference_term(path_, val, modifier) for val in original_value
+                self.single_valued_reference_term(path_, val, modifier)
+                for val in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
 
@@ -1153,7 +1195,9 @@ class Search(object):
     def create_money_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = [self.create_money_term(path_, value, modifier) for value in param_value]
+            terms = [
+                self.create_money_term(path_, value, modifier) for value in param_value
+            ]
             return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         elif isinstance(param_value, tuple):
@@ -1167,7 +1211,8 @@ class Search(object):
 
         if isinstance(original_value, list):
             terms = [
-                self.single_valued_money_term(path_, value, modifier) for value in original_value
+                self.single_valued_money_term(path_, value, modifier)
+                for value in original_value
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
 
@@ -1225,7 +1270,9 @@ class Search(object):
                 "You cannot use modifier (above,below) and prefix (sa,eb) at a time"
             )
         if modifier == "contains" and operator_ != "eq":
-            raise NotImplementedError("In case of :contains modifier, only eq prefix is supported")
+            raise NotImplementedError(
+                "In case of :contains modifier, only eq prefix is supported"
+            )
 
     def create_term(self, path_, value, modifier):
         """ """
@@ -1318,12 +1365,15 @@ class Search(object):
         """
         if modifier in ("missing", "exists"):
             if not isinstance(param_value, tuple):
-                raise ValidationError("Multiple values are not allowed for missing(exists) search")
+                raise ValidationError(
+                    "Multiple values are not allowed for missing(exists) search"
+                )
 
             if not param_value[1] in ("true", "false"):
 
                 raise ValidationError(
-                    "Only ´true´ or ´false´ as value is " "allowed for missing(exists) search"
+                    "Only ´true´ or ´false´ as value is "
+                    "allowed for missing(exists) search"
                 )
 
     def attach_where_terms(self, builder):
@@ -1346,7 +1396,9 @@ class Search(object):
                 if sort_field.startswith("-"):
                     order_ = SortOrderType.DESC
                     sort_field = sort_field[1:]
-                for sort_param_def in self.context._get_search_param_definitions(sort_field):
+                for sort_param_def in self.context._get_search_param_definitions(
+                    sort_field
+                ):
                     path_ = self.context.resolve_path_context(sort_param_def)
                     terms.append(sort_(path_, order_))
 
@@ -1408,11 +1460,15 @@ class Search(object):
 
         # _include
         self.include_queries = self.include(main_result)
-        include_results: List[EngineResult] = [q.fetchall() for q in self.include_queries]
+        include_results: List[EngineResult] = [
+            q.fetchall() for q in self.include_queries
+        ]
 
         # _revinclude
         self.rev_include_queries = self.rev_include(main_result)
-        rev_include_results: List[EngineResult] = [q.fetchall() for q in self.rev_include_queries]
+        rev_include_results: List[EngineResult] = [
+            q.fetchall() for q in self.rev_include_queries
+        ]
 
         all_includes = [*include_results, *rev_include_results]
         return self.response(main_result, all_includes)
@@ -1458,7 +1514,9 @@ class AsyncSearch(Search):
 
         # _include
         self.include_queries = self.include(main_result)
-        include_results: List[EngineResult] = [await q.fetchall() for q in self.include_queries]
+        include_results: List[EngineResult] = [
+            await q.fetchall() for q in self.include_queries
+        ]
 
         # _revinclude
         self.rev_include_queries = self.rev_include(main_result)
