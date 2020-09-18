@@ -564,32 +564,23 @@ def test_issue9_multiple_negative_terms_not_working(es_data, engine):
 
 
 def test_search_negative_address(es_data, engine):
-    """ 9105 PZ"""
+    """ """
     search_context = SearchContext(engine, "Organization")
     params = (("address:not", "Den Burg"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 0
 
-    # fix me: there should 1 result as one of address not have post code like that!
-    # {'_source': {'includes': ['organization_resource']},
-    #  'from': 0,
-    #  'query': {'bool': {'filter': [{'match':
-    #   {'organization_resource.resourceType': 'Organization'}}],
-    #                     'must_not': [{'nested': {
-    #                     'ignore_unmapped': True,
-    #                         'path': 'organization_resource.address',
-    #                         'query': {'term':
-    #        {'organization_resource.address.postalCode': '9105 '
-    #                         'PZ'}},
-    #                  'score_mode': 'min'}}]}},
-    #  'scroll': '1m',
-    #  'size': 100}
-
     params = (("address-postalcode:not", "9105 PZ"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    # assert bundle.total == 1
+    assert bundle.total == 0
+    params = (
+        ("_profile:not", "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
 
 
 def test_issue8_without_param(es_data, engine):
