@@ -1,7 +1,8 @@
 # _*_ coding: utf-8 _*_
 import time
 from abc import ABC
-from collections import deque
+from collections import deque, defaultdict
+from typing import Dict, List
 
 from zope.interface import implementer
 
@@ -13,8 +14,10 @@ from fhirpath.interfaces.engine import (
     IEngineResultHeader,
     IEngineResultRow,
 )
+from fhirpath.fhirspec import SearchParameter
 from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
+from fhirpath.exceptions import ValidationError
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
@@ -71,18 +74,6 @@ class EngineProxy(Proxy):
         self.initialize(obj)
 
 
-@implementer(IEngineResult)
-class EngineResult(object):
-    """ """
-
-    __slot__ = ("header", "body")
-
-    def __init__(self, header, body):
-        """ """
-        object.__setattr__(self, "header", header)
-        object.__setattr__(self, "body", body)
-
-
 @implementer(IEngineResultHeader)
 class EngineResultHeader(object):
     """ """
@@ -116,3 +107,76 @@ class EngineResultBody(deque):
 @implementer(IEngineResultRow)
 class EngineResultRow(list):
     """ """
+
+
+@implementer(IEngineResult)
+class EngineResult(object):
+    """ """
+
+    header: EngineResultHeader
+    body: EngineResultBody
+
+    def __init__(
+        self,
+        header: EngineResultHeader,
+        body: EngineResultBody,
+    ):
+        """ """
+        self.header = header
+        self.body = body
+
+    def extract_ids(self) -> Dict[str, List[str]]:
+        ids: Dict = defaultdict(list)
+        for row in self.body:
+            resource_id = row[0].get("id")
+            resource_type = row[0].get("resourceType")
+            if not resource_id:
+                raise ValidationError(
+                    "failed to extract IDs from EngineResult: missing id in resource"
+                )
+            if not resource_type:
+                raise ValidationError(
+                    "failed to extract IDs from EngineResult: missing resourceType in resource"
+                )
+            ids[resource_type].append(resource_id)
+        return ids
+
+    def extract_references(self, search_param: SearchParameter) -> Dict[str, List[str]]:
+        """Takes a search parameter as input and extract all targeted references
+
+        Returns a dict like:
+        {"Patient": ["list", "of", "referenced", "patient", "ids"], "Observation": []}
+        """
+        assert search_param.type == "reference"
+        ids: Dict = defaultdict(list)
+
+        def browse(node, path):
+            parts = path.split(".", 1)
+
+            # FIXME: we don't handle resolving reference to check their types yet.
+            if parts[0].startswith("where("):
+                parts = parts[1:]
+
+            if len(parts) == 0:
+                return node
+            elif len(parts) == 1:
+                return node[parts[0]]
+            else:
+                return browse(node[parts[0]], parts[1])
+
+        def append_ref(ref_attr):
+            if "reference" not in ref_attr:
+                raise ValidationError(f"attribute {ref_attr} is not a Reference")
+            # FIXME: this does not work with references using absolute URLs
+            referenced_resource, _id = ref_attr["reference"].split("/")
+            ids[referenced_resource].append(_id)
+
+        _, path = search_param.expression.split(".", 1)
+        for row in self.body:
+            ref_attribute = browse(row[0], path)
+            if isinstance(ref_attribute, list):
+                for r in ref_attribute:
+                    append_ref(r)
+            else:
+                append_ref(ref_attribute)
+        return ids

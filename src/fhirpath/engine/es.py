@@ -59,18 +59,19 @@ class ElasticsearchEngine(Engine):
         if len(source_filters) == 0:
             return
 
-        resource_type = query.get_from()[0][0]
-        field_index_name = self.calculate_field_index_name(resource_type)
         selects = list()
-        for path_ in source_filters:
-            if not path_.startswith(field_index_name):
-                selects.append(path_)
-                continue
-            parts = path_.split(".")
-            if len(parts) == 1:
-                selects.append(resource_type)
-            else:
-                selects.append(".".join([resource_type] + parts[1:]))
+        for froms in query.get_from():
+            resource_type = froms[0]
+            field_index_name = self.calculate_field_index_name(resource_type)
+            for path_ in source_filters:
+                if not path_.startswith(field_index_name):
+                    selects.append(path_)
+                    continue
+                parts = path_.split(".")
+                if len(parts) == 1:
+                    selects.append(resource_type)
+                else:
+                    selects.append(".".join([resource_type] + parts[1:]))
 
         result.header.selects = selects
 
@@ -86,18 +87,14 @@ class ElasticsearchEngine(Engine):
                 source_filters.append(el_path.path)
                 continue
             parts = el_path._raw.split(".")
-            source_filters.append(
-                ".".join([self.calculate_field_index_name(parts[0]), *parts[1:]])
-            )
+            source_filters.append(".".join([self.calculate_field_index_name(parts[0]), *parts[1:]]))
         return source_filters
 
     def _traverse_for_value(self, source, path_):
         """Looks path_ is innocent string key, but may content expression, function."""
         if isinstance(source, dict):
             # xxx: validate path, not blindly sending None
-            if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
-                path_
-            ):
+            if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(path_):
                 raise ValidationError(
                     f"Invalid path {path_} has been supllied!"
                     "Path cannot contain function if source type is dict"
@@ -226,9 +223,7 @@ class ElasticsearchEngine(Engine):
             total = rawresult["hits"]["total"]
             source_filters = self._get_source_filters(selects)
 
-        result = EngineResult(
-            header=EngineResultHeader(total=total), body=EngineResultBody()
-        )
+        result = EngineResult(header=EngineResultHeader(total=total), body=EngineResultBody())
         if len(selects) == 0:
             # Nothing would be in body
             return result
@@ -236,9 +231,7 @@ class ElasticsearchEngine(Engine):
         if query_type != EngineQueryType.COUNT:
             self.extract_hits(source_filters, rawresult["hits"]["hits"], result.body)
 
-        if "_scroll_id" in rawresult and result.header.total > len(
-            rawresult["hits"]["hits"]
-        ):
+        if "_scroll_id" in rawresult and result.header.total > len(rawresult["hits"]["hits"]):
             # we need to fetch all!
             consumed = len(rawresult["hits"]["hits"])
 
@@ -263,9 +256,9 @@ class ElasticsearchEngine(Engine):
         return yarl.URL"""
         raise NotImplementedError
 
-    def wrapped_with_bundle(self, result):
+    def wrapped_with_bundle(self, result, includes):
         """ """
         url = self.current_url()
 
-        wrapper = BundleWrapper(self, result, url, "searchset")
+        wrapper = BundleWrapper(self, result, includes, url, "searchset")
         return wrapper()

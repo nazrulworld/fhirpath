@@ -70,9 +70,7 @@ class Query(ABC):
         """Create Query object from QueryBuilder.
         Kind of reverse process"""
         if not IQueryBuilder(builder)._finalized:
-            raise ConstraintNotSatisfied(
-                "QueryBuilder object must be in finalized state"
-            )
+            raise ConstraintNotSatisfied("QueryBuilder object must be in finalized state")
         query = cls(
             builder._engine.fhir_release,  # type: ignore
             builder._from,  # type: ignore
@@ -161,9 +159,7 @@ class QueryBuilder(ABC):
 
         if self._engine is None:
             raise ConstraintNotSatisfied(
-                "Object from '{0!s}' must be binded with engine".format(
-                    self.__class__.__name__
-                )
+                f"Object from '{self.__class__.__name__}' must be bound with engine"
             )
         # xxx: do any validation?
         if len(self._select) == 0:
@@ -298,9 +294,7 @@ class QueryBuilder(ABC):
             result_factory = AsyncQueryResult
         if TYPE_CHECKING:
             assert self._engine
-        result = result_factory(
-            query=query, engine=self._engine, unrestricted=unrestricted
-        )
+        result = result_factory(query=query, engine=self._engine, unrestricted=unrestricted)
         return result
 
     def _pre_check(self):
@@ -326,9 +320,7 @@ class QueryBuilder(ABC):
             match = root_path == "Resource"
 
         if not match:
-            raise ValidationError(
-                f"Root path '{root_path}' must be matched with from models"
-            )
+            raise ValidationError(f"Root path '{root_path}' must be matched with from models")
 
     def _validate_term_path(self, term):
         """ """
@@ -351,8 +343,7 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        result = self._engine.execute(self._query, self._unrestricted)
-        return result
+        return self._engine.execute(self._query, self._unrestricted)
 
     def single(self):
         """Will return the single item in the input if there is just one item.
@@ -405,18 +396,15 @@ class QueryResult(ABC):
         """Returns a collection with a single value which is the integer count of
         the number of items in the input collection.
         Returns 0 when the input collection is empty."""
-        result = self._engine.execute(
-            self._query, self._unrestricted, EngineQueryType.COUNT
-        )
-        return result.header.total
+        return self._engine.execute(self._query, self._unrestricted, EngineQueryType.COUNT)
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return self.count() == 0
+        return self.count().header.total == 0
 
     def __len__(self):
         """ """
-        return self.count()
+        return self.count().header.total
 
     def OFF__getitem__(self, key):
         """
@@ -519,23 +507,21 @@ class AsyncQueryResult(QueryResult):
 
     async def count(self):
         """ """
-        result = await self._engine.execute(
-            self._query, self._unrestricted, EngineQueryType.COUNT
-        )
-        return result.header.total
+        result = await self._engine.execute(self._query, self._unrestricted, EngineQueryType.COUNT)
+        return result
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return await self.count() == 0
+        return await self.count().header.total == 0
 
     def __len__(self):
         """ """
-        return self.count()
+        return self.count().header.total
 
 
 def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
     """ """
     builder = Query._builder(engine)
-    if resource is not None:
+    if resource:
         builder = builder.from_(resource)
     return builder

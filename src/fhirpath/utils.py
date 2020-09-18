@@ -28,6 +28,7 @@ import pkg_resources
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
+from fhir.resources import construct_fhir_element
 
 from fhirpath.thirdparty import Proxy
 
@@ -84,9 +85,7 @@ def force_str(value: Any, allow_non_str: bool = True) -> Text:
     return value
 
 
-def force_bytes(
-    string: Text, encoding: Text = "utf8", errors: Text = "strict"
-) -> bytes:
+def force_bytes(string: Text, encoding: Text = "utf8", errors: Text = "strict") -> bytes:
 
     if isinstance(string, bytes):
         if encoding == "utf8":
@@ -214,10 +213,7 @@ def lookup_fhir_class(
     resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
 ) -> Type["FHIRAbstractModel"]:  # noqa: E999
     factory_paths: List[str] = ["fhir", "resources"]
-    if (
-        FHIR_VERSION["DEFAULT"].value != fhir_release.name
-        and fhir_release != FHIR_VERSION.DEFAULT
-    ):
+    if FHIR_VERSION["DEFAULT"].value != fhir_release.name and fhir_release != FHIR_VERSION.DEFAULT:
         factory_paths.append(fhir_release.name)
     factory_paths.append("get_fhir_model_class")
 
@@ -225,15 +221,11 @@ def lookup_fhir_class(
     try:
         klass = factory(resource_type)
     except KeyError:
-        raise LookupError(
-            f"{resource_type} doesnt to be valid FHIRModel (element type) name!"
-        )
+        raise LookupError(f"{resource_type} is not a valid FHIR class")
     return klass
 
 
-CONTAINS_PY_PACKAGE: Pattern = re.compile(
-    r"^\${(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE
-)
+CONTAINS_PY_PACKAGE: Pattern = re.compile(r"^\${(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE)
 
 
 def expand_path(path_: Text) -> Text:
@@ -255,9 +247,7 @@ def expand_path(path_: Text) -> Text:
                 replacement, pkg_resources.get_distribution(package_name).location
             )
         except pkg_resources.DistributionNotFound:
-            msg = "Invalid package `{0}`! as provided in {1}".format(
-                package_name, path_
-            )
+            msg = "Invalid package `{0}`! as provided in {1}".format(package_name, path_)
             return reraise(LookupError, msg)
 
     else:
@@ -336,9 +326,7 @@ class PathInfoContext:
         self.prop_name: str = prop_name
         self.prop_original: str = prop_original
         self.type_name: str = type_name
-        self.type_class: Union[
-            bool, "AbstractBaseType", "AbstractType", "Primitive"
-        ] = type_class
+        self.type_class: Union[bool, "AbstractBaseType", "AbstractType", "Primitive"] = type_class
         self.type_field: "ModelField" = type_field
         self.type_model_config: Type["BaseConfig"] = type_model_config
         self.optional: bool = optional
@@ -385,9 +373,7 @@ class PathInfoContext:
                 else:
                     model_class = lookup_fhir_class(
                         context.type_class.__resource_type__,  # type: ignore
-                        FHIR_VERSION[
-                            context.type_class.__fhir_release__  # type: ignore
-                        ],
+                        FHIR_VERSION[context.type_class.__fhir_release__],  # type: ignore
                     )
                     continue
 
@@ -469,8 +455,7 @@ class PathInfoContext:
     def _get_children(self):
         """ """
         return [
-            PathInfoContext.context_from_path(child, self.fhir_release)
-            for child in self._children
+            PathInfoContext.context_from_path(child, self.fhir_release) for child in self._children
         ]
 
     def _set_children(self, paths):
@@ -530,7 +515,7 @@ class PathInfoContextProxy(Proxy):
 class BundleWrapper:
     """ """
 
-    def __init__(self, engine, result, url: URL, bundle_type="searchset"):
+    def __init__(self, engine, result, includes: List, url: URL, bundle_type="searchset"):
         """ """
         self.fhir_version = engine.fhir_release
         self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
@@ -542,7 +527,12 @@ class BundleWrapper:
         self.data["type"] = bundle_type
         self.data["total"] = result.header.total
 
+        # attach main results
         self.attach_entry(result, "match")
+
+        # attach included results
+        for _include in includes:
+            self.attach_entry(_include, "include")
 
         self.attach_links(url, len(result.body))
 
@@ -562,7 +552,8 @@ class BundleWrapper:
             # entry = BundleEntry
             entry = dict()
             entry["fullUrl"] = "{0}/{1}".format(resource_type, resource_id)
-            entry["resource"] = resource
+            # use the model factory in order to validate the resource
+            entry["resource"] = construct_fhir_element(resource_type, resource).json()
             # search = BundleEntrySearch
             search = {"mode": mode}
             entry["search"] = search
@@ -596,9 +587,7 @@ class BundleWrapper:
                 container.append(self.make_link("previous", url, url_params))
 
             # Next Page
-            if _current_offset < int(
-                math.floor(_total_results / _max_count) * _max_count
-            ):
+            if _current_offset < int(math.floor(_total_results / _max_count) * _max_count):
                 url_params["search-offset"] = int(_current_offset + _max_count)
                 container.append(self.make_link("next", url, url_params))
 

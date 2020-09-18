@@ -367,9 +367,7 @@ class Term(BaseTerm):
                 OPERATOR.ge,
             ):
                 raise ValidationError(
-                    "Operator '{0!s}' is allowed for value type '{1!s}'".format(
-                        self.comparison_operator.__name__, self.path.context.type_name
-                    )
+                    f"Operator '{self.comparison_operator}' is not allowed for value type {self.path.context.type_name}'"
                 )
         else:
             # don't have usecase yet!
@@ -747,10 +745,7 @@ class GroupTerm(object):
 
         if self.match_operator is None:
             if all(
-                [
-                    (isinstance(t, Term) and t.unary_operator == OPERATOR.neg)
-                    for t in self.terms
-                ]
+                [(isinstance(t, Term) and t.unary_operator == OPERATOR.neg) for t in self.terms]
             ):
                 self.match_operator = MatchType.NONE
             else:
@@ -1031,9 +1026,7 @@ class ElementPath(object):
             ctx = EmptyPathInfoContext()
             ctx._path = self._raw
         else:
-            ctx = proxy(
-                PathInfoContext.context_from_path(self._path, context.fhir_release)
-            )
+            ctx = proxy(PathInfoContext.context_from_path(self._path, context.fhir_release))
         self.context = ctx
         self._finalized = True
 
