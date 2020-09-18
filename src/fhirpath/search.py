@@ -513,7 +513,7 @@ class Search(object):
             self.add_term(normalized_data, terms_container)
 
             builder = builder.where(*terms_container)
-            builder = builder.limit(DEFAULT_RESULT_COUNT)
+            self.attach_limit_terms(builder)
 
             result: QueryResult = builder(
                 unrestricted=self.context.unrestricted,
@@ -582,6 +582,7 @@ class Search(object):
                 self.add_term(normalized_data, terms)
 
             builder = builder.where(*terms)
+            self.attach_limit_terms(builder)
 
             # FIXME: find a better way to handle the limit
             builder = builder.limit(DEFAULT_RESULT_COUNT)
@@ -647,9 +648,7 @@ class Search(object):
                 self.add_term(normalized_data, terms)
 
             builder = builder.where(*terms)
-
-            # FIXME: find a better way to handle the limit
-            builder = builder.limit(DEFAULT_RESULT_COUNT)
+            self.attach_limit_terms(builder)
 
             result: QueryResult = builder(
                 unrestricted=self.context.unrestricted,
