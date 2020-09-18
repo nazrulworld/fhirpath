@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Pattern, Set, Text, Tuple, Union
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
-from zope.interface import implementer, Invalid
+from zope.interface import implementer
 
 from fhirpath.enums import (
     FHIR_VERSION,
@@ -282,7 +282,7 @@ class SearchContext(object):
 class Search(object):
     """ """
 
-    def __init__(self, context: SearchContext, query_string=None, params=None):
+    def __init__(self, context: SearchContext, query_string=None, params=MultiDict()):
         """ """
         # validate first
         Search.validate_params(context, query_string, params)
@@ -299,8 +299,6 @@ class Search(object):
             all_params = MultiDict(params.items())
         elif isinstance(params, MultiDictProxy):
             all_params = params.copy()
-        else:
-            raise Invalid
 
         self.result_params: Dict[str, str] = dict()
         self.search_params = None
@@ -324,10 +322,6 @@ class Search(object):
                 "fhirpath.interfaces.ISearchContext interface"
             )
 
-        if query_string is None and params is None:
-            raise ValidationError(
-                "At least one of value is required, either ´query_string´ or search ´params´ "
-            )
         if query_string and params:
             raise ValidationError(
                 "Only value from one of arguments "
@@ -381,6 +375,7 @@ class Search(object):
         """
         if all_params is None:
             return
+
         _sort = all_params.popall("_sort", [])
         if len(_sort) > 0:
             self.result_params["_sort"] = ",".join(_sort)
@@ -1079,13 +1074,14 @@ class Search(object):
                 ),
                 self.create_term(path_ / "value", value, None),
             ]
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
         else:
             terms = [
                 self.create_term(path_ / "system", value, None),
                 self.create_term(path_ / "use", value, None),
                 self.create_term(path_ / "value", value, None),
             ]
-        group = G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
         if modifier == "not":
             group.match_operator = MatchType.NONE
         else:

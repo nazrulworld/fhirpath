@@ -404,15 +404,15 @@ class QueryResult(ABC):
         Returns 0 when the input collection is empty."""
         return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        )
+        ).header.total
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return self.count().header.total == 0
+        return self.count() == 0
 
     def __len__(self):
         """ """
-        return self.count().header.total
+        return self.count()
 
     def OFF__getitem__(self, key):
         """
@@ -515,18 +515,17 @@ class AsyncQueryResult(QueryResult):
 
     async def count(self):
         """ """
-        result = await self._engine.execute(
+        return await self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        )
-        return result
+        ).header.total
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return await self.count().header.total == 0
+        return await self.count() == 0
 
     def __len__(self):
         """ """
-        return self.count().header.total
+        return self.count()
 
 
 def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
