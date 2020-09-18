@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from zope.interface import implementer
 
-from fhirpath.enums import FHIR_VERSION
+from fhirpath.enums import FHIR_VERSION, WhereConstraintType
 from fhirpath.interfaces import IEngine
 from fhirpath.interfaces.engine import (
     IEngineResult,
@@ -14,6 +14,7 @@ from fhirpath.interfaces.engine import (
     IEngineResultHeader,
     IEngineResultRow,
 )
+from fhirpath.fql.types import ElementPath
 from fhirpath.fhirspec import SearchParameter
 from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
@@ -151,10 +152,6 @@ class EngineResult(object):
         def browse(node, path):
             parts = path.split(".", 1)
 
-            # FIXME: we don't handle resolving reference to check their types yet.
-            if parts[0].startswith("where("):
-                parts = parts[1:]
-
             if len(parts) == 0:
                 return node
             elif len(parts) == 1:
@@ -169,12 +166,28 @@ class EngineResult(object):
             referenced_resource, _id = ref_attr["reference"].split("/")
             ids[referenced_resource].append(_id)
 
-        _, path = search_param.expression.split(".", 1)
+        # use ElementPath to parse fhirpath expressions like .where()
+        path_element = ElementPath(search_param.expression)
+        # remove the resource type from the path
+        _, path = path_element._path.split(".", 1)
         for row in self.body:
-            ref_attribute = browse(row[0], path)
+            resource = row[0]
+            ref_attribute = browse(resource, path)
+
+            # if the searchparam expression contains .where() statement, skip references
+            # that do not match the required resource type
+            if (
+                path_element._where
+                and path_element._where.type == WhereConstraintType.T2
+            ):
+                ref_target_type = ref_attribute["reference"].split("/")[0]
+                if path_element._where.value != ref_target_type:
+                    continue
+
             if isinstance(ref_attribute, list):
                 for r in ref_attribute:
                     append_ref(r)
             else:
                 append_ref(ref_attribute)
+
         return ids

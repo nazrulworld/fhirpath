@@ -32,7 +32,7 @@ from fhirpath.fql import (
     sa_,
     sort_,
 )
-from fhirpath.engine import EngineResult
+from fhirpath.engine import EngineResult, EngineResultHeader, EngineResultBody
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.query import Q_, QueryResult
@@ -1442,7 +1442,9 @@ class Search(object):
             # FIXME: we use the result of the last _has query to build the empty bundle, but
             # we should be more explicit about the query context.
             if not self.reverse_chaining_results:
-                return self.response(res, [])
+                return self.response(
+                    EngineResult(EngineResultHeader(total=0), EngineResultBody()), []
+                )
 
         # MAIN QUERY
         self.main_query = self.build()
