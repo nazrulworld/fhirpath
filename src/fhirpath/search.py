@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
-from typing import Dict, List, Optional, Pattern, Set, Text, Tuple, Union
+from typing import Dict, List, Optional, Pattern, Set, Text, Tuple, Union, cast
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
@@ -81,7 +81,8 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self, fhir_release: FHIR_VERSION,
+        self,
+        fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -282,7 +283,7 @@ class SearchContext(object):
 class Search(object):
     """ """
 
-    def __init__(self, context: SearchContext, query_string=None, params=MultiDict()):
+    def __init__(self, context: SearchContext, query_string=None, params=None):
         """ """
         # validate first
         Search.validate_params(context, query_string, params)
@@ -374,7 +375,7 @@ class Search(object):
         _containedType
         """
         if all_params is None:
-            return
+            return MultiDict()
 
         _sort = all_params.popall("_sort", [])
         if len(_sort) > 0:
@@ -467,13 +468,16 @@ class Search(object):
         This function handles the _has keyword.
         """
         has_queries: List[Tuple[SearchParameter, QueryResult]] = []
-        _has_predicates: List[Tuple[str, str]] = self.result_params.get("_has", [])
+        _has_predicates: List[Tuple[str, str]] = cast(
+            List[Tuple[str, str]], self.result_params.get("_has", [])
+        )
         for _has, value in _has_predicates:
             # Parse the _has input parameter
             parts = _has.split(":")
             if len(parts) != 4:
                 raise ValidationError(
-                    f"bad _has param '{_has}', should be _has:Resource:ref_search_param:value_search_param=value"
+                    f"bad _has param '{_has}', should be "
+                    "_has:Resource:ref_search_param:value_search_param=value"
                 )
 
             from_resource_type: str = parts[1]
@@ -483,7 +487,8 @@ class Search(object):
             from_context = SearchContext(self.context.engine, from_resource_type)
 
             # Get the reference search parameter definition
-            # we use the first definition returned since we only have one resource in the context
+            # we use the first definition returned since we
+            # only have one resource in the context
             ref_param = from_context._get_search_param_definitions(ref_param_raw)[0]
             if not ref_param:
                 raise ValidationError(
@@ -495,6 +500,7 @@ class Search(object):
                     f"must be of type 'reference', got {ref_param.type}"
                 )
             # ensure that the reference search param targets the correct type
+            assert isinstance(ref_param.target, list)
             if not any(r in ref_param.target for r in self.context.resource_types):
                 raise ValidationError(
                     f"unexpected types {','.join(self.context.resource_types)} "
@@ -535,7 +541,8 @@ class Search(object):
             parts = inc.split(":")
             if len(parts) < 2 or len(parts) > 3:
                 raise ValidationError(
-                    f"bad _include param '{inc}', should be Resource:search_param[:target_type]"
+                    f"bad _include param '{inc}', "
+                    "should be Resource:search_param[:target_type]"
                 )
 
             from_resource_type = parts[0]
@@ -556,7 +563,8 @@ class Search(object):
                     f"search parameter {from_resource_type}.{ref_param_raw} "
                     f"must be of type 'reference', got {ref_param.type}"
                 )
-            elif target_ref_type and target_ref_type not in ref_param.target:
+            assert isinstance(ref_param.target, list)
+            if target_ref_type and target_ref_type not in ref_param.target:
                 raise ValidationError(
                     f"the search param {from_resource_type}.{ref_param_raw} may refer"
                     f" to {', '.join(ref_param.target)}, not to {target_ref_type}"
@@ -609,7 +617,8 @@ class Search(object):
             parts = inc.split(":")
             if len(parts) < 2 or len(parts) > 3:
                 raise ValidationError(
-                    f"bad _revinclude param '{inc}', should be Resource:search_param[:target_type]"
+                    f"bad _revinclude param '{inc}', "
+                    "should be Resource:search_param[:target_type]"
                 )
 
             from_resource_type = parts[0]
@@ -630,7 +639,8 @@ class Search(object):
                     f"search parameter {from_resource_type}.{ref_param_raw} "
                     f"must be of type 'reference', got {ref_param.type}"
                 )
-            elif target_ref_type and target_ref_type not in ref_param.target:
+            assert isinstance(ref_param.target, list)
+            if target_ref_type and target_ref_type not in ref_param.target:
                 raise ValidationError(
                     f"the search param {from_resource_type}.{ref_param_raw} may refer"
                     f" to {', '.join(ref_param.target)}, not to {target_ref_type}"
@@ -642,7 +652,7 @@ class Search(object):
             # Build a Q_ (query) object to join the resource based on reference ids.
             builder = Q_([from_resource_type], self.context.engine)
             terms: List = []
-            for resource_type, resource_ids in ids.items():
+            for _, resource_ids in ids.items():
                 search_context = SearchContext(self.context.engine, from_resource_type)
                 # for each resource, create a term to filter reference ids
                 normalized_data = search_context.normalize_param(
@@ -1426,7 +1436,8 @@ class Search(object):
         # reverse chaining (_has)
         if self.result_params.get("_has"):
             has_queries = self.has()
-            # compute the intersection of referenced resources' ID from the result of _has queries.
+            # compute the intersection of referenced resources' ID
+            # from the result of _has queries.
             self.reverse_chaining_results = {}
             for ref_param, q in has_queries:
                 res = q.fetchall()
@@ -1439,8 +1450,8 @@ class Search(object):
                 }
 
             # if the _has predicates did not match any documents, return an empty result
-            # FIXME: we use the result of the last _has query to build the empty bundle, but
-            # we should be more explicit about the query context.
+            # FIXME: we use the result of the last _has query to build the empty bundle,
+            # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
                 return self.response(
                     EngineResult(EngineResultHeader(total=0), EngineResultBody()), []
@@ -1482,7 +1493,8 @@ class AsyncSearch(Search):
         # reverse chaining (_has)
         if self.result_params.get("_has"):
             has_queries = self.has()
-            # compute the intersection of referenced resources' ID from the result of _has queries.
+            # compute the intersection of referenced resources' ID
+            # from the result of _has queries.
             self.reverse_chaining_results = {}
             for ref_param, q in has_queries:
                 res = await q.fetchall()
@@ -1495,8 +1507,8 @@ class AsyncSearch(Search):
                 }
 
             # if the _has predicates did not match any documents, return an empty result
-            # FIXME: we use the result of the last _has query to build the empty bundle, but
-            # we should be more explicit about the query context.
+            # FIXME: we use the result of the last _has query to build the empty bundle,
+            # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
                 return self.response(res, [])
 

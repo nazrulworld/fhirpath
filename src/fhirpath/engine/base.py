@@ -118,7 +118,9 @@ class EngineResult(object):
     body: EngineResultBody
 
     def __init__(
-        self, header: EngineResultHeader, body: EngineResultBody,
+        self,
+        header: EngineResultHeader,
+        body: EngineResultBody,
     ):
         """ """
         self.header = header
@@ -135,7 +137,8 @@ class EngineResult(object):
                 )
             if not resource_type:
                 raise ValidationError(
-                    "failed to extract IDs from EngineResult: missing resourceType in resource"
+                    "failed to extract IDs from EngineResult: "
+                    "missing resourceType in resource"
                 )
             ids[resource_type].append(resource_id)
         return ids
@@ -147,6 +150,9 @@ class EngineResult(object):
         {"Patient": ["list", "of", "referenced", "patient", "ids"], "Observation": []}
         """
         assert search_param.type == "reference"
+        assert isinstance(
+            search_param.expression, str
+        ), f"'expression' is not defined for search parameter {search_param.name}"
         ids: Dict = defaultdict(list)
 
         def browse(node, path):
@@ -165,6 +171,9 @@ class EngineResult(object):
             # FIXME: this does not work with references using absolute URLs
             referenced_resource, _id = ref_attr["reference"].split("/")
             ids[referenced_resource].append(_id)
+
+        if not search_param.expression:
+            raise Exception()
 
         # use ElementPath to parse fhirpath expressions like .where()
         path_element = ElementPath(search_param.expression)

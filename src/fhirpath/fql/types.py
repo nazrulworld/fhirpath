@@ -367,7 +367,8 @@ class Term(BaseTerm):
                 OPERATOR.ge,
             ):
                 raise ValidationError(
-                    f"Operator '{self.comparison_operator}' is not allowed for value type {self.path.context.type_name}'"
+                    f"Operator '{self.comparison_operator}' is not allowed "
+                    f"for value type {self.path.context.type_name}'"
                 )
         else:
             # don't have usecase yet!

@@ -382,9 +382,10 @@ class PathInfoContext:
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
                 else:
+                    klass = context.type_class
                     model_class = lookup_fhir_class(
-                        context.type_class.__resource_type__,  # type: ignore
-                        FHIR_VERSION[context.type_class.__fhir_release__],  # type: ignore
+                        klass.__resource_type__,  # type: ignore
+                        FHIR_VERSION[klass.__fhir_release__],  # type: ignore
                     )
                     continue
 
