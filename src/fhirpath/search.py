@@ -375,7 +375,8 @@ class Search(object):
         _containedType
         """
         if all_params is None:
-            return MultiDict()
+            self.search_params = MultiDict()
+            return
 
         _sort = all_params.popall("_sort", [])
         if len(_sort) > 0:
