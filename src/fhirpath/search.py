@@ -7,6 +7,7 @@ from urllib.parse import unquote_plus
 from multidict import MultiDict, MultiDictProxy
 from zope.interface import implementer
 
+from fhirpath.engine import EngineResult, EngineResultBody, EngineResultHeader
 from fhirpath.enums import (
     FHIR_VERSION,
     GroupType,
@@ -32,7 +33,6 @@ from fhirpath.fql import (
     sa_,
     sort_,
 )
-from fhirpath.engine import EngineResult, EngineResultHeader, EngineResultBody
 from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.query import Q_, QueryResult

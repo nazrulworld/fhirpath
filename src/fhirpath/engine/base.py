@@ -1,12 +1,15 @@
 # _*_ coding: utf-8 _*_
 import time
 from abc import ABC
-from collections import deque, defaultdict
+from collections import defaultdict, deque
 from typing import Dict, List
 
 from zope.interface import implementer
 
 from fhirpath.enums import FHIR_VERSION, WhereConstraintType
+from fhirpath.exceptions import ValidationError
+from fhirpath.fhirspec import SearchParameter
+from fhirpath.fql.types import ElementPath
 from fhirpath.interfaces import IEngine
 from fhirpath.interfaces.engine import (
     IEngineResult,
@@ -14,11 +17,8 @@ from fhirpath.interfaces.engine import (
     IEngineResultHeader,
     IEngineResultRow,
 )
-from fhirpath.fql.types import ElementPath
-from fhirpath.fhirspec import SearchParameter
 from fhirpath.query import Query
 from fhirpath.thirdparty import Proxy
-from fhirpath.exceptions import ValidationError
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 

@@ -25,10 +25,10 @@ from typing import (
 )
 
 import pkg_resources
+from fhir.resources import construct_fhir_element
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
-from fhir.resources import construct_fhir_element
 
 from fhirpath.thirdparty import Proxy
 
@@ -39,13 +39,13 @@ from .types import PrimitiveDataTypes
 
 if TYPE_CHECKING:
     from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
+    from fhir.resources.fhirtypes import (  # noqa: F401
+        AbstractBaseType,
+        AbstractType,
+        Primitive,
+    )
     from pydantic.fields import ModelField  # noqa: F401
     from pydantic.main import BaseConfig  # noqa: F401
-    from fhir.resources.fhirtypes import (  # noqa: F401
-        Primitive,
-        AbstractType,
-        AbstractBaseType,
-    )
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
