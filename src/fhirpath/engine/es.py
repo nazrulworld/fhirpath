@@ -264,9 +264,10 @@ class ElasticsearchEngine(Engine):
         return yarl.URL"""
         raise NotImplementedError
 
-    def wrapped_with_bundle(self, result, includes):
+    def wrapped_with_bundle(self, result, includes=None):
         """ """
         url = self.current_url()
-
+        if includes is None:
+            includes = list()
         wrapper = BundleWrapper(self, result, includes, url, "searchset")
         return wrapper()
