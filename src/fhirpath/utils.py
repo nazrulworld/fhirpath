@@ -540,7 +540,7 @@ class BundleWrapper:
         self.data["meta"] = {"lastUpdated": datetime.datetime.utcnow()}
 
         self.data["type"] = bundle_type
-        self.data["total"] = result.header.total
+        self.data["total"] = sum(r.header.total for r in [result, *includes])
 
         # attach main results
         self.attach_entry(result, "match")

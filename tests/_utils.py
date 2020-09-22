@@ -164,23 +164,26 @@ def _setup_es_index(es_conn):
                 "id": {"index": True, "store": True, "type": "keyword"},
                 "modification_date": {"store": True, "type": "date"},
                 "p_type": {"index": True, "type": "keyword"},
-                "parent_uuid": {"index": True, "store": True, "type": "keyword"},
-                "path": {"analyzer": "path_analyzer", "store": True, "type": "text"},
                 "tid": {"index": True, "store": True, "type": "keyword"},
                 "title": {"index": True, "store": True, "type": "text"},
-                "uuid": {"index": True, "store": True, "type": "keyword"},
             },
         },
     }
 
     org_mapping = fhir_resource_mapping("Organization")
     patient_mapping = fhir_resource_mapping("Patient")
+    practitioner_mapping = fhir_resource_mapping("Practitioner")
+    medicationrequest_mapping = fhir_resource_mapping("MedicationRequest")
     chargeitem_mapping = fhir_resource_mapping("ChargeItem")
     observation_mapping = fhir_resource_mapping("Observation")
     task_mapping = fhir_resource_mapping("Task")
 
     body["mappings"]["properties"]["organization_resource"] = org_mapping
     body["mappings"]["properties"]["patient_resource"] = patient_mapping
+    body["mappings"]["properties"]["practitioner_resource"] = practitioner_mapping
+    body["mappings"]["properties"][
+        "medicationrequest_resource"
+    ] = medicationrequest_mapping
     body["mappings"]["properties"]["chargeitem_resource"] = chargeitem_mapping
     body["mappings"]["properties"]["observation_resource"] = observation_mapping
     body["mappings"]["properties"]["task_resource"] = task_mapping
@@ -212,8 +215,6 @@ def _make_index_item(resource_type):
             ES_INDEX_NAME, resource_type.lower(), uuid_
         ),
         "id": None,
-        "parent_uuid": "2c1a8a1403a743608aafc294b6e822af",
-        "path": "/f001",
         "tid": 8,
         "title": "Burgers University Medical Center",
         "uuid": id_prefix + uuid_,
@@ -222,22 +223,8 @@ def _make_index_item(resource_type):
     with open(str(FHIR_EXAMPLE_RESOURCES / (resource_type + ".json")), "r") as fp:
         data = json.load(fp)
 
-    data["id"] = uuid_
-    tpl["id"] = uuid_
-    tpl["path"] = "/" + uuid_
+    tpl["id"] = data["id"]
     tpl[resource_type.lower() + "_resource"] = data
-    if resource_type == "Organization":
-        tpl["title"] = data["name"]
-    elif resource_type == "Patient":
-        tpl["title"] = data["name"][0]["text"]
-    elif resource_type == "Task":
-        tpl["title"] = "Task-" + tpl["id"]
-    elif resource_type == "ChargeItem":
-        tpl["title"] = "ChargeItem-" + tpl["id"]
-    elif resource_type == "Observation":
-        tpl["title"] = "Observation-" + tpl["id"]
-    else:
-        raise NotImplementedError
 
     return tpl
 
@@ -257,6 +244,27 @@ def _load_es_data(es_conn):
     bulk_data = [
         {"index": {"_id": patient_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
         patient_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    practitioner_data = _make_index_item("Practitioner")
+    bulk_data = [
+        {"index": {"_id": practitioner_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        practitioner_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    medicationrequest_data = _make_index_item("MedicationRequest")
+    bulk_data = [
+        {
+            "index": {
+                "_id": medicationrequest_data["uuid"],
+                "_index": ES_INDEX_NAME_REAL,
+            }
+        },
+        medicationrequest_data,
     ]
     res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
     assert res["errors"] is False

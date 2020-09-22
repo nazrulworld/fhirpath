@@ -504,8 +504,9 @@ class Search(object):
             assert isinstance(ref_param.target, list)
             if not any(r in ref_param.target for r in self.context.resource_types):
                 raise ValidationError(
-                    f"unexpected types {','.join(self.context.resource_types)} "
-                    f"for reference {from_resource_type}.{ref_param_raw}"
+                    f"invalid reference {from_resource_type}.{ref_param_raw} "
+                    f"({','.join(ref_param.target)}) in the current search context "
+                    f"({','.join(self.context.resource_types)})"
                 )
 
             # Get the value search parameter definition
@@ -582,6 +583,10 @@ class Search(object):
             # filter included resources for which we have references to
             included_resources = [r for r in included_resources if ids.get(r)]
 
+            # if no references were extracted from the main_query_result, skip.
+            if not included_resources:
+                continue
+
             # Build a Q_ (query) object to join the resource based on reference ids.
             builder = Q_(included_resources, self.context.engine)
             terms: List = []
@@ -643,8 +648,9 @@ class Search(object):
             assert isinstance(ref_param.target, list)
             if target_ref_type and target_ref_type not in ref_param.target:
                 raise ValidationError(
-                    f"the search param {from_resource_type}.{ref_param_raw} may refer"
-                    f" to {', '.join(ref_param.target)}, not to {target_ref_type}"
+                    f"invalid reference {from_resource_type}.{ref_param_raw} "
+                    f"({','.join(ref_param.target)}) in the current search context "
+                    f"({','.join(self.context.resource_types)})"
                 )
 
             # Extract IDs from the main query result
