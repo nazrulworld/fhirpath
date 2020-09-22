@@ -7,6 +7,8 @@ History
 
 Improvements
 
+- add supports for some important FHIR search parameters (``_has``, ``_include`` and ``_revinclude``) [simonvadee]
+
 - enable search on several resource types (_type search param) [Jasopaum]
 
 - Issue #8 `Add search support for without any params or query string if context has resource type <https://github.com/nazrulworld/fhirpath/issues/8>`_ [nazrulworld]
@@ -17,6 +19,8 @@ Breaking
 
 - ``fhirpath.search.SearchContext.resource_name`` has been changed ``fhirpath.search.SearchContext.resource_type`` and
   now datatype is List instead of string. Please check your API. [Jasopaum]
+
+- For case of ``Elasticsearch`` based engine, you have to use custom analyzer (``fhir_reference_analyzer``) for FHIR Reference type. For details see readme.
 
 
 0.7.1 (2020-08-07)

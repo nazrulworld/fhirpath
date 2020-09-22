@@ -182,6 +182,9 @@ ToDo
 
 2. All methods/functions are defined in `FHIRPath`_ specification, would be completed.
 
+3. Implement https://github.com/ijl/orjson
+4. https://developers.redhat.com/blog/2017/11/16/speed-python-using-rust/
+
 Credits
 -------
 
