@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 _*_
-import datetime
 import io
 import json
 import os
@@ -9,9 +8,7 @@ import time
 import uuid
 
 import elasticsearch
-import pytz
 import yarl
-from isodate import datetime_isoformat
 from pytest_docker_fixtures.containers._base import BaseImage
 
 from fhirpath.engine import dialect_factory
@@ -147,7 +144,7 @@ def _setup_es_index(es_conn):
             },
             "index": {
                 "mapping": {
-                    "total_fields": {"limit": 2500},
+                    "total_fields": {"limit": 5000},
                     "depth": {"limit": 50},
                     "nested_fields": {"limit": 500},
                 }
@@ -158,14 +155,10 @@ def _setup_es_index(es_conn):
             "properties": {
                 "access_roles": {"index": True, "store": True, "type": "keyword"},
                 "access_users": {"index": True, "store": True, "type": "keyword"},
-                "creation_date": {"store": True, "type": "date"},
                 "depth": {"type": "integer"},
                 "elastic_index": {"index": True, "store": True, "type": "keyword"},
                 "id": {"index": True, "store": True, "type": "keyword"},
-                "modification_date": {"store": True, "type": "date"},
-                "p_type": {"index": True, "type": "keyword"},
-                "tid": {"index": True, "store": True, "type": "keyword"},
-                "title": {"index": True, "store": True, "type": "text"},
+                "uuid": {"index": True, "store": True, "type": "keyword"},
             },
         },
     }
@@ -197,8 +190,6 @@ def _make_index_item(resource_type):
 
     id_prefix = "2c1|"
     uuid_ = uuid.uuid4().hex
-    now_time = datetime.datetime.now()
-    now_time.replace(tzinfo=pytz.UTC)
 
     tpl = {
         "access_roles": [
@@ -209,14 +200,11 @@ def _make_index_item(resource_type):
             "guillotina.ContainerAdmin",
         ],
         "access_users": ["root"],
-        "creation_date": datetime_isoformat(now_time),
         "depth": 2,
         "elastic_index": "{0}__{1}-{2}".format(
             ES_INDEX_NAME, resource_type.lower(), uuid_
         ),
         "id": None,
-        "tid": 8,
-        "title": "Burgers University Medical Center",
         "uuid": id_prefix + uuid_,
     }
 

@@ -1,7 +1,7 @@
 {
   "resourceType": "Contract",
   "meta": {
-    "lastUpdated": "2020-03-15T16:44:10+06:00",
+    "lastUpdated": "2020-09-22T17:29:51.900627",
     "versionId": "R4"
   },
   "mapping": {
@@ -11,25 +11,48 @@
           "use": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "system": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "value": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "type": {
             "properties": {
               "text": {
-                "type": "text",
+                "type": "keyword",
                 "index": true,
                 "store": false,
-                "analyzer": "standard"
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -39,26 +62,52 @@
       "url": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "version": {
-        "type": "text",
+        "type": "keyword",
         "index": true,
         "store": false,
-        "analyzer": "standard"
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "status": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "legalState": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -66,17 +115,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -85,24 +149,90 @@
       "instantiatesCanonical": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
       "instantiatesUri": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "contentDerivative": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -110,17 +240,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -148,10 +293,18 @@
       "expirationType": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -159,17 +312,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -178,9 +346,62 @@
       "subject": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
@@ -188,9 +409,62 @@
       "authority": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
@@ -198,9 +472,62 @@
       "domain": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
@@ -208,53 +535,199 @@
       "site": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
       },
       "name": {
-        "type": "text",
+        "type": "keyword",
         "index": true,
         "store": false,
-        "analyzer": "standard"
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "title": {
-        "type": "text",
+        "type": "keyword",
         "index": true,
         "store": false,
-        "analyzer": "standard"
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "subtitle": {
-        "type": "text",
+        "type": "keyword",
         "index": true,
         "store": false,
-        "analyzer": "standard"
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "alias": {
-        "type": "text",
+        "type": "keyword",
         "index": true,
         "store": false,
-        "analyzer": "standard"
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "author": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
       "scope": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -262,17 +735,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -281,10 +769,18 @@
       "topicCodeableConcept": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -292,17 +788,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -311,19 +822,80 @@
       "topicReference": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
       "type": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -331,17 +903,32 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
@@ -350,10 +937,18 @@
       "subType": {
         "properties": {
           "text": {
-            "type": "text",
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "coding": {
             "type": "nested",
@@ -361,29 +956,3219 @@
               "system": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "code": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               },
               "display": {
                 "type": "keyword",
                 "index": true,
-                "store": false
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
               }
             }
           }
         },
         "type": "nested"
       },
+      "contentDefinition": {
+        "type": "nested",
+        "properties": {
+          "type": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "subType": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "publisher": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "publicationDate": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "publicationStatus": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          },
+          "resourceType": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "term": {
+        "type": "nested",
+        "properties": {
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "issued": {
+            "type": "date",
+            "format": "date_time_no_millis||date_optional_time",
+            "store": false
+          },
+          "applies": {
+            "properties": {
+              "start": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              },
+              "end": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              }
+            }
+          },
+          "topicCodeableConcept": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "topicReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "type": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "subType": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "text": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "tokenized": {
+                "type": "text",
+                "analyzer": "standard"
+              },
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          },
+          "securityLabel": {
+            "type": "nested",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "store": false
+              },
+              "classification": {
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "category": {
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "control": {
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "resourceType": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
+          },
+          "offer": {
+            "type": "nested",
+            "properties": {
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "party": {
+                "type": "nested",
+                "properties": {
+                  "reference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "type": "nested"
+                  },
+                  "role": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "coding": {
+                        "type": "nested",
+                        "properties": {
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "code": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "display": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "resourceType": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "topic": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "decision": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "answer": {
+                "type": "nested",
+                "properties": {
+                  "valueBoolean": {
+                    "type": "boolean",
+                    "store": false
+                  },
+                  "valueDecimal": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "valueInteger": {
+                    "type": "integer",
+                    "store": false
+                  },
+                  "valueDate": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "valueTime": {
+                    "type": "date",
+                    "format": "basic_t_time_no_millis",
+                    "store": false
+                  },
+                  "valueString": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "valueUri": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "valueAttachment": {
+                    "properties": {
+                      "url": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "language": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "title": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "creation": {
+                        "type": "date",
+                        "format": "date_time_no_millis||date_optional_time",
+                        "store": false
+                      }
+                    }
+                  },
+                  "valueCoding": {
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "valueQuantity": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "valueReference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "resourceType": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "linkId": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "securityLabelNumber": {
+                "type": "integer",
+                "store": false
+              },
+              "resourceType": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
+          },
+          "asset": {
+            "type": "nested",
+            "properties": {
+              "scope": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "subtype": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "relationship": {
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "context": {
+                "type": "nested",
+                "properties": {
+                  "reference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "code": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "coding": {
+                        "type": "nested",
+                        "properties": {
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "code": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "display": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "type": "nested"
+                  },
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "resourceType": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "condition": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "periodType": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "period": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                },
+                "type": "nested"
+              },
+              "usePeriod": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                },
+                "type": "nested"
+              },
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "linkId": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "securityLabelNumber": {
+                "type": "integer",
+                "store": false
+              },
+              "valuedItem": {
+                "type": "nested",
+                "properties": {
+                  "entityCodeableConcept": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "coding": {
+                        "type": "nested",
+                        "properties": {
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "code": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "display": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "entityReference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "effectiveTime": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "quantity": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "unit": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "unitPrice": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "currency": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "factor": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "points": {
+                    "type": "float",
+                    "store": false
+                  },
+                  "net": {
+                    "properties": {
+                      "value": {
+                        "type": "float",
+                        "store": false
+                      },
+                      "currency": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "payment": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "responsible": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "recipient": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "linkId": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "securityLabelNumber": {
+                    "type": "integer",
+                    "store": false
+                  },
+                  "resourceType": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "resourceType": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
+          },
+          "action": {
+            "type": "nested",
+            "properties": {
+              "doNotPerform": {
+                "type": "boolean",
+                "store": false
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "subject": {
+                "type": "nested",
+                "properties": {
+                  "reference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "type": "nested"
+                  },
+                  "role": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "coding": {
+                        "type": "nested",
+                        "properties": {
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "code": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "display": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "resourceType": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "intent": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "linkId": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "status": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "context": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "occurrenceDateTime": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              },
+              "occurrencePeriod": {
+                "properties": {
+                  "start": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "end": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                }
+              },
+              "occurrenceTiming": {
+                "properties": {
+                  "event": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  },
+                  "code": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "coding": {
+                        "type": "nested",
+                        "properties": {
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "code": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "display": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "requester": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "performerType": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "performerRole": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "performer": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "reasonCode": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "coding": {
+                    "type": "nested",
+                    "properties": {
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "code": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "display": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "reasonReference": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "type": "nested"
+              },
+              "reason": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "note": {
+                "properties": {
+                  "authorReference": {
+                    "properties": {
+                      "reference": {
+                        "type": "text",
+                        "index": true,
+                        "store": false,
+                        "analyzer": "fhir_reference_analyzer"
+                      },
+                      "identifier": {
+                        "properties": {
+                          "use": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "system": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "value": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          },
+                          "type": {
+                            "properties": {
+                              "text": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                  "tokenized": {
+                                    "type": "text",
+                                    "analyzer": "standard"
+                                  },
+                                  "raw": {
+                                    "type": "keyword"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "authorString": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "time": {
+                    "type": "date",
+                    "format": "date_time_no_millis||date_optional_time",
+                    "store": false
+                  }
+                },
+                "type": "nested"
+              },
+              "securityLabelNumber": {
+                "type": "integer",
+                "store": false
+              },
+              "resourceType": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
+          },
+          "resourceType": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
       "supportingInfo": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
@@ -391,58 +4176,908 @@
       "relevantHistory": {
         "properties": {
           "reference": {
-            "type": "keyword",
+            "type": "text",
             "index": true,
-            "store": false
+            "store": false,
+            "analyzer": "fhir_reference_analyzer"
+          },
+          "identifier": {
+            "properties": {
+              "use": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "value": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "type": {
+                "properties": {
+                  "text": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "tokenized": {
+                        "type": "text",
+                        "analyzer": "standard"
+                      },
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "type": "nested"
       },
-      "legallyBindingAttachment": {
+      "signer": {
+        "type": "nested",
         "properties": {
-          "url": {
-            "type": "keyword",
-            "index": true,
-            "store": false
+          "type": {
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            }
           },
-          "language": {
-            "type": "keyword",
-            "index": true,
-            "store": false
+          "party": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          "title": {
-            "type": "text",
+          "signature": {
+            "properties": {
+              "type": {
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              },
+              "when": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              },
+              "who": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "targetFormat": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "sigFormat": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "onBehalfOf": {
+                "properties": {
+                  "reference": {
+                    "type": "text",
+                    "index": true,
+                    "store": false,
+                    "analyzer": "fhir_reference_analyzer"
+                  },
+                  "identifier": {
+                    "properties": {
+                      "use": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "system": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "value": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      },
+                      "type": {
+                        "properties": {
+                          "text": {
+                            "type": "keyword",
+                            "index": true,
+                            "store": false,
+                            "fields": {
+                              "tokenized": {
+                                "type": "text",
+                                "analyzer": "standard"
+                              },
+                              "raw": {
+                                "type": "keyword"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "type": "nested"
+          },
+          "resourceType": {
+            "type": "keyword",
             "index": true,
             "store": false,
-            "analyzer": "standard"
-          },
-          "creation": {
-            "type": "date",
-            "format": "date_time_no_millis||date_optional_time",
-            "store": false
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           }
         }
       },
-      "legallyBindingReference": {
+      "friendly": {
+        "type": "nested",
         "properties": {
-          "reference": {
+          "contentAttachment": {
+            "properties": {
+              "url": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "language": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "title": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "creation": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              }
+            }
+          },
+          "contentReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "resourceType": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "legal": {
+        "type": "nested",
+        "properties": {
+          "legalState": {
+            "properties": {
+              "text": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "coding": {
+                "type": "nested",
+                "properties": {
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "code": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "display": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "contentAttachment": {
+            "properties": {
+              "url": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "language": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "title": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "creation": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              }
+            }
+          },
+          "contentReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "legallyBindingAttachment": {
+            "properties": {
+              "url": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "language": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "title": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "creation": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              }
+            }
+          },
+          "legallyBindingReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "resourceType": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "rule": {
+        "type": "nested",
+        "properties": {
+          "contentAttachment": {
+            "properties": {
+              "url": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "language": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "title": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "tokenized": {
+                    "type": "text",
+                    "analyzer": "standard"
+                  },
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "creation": {
+                "type": "date",
+                "format": "date_time_no_millis||date_optional_time",
+                "store": false
+              }
+            }
+          },
+          "contentReference": {
+            "properties": {
+              "reference": {
+                "type": "text",
+                "index": true,
+                "store": false,
+                "analyzer": "fhir_reference_analyzer"
+              },
+              "identifier": {
+                "properties": {
+                  "use": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "system": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "value": {
+                    "type": "keyword",
+                    "index": true,
+                    "store": false,
+                    "fields": {
+                      "raw": {
+                        "type": "keyword"
+                      }
+                    }
+                  },
+                  "type": {
+                    "properties": {
+                      "text": {
+                        "type": "keyword",
+                        "index": true,
+                        "store": false,
+                        "fields": {
+                          "tokenized": {
+                            "type": "text",
+                            "analyzer": "standard"
+                          },
+                          "raw": {
+                            "type": "keyword"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "resourceType": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           }
         }
       },
       "id": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "tokenized": {
+            "type": "text",
+            "analyzer": "standard"
+          },
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "meta": {
         "properties": {
           "versionId": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
           },
           "lastUpdated": {
             "type": "date",
@@ -452,24 +5087,100 @@
           "profile": {
             "type": "keyword",
             "index": true,
-            "store": false
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          },
+          "tag": {
+            "properties": {
+              "system": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "code": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "display": {
+                "type": "keyword",
+                "index": true,
+                "store": false,
+                "fields": {
+                  "raw": {
+                    "type": "keyword"
+                  }
+                }
+              }
+            },
+            "type": "nested",
+            "include_in_root": true
           }
         }
       },
       "implicitRules": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
       },
       "language": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
+      },
+      "text": {
+        "properties": {
+          "status": {
+            "type": "keyword",
+            "index": true,
+            "store": false,
+            "fields": {
+              "raw": {
+                "type": "keyword"
+              }
+            }
+          },
+          "div": {
+            "type": "text",
+            "index": true,
+            "analyzer": "standard",
+            "store": false
+          }
+        }
       },
       "resourceType": {
         "type": "keyword",
         "index": true,
-        "store": false
+        "store": false,
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          }
+        }
       }
     }
   }
