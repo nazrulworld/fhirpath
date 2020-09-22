@@ -74,11 +74,13 @@ class FHIRSearchSpec(object):
         """ """
         storage = self.storage.get(self.fhir_release.name)
         base_resource_params = storage.get("Resource")
+        base_domain_resource_params = storage.get("DomainResource")
 
         for resource_type in storage:
             if resource_type in ("Resource", "DomainResource"):
                 continue
             storage.get(resource_type) + base_resource_params
+            storage.get(resource_type) + base_domain_resource_params
 
     @property
     def jsonfilename(self):

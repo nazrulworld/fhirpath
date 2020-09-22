@@ -59,18 +59,19 @@ class ElasticsearchEngine(Engine):
         if len(source_filters) == 0:
             return
 
-        resource_type = query.get_from()[0][0]
-        field_index_name = self.calculate_field_index_name(resource_type)
         selects = list()
-        for path_ in source_filters:
-            if not path_.startswith(field_index_name):
-                selects.append(path_)
-                continue
-            parts = path_.split(".")
-            if len(parts) == 1:
-                selects.append(resource_type)
-            else:
-                selects.append(".".join([resource_type] + parts[1:]))
+        for froms in query.get_from():
+            resource_type = froms[0]
+            field_index_name = self.calculate_field_index_name(resource_type)
+            for path_ in source_filters:
+                if not path_.startswith(field_index_name):
+                    selects.append(path_)
+                    continue
+                parts = path_.split(".")
+                if len(parts) == 1:
+                    selects.append(resource_type)
+                else:
+                    selects.append(".".join([resource_type] + parts[1:]))
 
         result.header.selects = selects
 
@@ -263,9 +264,9 @@ class ElasticsearchEngine(Engine):
         return yarl.URL"""
         raise NotImplementedError
 
-    def wrapped_with_bundle(self, result):
+    def wrapped_with_bundle(self, result, includes):
         """ """
         url = self.current_url()
 
-        wrapper = BundleWrapper(self, result, url, "searchset")
+        wrapper = BundleWrapper(self, result, includes, url, "searchset")
         return wrapper()

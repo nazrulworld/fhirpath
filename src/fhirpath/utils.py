@@ -25,6 +25,7 @@ from typing import (
 )
 
 import pkg_resources
+from fhir.resources import construct_fhir_element
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
@@ -38,13 +39,13 @@ from .types import PrimitiveDataTypes
 
 if TYPE_CHECKING:
     from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
+    from fhir.resources.fhirtypes import (  # noqa: F401
+        AbstractBaseType,
+        AbstractType,
+        Primitive,
+    )
     from pydantic.fields import ModelField  # noqa: F401
     from pydantic.main import BaseConfig  # noqa: F401
-    from fhir.resources.fhirtypes import (  # noqa: F401
-        Primitive,
-        AbstractType,
-        AbstractBaseType,
-    )
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -225,9 +226,7 @@ def lookup_fhir_class(
     try:
         klass = factory(resource_type)
     except KeyError:
-        raise LookupError(
-            f"{resource_type} doesnt to be valid FHIRModel (element type) name!"
-        )
+        raise LookupError(f"{resource_type} is not a valid FHIR class")
     return klass
 
 
@@ -383,11 +382,10 @@ class PathInfoContext:
                         raise ValueError("Invalid path {0}".format(pathname))
                     break
                 else:
+                    klass = context.type_class
                     model_class = lookup_fhir_class(
-                        context.type_class.__resource_type__,  # type: ignore
-                        FHIR_VERSION[
-                            context.type_class.__fhir_release__  # type: ignore
-                        ],
+                        klass.__resource_type__,  # type: ignore
+                        FHIR_VERSION[klass.__fhir_release__],  # type: ignore
                     )
                     continue
 
@@ -530,7 +528,9 @@ class PathInfoContextProxy(Proxy):
 class BundleWrapper:
     """ """
 
-    def __init__(self, engine, result, url: URL, bundle_type="searchset"):
+    def __init__(
+        self, engine, result, includes: List, url: URL, bundle_type="searchset"
+    ):
         """ """
         self.fhir_version = engine.fhir_release
         self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
@@ -540,9 +540,14 @@ class BundleWrapper:
         self.data["meta"] = {"lastUpdated": datetime.datetime.utcnow()}
 
         self.data["type"] = bundle_type
-        self.data["total"] = result.header.total
+        self.data["total"] = sum(r.header.total for r in [result, *includes])
 
+        # attach main results
         self.attach_entry(result, "match")
+
+        # attach included results
+        for _include in includes:
+            self.attach_entry(_include, "include")
 
         self.attach_links(url, len(result.body))
 
@@ -562,7 +567,8 @@ class BundleWrapper:
             # entry = BundleEntry
             entry = dict()
             entry["fullUrl"] = "{0}/{1}".format(resource_type, resource_id)
-            entry["resource"] = resource
+            # use the model factory in order to validate the resource
+            entry["resource"] = construct_fhir_element(resource_type, resource).json()
             # search = BundleEntrySearch
             search = {"mode": mode}
             entry["search"] = search

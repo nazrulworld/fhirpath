@@ -161,9 +161,7 @@ class QueryBuilder(ABC):
 
         if self._engine is None:
             raise ConstraintNotSatisfied(
-                "Object from '{0!s}' must be binded with engine".format(
-                    self.__class__.__name__
-                )
+                f"Object from '{self.__class__.__name__}' must be bound with engine"
             )
         # xxx: do any validation?
         if len(self._select) == 0:
@@ -351,8 +349,7 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        result = self._engine.execute(self._query, self._unrestricted)
-        return result
+        return self._engine.execute(self._query, self._unrestricted)
 
     def single(self):
         """Will return the single item in the input if there is just one item.
@@ -405,10 +402,9 @@ class QueryResult(ABC):
         """Returns a collection with a single value which is the integer count of
         the number of items in the input collection.
         Returns 0 when the input collection is empty."""
-        result = self._engine.execute(
+        return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        )
-        return result.header.total
+        ).header.total
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
@@ -519,10 +515,9 @@ class AsyncQueryResult(QueryResult):
 
     async def count(self):
         """ """
-        result = await self._engine.execute(
+        return await self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        )
-        return result.header.total
+        ).header.total
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
@@ -536,6 +531,6 @@ class AsyncQueryResult(QueryResult):
 def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
     """ """
     builder = Query._builder(engine)
-    if resource is not None:
+    if resource:
         builder = builder.from_(resource)
     return builder

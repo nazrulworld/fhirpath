@@ -238,10 +238,10 @@ def test_type_path_element(engine):
 
 def test_type_path_constraint():
     """where(type='successor').​resource
-            where(resolve() is Patient)
-            where(system='email')
-            where(type='predecessor').​resource
-            """
+    where(resolve() is Patient)
+    where(system='email')
+    where(type='predecessor').​resource
+    """
     path_ = ElementPath("Patient.telecom.where(system='email')")
     assert path_._where is not None
     assert path_._where.value == "email"

@@ -10,8 +10,7 @@ def main(argv):
 
     import fhirpath
     from fhirpath.enums import FHIR_VERSION
-    from fhirpath.fhirspec import FhirSpecFactory
-    from fhirpath.fhirspec import FHIRSearchSpecFactory
+    from fhirpath.fhirspec import FHIRSearchSpecFactory, FhirSpecFactory
 
     if argv[1] in ("-v", "--version"):
         sys.stdout.write(f"v{fhirpath.__version__}\n")

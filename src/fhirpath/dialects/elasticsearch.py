@@ -114,7 +114,7 @@ class ElasticSearchDialect(DialectBase):
         elif multiple_:
             q = {"terms": {path: value}}
         else:
-            q = {"term": {path: value}}
+            q = {"match": {path: value}}
 
         return q
 
@@ -401,6 +401,7 @@ class ElasticSearchDialect(DialectBase):
 
                 if term.path.context.type_name in (
                     "string",
+                    "xhtml",
                     "uri",
                     "url",
                     "canonical",

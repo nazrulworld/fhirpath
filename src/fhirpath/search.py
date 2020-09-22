@@ -1,12 +1,13 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
-from typing import Dict, List, Optional, Pattern, Set, Text, Tuple
+from typing import Dict, List, Optional, Pattern, Set, Text, Tuple, Union, cast
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
 from zope.interface import implementer
 
+from fhirpath.engine import EngineResult, EngineResultBody, EngineResultHeader
 from fhirpath.enums import (
     FHIR_VERSION,
     GroupType,
@@ -47,6 +48,8 @@ has_dot_is: Pattern = re.compile(r"\.is\([a-z]+\)$", re.I ^ re.U)
 has_dot_where: Pattern = re.compile(r"\.where\([a-z=\'\"()]+\)", re.I ^ re.U)
 parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
+
+DEFAULT_RESULT_COUNT = 100
 
 
 def has_escape_comma(val):
@@ -170,10 +173,10 @@ class SearchContext(object):
             normalized_params.append((_path, param_value_, modifier_))
         return normalized_params
 
-    def normalize_param_value(self, raw_value, container):
+    def normalize_param_value(self, raw_value: Union[List, str], container):
         """ """
         if isinstance(raw_value, list):
-            bucket = list()
+            bucket: List[str] = list()
             for rv in raw_value:
                 self.normalize_param_value(rv, bucket)
             if len(bucket) == 1:
@@ -299,8 +302,12 @@ class Search(object):
         elif isinstance(params, MultiDictProxy):
             all_params = params.copy()
 
-        self.result_params: Dict = dict()
+        self.result_params: Dict[str, str] = dict()
         self.search_params = None
+
+        self.reverse_chaining_results: Optional[Dict[str, Set[str]]] = None
+        self.main_query = None
+        self.include_queries = None
 
         self.prepare_params(all_params)
 
@@ -322,76 +329,6 @@ class Search(object):
                 "Only value from one of arguments "
                 "(´query_string´, ´params´) is accepted"
             )
-
-    def prepare_params(self, all_params):
-        """making search, sort, limit, params
-        Result Parameters
-        ~~~~~~~~~~~~~~~~
-        _sort
-        _count
-        _include
-        _revinclude
-        _summary
-        _total
-        _elements
-        _contained
-        _containedType
-        """
-        if all_params is None:
-            return
-        _sort = all_params.popall("_sort", [])
-        if len(_sort) > 0:
-            self.result_params["_sort"] = ",".join(_sort)
-
-        _count = all_params.popall("_count", [])
-
-        if len(_count) > 0:
-            if len(_count) > 1:
-                raise ValidationError("'_count' cannot be multiple!")
-            self.result_params["_count"] = int(_count[0])
-
-        page = all_params.popall("page", [])
-        if len(page) > 0:
-            if len(page) > 1:
-                raise ValidationError("'page' cannot be multiple!")
-            self.result_params["page"] = int(page[0])
-
-        _total = all_params.popall("_total", [])
-
-        if len(_total) > 0:
-            if len(_total) > 1:
-                raise ValidationError("'_total' cannot be multiple!")
-            self.result_params["_total"] = _total[0]
-
-        _type = all_params.popone("_type", None)
-        if _type:
-            self.result_params["_type"] = _type.split(",")
-
-        _summary = all_params.popone("_summary", None)
-        if _summary:
-            self.result_params["_summary"] = _summary
-
-        _include = all_params.popone("_include", None)
-        if _include:
-            self.result_params["_include"] = _include
-
-        _revinclude = all_params.popone("_revinclude", None)
-        if _revinclude:
-            self.result_params["_revinclude"] = _revinclude
-
-        _elements = all_params.popone("_elements", [])
-        if len(_elements) > 0:
-            self.result_params["_elements"] = ",".join(_elements)
-
-        _contained = all_params.popone("_contained", None)
-        if _contained:
-            self.result_params["_contained"] = _contained
-
-        _containedType = all_params.popone("_containedType", None)
-        if _containedType:
-            self.result_params["_containedType"] = _containedType
-
-        self.search_params = MultiDictProxy(all_params)
 
     @staticmethod
     def parse_query_string(query_string, allow_none=False):
@@ -424,6 +361,83 @@ class Search(object):
         """ """
         return cls(context, params=params)
 
+    def prepare_params(self, all_params):
+        """making search, sort, limit, params
+        Result Parameters
+        ~~~~~~~~~~~~~~~~
+        _sort
+        _count
+        _include
+        _revinclude
+        _summary
+        _total
+        _elements
+        _contained
+        _containedType
+        """
+        if all_params is None:
+            self.search_params = MultiDict()
+            return
+
+        _sort = all_params.popall("_sort", [])
+        if len(_sort) > 0:
+            self.result_params["_sort"] = ",".join(_sort)
+
+        _count = all_params.popall("_count", [])
+
+        if len(_count) > 0:
+            if len(_count) > 1:
+                raise ValidationError("'_count' cannot be multiple!")
+            self.result_params["_count"] = int(_count[0])
+
+        page = all_params.popall("page", [])
+        if len(page) > 0:
+            if len(page) > 1:
+                raise ValidationError("'page' cannot be multiple!")
+            self.result_params["page"] = int(page[0])
+
+        _total = all_params.popall("_total", [])
+
+        if len(_total) > 0:
+            if len(_total) > 1:
+                raise ValidationError("'_total' cannot be multiple!")
+            self.result_params["_total"] = _total[0]
+
+        _type = all_params.popone("_type", None)
+        if _type:
+            self.result_params["_type"] = _type.split(",")
+
+        _summary = all_params.popone("_summary", None)
+        if _summary:
+            self.result_params["_summary"] = _summary
+
+        _include = all_params.popall("_include", None)
+        if _include:
+            self.result_params["_include"] = _include
+
+        _has = [(k, v) for k, v in all_params.items() if k.startswith("_has:")]
+        if _has:
+            self.result_params["_has"] = _has
+        [all_params.pop(k) for k, _ in _has]
+
+        _revinclude = all_params.popall("_revinclude", None)
+        if _revinclude:
+            self.result_params["_revinclude"] = _revinclude
+
+        _elements = all_params.popone("_elements", [])
+        if len(_elements) > 0:
+            self.result_params["_elements"] = ",".join(_elements)
+
+        _contained = all_params.popone("_contained", None)
+        if _contained:
+            self.result_params["_contained"] = _contained
+
+        _containedType = all_params.popone("_containedType", None)
+        if _containedType:
+            self.result_params["_containedType"] = _containedType
+
+        self.search_params = MultiDictProxy(all_params)
+
     def build(self) -> QueryResult:
         """Create QueryBuilder from search query string"""
         builder = Q_(self.context.resource_types, self.context.engine)
@@ -432,10 +446,238 @@ class Search(object):
         builder = self.attach_sort_terms(builder)
         builder = self.attach_limit_terms(builder)
 
-        return builder(
+        # handle _has predicates
+        if self.reverse_chaining_results:
+            # filter results on IDs
+            terms: List = []
+            for resource_type, ids in self.reverse_chaining_results.items():
+                search_context = SearchContext(self.context.engine, resource_type)
+                normalized_data = search_context.normalize_param("_id", ",".join(ids))
+                self.add_term(normalized_data, terms)
+
+            builder = builder.where(*terms)
+
+        result: QueryResult = builder(
             unrestricted=self.context.unrestricted,
             async_result=self.context.async_result,
         )
+
+        return result
+
+    # FIXME: sorting, paginating and large results are not handled yet.
+    def has(self) -> List[Tuple[SearchParameter, QueryResult]]:
+        """
+        This function handles the _has keyword.
+        """
+        has_queries: List[Tuple[SearchParameter, QueryResult]] = []
+        _has_predicates: List[Tuple[str, str]] = cast(
+            List[Tuple[str, str]], self.result_params.get("_has", [])
+        )
+        for _has, value in _has_predicates:
+            # Parse the _has input parameter
+            parts = _has.split(":")
+            if len(parts) != 4:
+                raise ValidationError(
+                    f"bad _has param '{_has}', should be "
+                    "_has:Resource:ref_search_param:value_search_param=value"
+                )
+
+            from_resource_type: str = parts[1]
+            ref_param_raw: str = parts[2]
+            value_param_raw: str = parts[3]
+
+            from_context = SearchContext(self.context.engine, from_resource_type)
+
+            # Get the reference search parameter definition
+            # we use the first definition returned since we
+            # only have one resource in the context
+            ref_param = from_context._get_search_param_definitions(ref_param_raw)[0]
+            if not ref_param:
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
+                )
+            if ref_param.type != "reference":
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} "
+                    f"must be of type 'reference', got {ref_param.type}"
+                )
+            # ensure that the reference search param targets the correct type
+            assert isinstance(ref_param.target, list)
+            if not any(r in ref_param.target for r in self.context.resource_types):
+                raise ValidationError(
+                    f"invalid reference {from_resource_type}.{ref_param_raw} "
+                    f"({','.join(ref_param.target)}) in the current search context "
+                    f"({','.join(self.context.resource_types)})"
+                )
+
+            # Get the value search parameter definition
+            value_param = from_context._get_search_param_definitions(value_param_raw)[0]
+            if not value_param:
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
+                )
+            # Build a Q_ (query) object to join the resource based on reference ids.
+            builder = Q_(from_resource_type, from_context.engine)
+            normalized_data = from_context.normalize_param(value_param_raw, value)
+            terms_container: List = []
+            self.add_term(normalized_data, terms_container)
+
+            builder = builder.where(*terms_container)
+            self.attach_limit_terms(builder)
+
+            result: QueryResult = builder(
+                unrestricted=self.context.unrestricted,
+                async_result=self.context.async_result,
+            )
+            has_queries.append((ref_param, result))
+
+        return has_queries
+
+    # FIXME: sorting, paginating and large results are not handled yet.
+    def include(self, main_query_result: EngineResult) -> List[QueryResult]:
+        """
+        This function handles the _include keyword.
+        """
+        include_queries: List[QueryResult] = []
+        for inc in self.result_params.get("_include", []):
+            # Parse the _include input parameter
+            parts = inc.split(":")
+            if len(parts) < 2 or len(parts) > 3:
+                raise ValidationError(
+                    f"bad _include param '{inc}', "
+                    "should be Resource:search_param[:target_type]"
+                )
+
+            from_resource_type = parts[0]
+            ref_param_raw: str = parts[1]
+            target_ref_type = parts[2] if len(parts) == 3 else None
+
+            # Get the search parameter definition
+            # it must be of type reference
+            ref_param: SearchParameter = SearchContext(
+                self.context.engine, from_resource_type
+            )._get_search_param_definitions(ref_param_raw)[0]
+            if not ref_param:
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
+                )
+            if ref_param.type != "reference":
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} "
+                    f"must be of type 'reference', got {ref_param.type}"
+                )
+            assert isinstance(ref_param.target, list)
+            if target_ref_type and target_ref_type not in ref_param.target:
+                raise ValidationError(
+                    f"the search param {from_resource_type}.{ref_param_raw} may refer"
+                    f" to {', '.join(ref_param.target)}, not to {target_ref_type}"
+                )
+
+            # Compute the resources which may be included in the join query
+            included_resources = (
+                [target_ref_type] if target_ref_type else ref_param.target
+            )
+
+            # Extract reference IDs from the main query result
+            ids = main_query_result.extract_references(ref_param)
+
+            # filter included resources for which we have references to
+            included_resources = [r for r in included_resources if ids.get(r)]
+
+            # if no references were extracted from the main_query_result, skip.
+            if not included_resources:
+                continue
+
+            # Build a Q_ (query) object to join the resource based on reference ids.
+            builder = Q_(included_resources, self.context.engine)
+            terms: List = []
+            for resource_type in included_resources:
+                search_context = SearchContext(self.context.engine, resource_type)
+                # for each resource, create a term to filter IDs
+                normalized_data = search_context.normalize_param(
+                    "_id", ",".join(ids[resource_type])
+                )
+                self.add_term(normalized_data, terms)
+
+            builder = builder.where(*terms)
+            self.attach_limit_terms(builder)
+
+            # FIXME: find a better way to handle the limit
+            builder = builder.limit(DEFAULT_RESULT_COUNT)
+
+            result: QueryResult = builder(
+                unrestricted=self.context.unrestricted,
+                async_result=self.context.async_result,
+            )
+            include_queries.append(result)
+
+        return include_queries
+
+    # FIXME: sorting, paginating and large results are not handled yet.
+    def rev_include(self, main_query_result: EngineResult) -> List[QueryResult]:
+        """
+        This function handles the _revinclude keyword.
+        """
+        include_queries: List[QueryResult] = []
+        for inc in self.result_params.get("_revinclude", []):
+            # Parse the _revinclude input parameter
+            parts = inc.split(":")
+            if len(parts) < 2 or len(parts) > 3:
+                raise ValidationError(
+                    f"bad _revinclude param '{inc}', "
+                    "should be Resource:search_param[:target_type]"
+                )
+
+            from_resource_type = parts[0]
+            ref_param_raw: str = parts[1]
+            target_ref_type = parts[2] if len(parts) == 3 else None
+
+            # Get the search parameter definition
+            # it must be of type reference
+            ref_param: SearchParameter = SearchContext(
+                self.context.engine, from_resource_type
+            )._get_search_param_definitions(ref_param_raw)[0]
+            if not ref_param:
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
+                )
+            if ref_param.type != "reference":
+                raise ValidationError(
+                    f"search parameter {from_resource_type}.{ref_param_raw} "
+                    f"must be of type 'reference', got {ref_param.type}"
+                )
+            assert isinstance(ref_param.target, list)
+            if target_ref_type and target_ref_type not in ref_param.target:
+                raise ValidationError(
+                    f"invalid reference {from_resource_type}.{ref_param_raw} "
+                    f"({','.join(ref_param.target)}) in the current search context "
+                    f"({','.join(self.context.resource_types)})"
+                )
+
+            # Extract IDs from the main query result
+            ids = main_query_result.extract_ids()
+
+            # Build a Q_ (query) object to join the resource based on reference ids.
+            builder = Q_([from_resource_type], self.context.engine)
+            terms: List = []
+            for _, resource_ids in ids.items():
+                search_context = SearchContext(self.context.engine, from_resource_type)
+                # for each resource, create a term to filter reference ids
+                normalized_data = search_context.normalize_param(
+                    ref_param_raw, ",".join(resource_ids)
+                )
+                self.add_term(normalized_data, terms)
+
+            builder = builder.where(*terms)
+            self.attach_limit_terms(builder)
+
+            result: QueryResult = builder(
+                unrestricted=self.context.unrestricted,
+                async_result=self.context.async_result,
+            )
+            include_queries.append(result)
+
+        return include_queries
 
     def add_term(self, normalized_data, terms_container):
         """ """
@@ -462,7 +704,7 @@ class Search(object):
             term = self.create_exists_term(path_, param_value, modifier)
 
         elif (
-            getattr(path_.context.type_class, "is_primitive", None)
+            hasattr(path_.context.type_class, "is_primitive")
             and not path_.context.type_class.is_primitive()
         ):
             # we need normalization
@@ -487,7 +729,9 @@ class Search(object):
             elif klass_name == "Money":
                 term_factory = self.create_money_term
             else:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"Can't perform search on element of type {klass_name}"
+                )
             term = term_factory(path_, param_value, modifier)
         else:
             term = self.create_term(path_, param_value, modifier)
@@ -497,13 +741,11 @@ class Search(object):
     def create_identifier_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_identifier_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_identifier_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_identifier_term(path_, param_value, modifier)
@@ -514,13 +756,11 @@ class Search(object):
         """ """
         operator_, original_value = value
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_identifier_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_identifier_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         has_pipe = "|" in original_value
         terms = list()
@@ -574,14 +814,11 @@ class Search(object):
     def create_quantity_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_quantity_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-
-            return group
+            terms = [
+                self.create_quantity_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_quantity_term(path_, param_value, modifier)
@@ -593,13 +830,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_quantity_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_quantity_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         operator_eq = "eq"
         has_pipe = "|" in original_value
@@ -659,13 +894,10 @@ class Search(object):
     def create_coding_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_coding_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_coding_term(path_, value, modifier) for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_coding_term(path_, param_value, modifier)
@@ -679,13 +911,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_coding_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_coding_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         has_pipe = "|" in original_value
         terms = list()
@@ -740,13 +970,11 @@ class Search(object):
     def create_codeableconcept_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_codeableconcept_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_codeableconcept_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         elif isinstance(param_value, tuple):
             return self.single_valued_codeableconcept_term(path_, param_value, modifier)
@@ -789,13 +1017,10 @@ class Search(object):
     def create_address_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_address_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_address_term(path_, val, modifier) for val in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_address_term(path_, param_value, modifier)
@@ -806,13 +1031,11 @@ class Search(object):
         """ """
         operator_, original_value = value
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_address_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_address_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         if modifier == "text":
             return self.create_term(path_ / "text", value, None)
@@ -835,13 +1058,11 @@ class Search(object):
     def create_contactpoint_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_contactpoint_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_contactpoint_term(path_, val, modifier)
+                for val in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_contactpoint_term(path_, param_value, modifier)
@@ -853,13 +1074,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_contactpoint_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_contactpoint_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         if path_._where:
             if path_._where.type != WhereConstraintType.T1:
@@ -873,13 +1092,14 @@ class Search(object):
                 ),
                 self.create_term(path_ / "value", value, None),
             ]
+            group = G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
         else:
             terms = [
                 self.create_term(path_ / "system", value, None),
                 self.create_term(path_ / "use", value, None),
                 self.create_term(path_ / "value", value, None),
             ]
-        group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+            group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
         if modifier == "not":
             group.match_operator = MatchType.NONE
         else:
@@ -890,13 +1110,10 @@ class Search(object):
     def create_humanname_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_humanname_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_humanname_term(path_, val, modifier) for val in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
 
         elif isinstance(param_value, tuple):
             return self.single_valued_humanname_term(path_, param_value, modifier)
@@ -908,13 +1125,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_humanname_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_humanname_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         if modifier == "text":
             return self.create_term(path_ / "text", value, None)
@@ -937,13 +1152,11 @@ class Search(object):
     def create_reference_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_reference_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-            return group
+            terms = [
+                self.create_reference_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         elif isinstance(param_value, tuple):
             return self.single_valued_reference_term(path_, param_value, modifier)
@@ -953,13 +1166,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_reference_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_reference_term(path_, val, modifier)
+                for val in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
 
         if path_._where:
             if path_._where.type != WhereConstraintType.T2:
@@ -998,14 +1209,10 @@ class Search(object):
     def create_money_term(self, path_, param_value, modifier):
         """ """
         if isinstance(param_value, list):
-            terms = list()
-            for value in param_value:
-                # Term or Group
-                term = self.create_money_term(path_, value, modifier)
-                terms.append(term)
-            group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-
-            return group
+            terms = [
+                self.create_money_term(path_, value, modifier) for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
 
         elif isinstance(param_value, tuple):
             return self.single_valued_money_term(path_, param_value, modifier)
@@ -1017,13 +1224,11 @@ class Search(object):
         operator_, original_value = value
 
         if isinstance(original_value, list):
-            terms_ = list()
-            for val in original_value:
-                term_ = self.single_valued_money_term(path_, val, modifier)
-                terms_.append(term_)
-            # IN Like Group
-            group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
-            return group
+            terms = [
+                self.single_valued_money_term(path_, value, modifier)
+                for value in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
 
         if self.context.engine.fhir_release == FHIR_VERSION.STU3:
             # make legacy
@@ -1154,20 +1359,18 @@ class Search(object):
 
     def validate(self):
         """ """
-        unwanted = set()
+        errors = set()
 
-        for param_name in self.search_params:
+        for search_param in self.search_params:
 
-            if param_name.split(":")[0] not in self.definition:
-                unwanted.add(param_name)
+            param_name = search_param.split(":")[0]
+            try:
+                self.context._get_search_param_definitions(param_name)
+            except ValidationError as e:
+                errors.add(str(e))
 
-        if len(unwanted) > 0:
-            raise ValidationError(
-                "({0}) search parameter(s) are not "
-                "available for resource `{1}`.".format(
-                    ", ".join([u for u in unwanted]), self.context.resource_name
-                )
-            )
+        if len(errors) > 0:
+            raise ValidationError(", ".join([e for e in errors]))
         # xxx: later more
 
     @staticmethod
@@ -1191,9 +1394,6 @@ class Search(object):
                 )
 
     def attach_where_terms(self, builder):
-        if self.search_params is None:
-            # xxx: should add resources condition here?
-            return builder
         terms_container = list()
         # we make sure that there are no duplicate keys!
         for param_name in set(self.search_params):
@@ -1226,7 +1426,7 @@ class Search(object):
     def attach_limit_terms(self, builder):
         """ """
         if "_count" not in self.result_params:
-            return builder
+            return builder.limit(DEFAULT_RESULT_COUNT)
 
         offset = 0
         if "page" in self.result_params:
@@ -1235,28 +1435,63 @@ class Search(object):
                 offset = (current_page - 1) * self.result_params["_count"]
         return builder.limit(self.result_params["_count"], offset)
 
-    def response(self, result):
+    def response(self, result, includes):
         """ """
-        return self.context.engine.wrapped_with_bundle(result)
-
-    def _get_search_param_definition(self, param_name):
-        """ """
-        search_param = getattr(self.definition, param_name, None)
-        if search_param is None:
-            raise ValidationError(
-                "No search definition is available for search parameter "
-                f"``{param_name}`` on Resource ``{self.context.resource_name}``."
-            )
-        return search_param
+        return self.context.engine.wrapped_with_bundle(result, includes)
 
     def __call__(self):
         """ """
-        query_result = self.build()
-        result = query_result.fetchall()
-        assert result is not None
-        response = self.response(result)
 
-        return response
+        # TODO: chaining
+
+        # reverse chaining (_has)
+        if self.result_params.get("_has"):
+            has_queries = self.has()
+            # compute the intersection of referenced resources' ID
+            # from the result of _has queries.
+            self.reverse_chaining_results = {}
+            for ref_param, q in has_queries:
+                res = q.fetchall()
+                self.reverse_chaining_results = {
+                    r_type: set(ids).intersection(self.reverse_chaining_results[r_type])
+                    if self.reverse_chaining_results.get(r_type)
+                    else set(ids)
+                    for r_type, ids in res.extract_references(ref_param).items()
+                    if r_type in self.context.resource_types
+                }
+
+            # if the _has predicates did not match any documents, return an empty result
+            # FIXME: we use the result of the last _has query to build the empty bundle,
+            # but we should be more explicit about the query context.
+            if not self.reverse_chaining_results:
+                return self.response(
+                    EngineResult(EngineResultHeader(total=0), EngineResultBody()), []
+                )
+
+        # MAIN QUERY
+        self.main_query = self.build()
+
+        # TODO handle count with _includes
+        if self.result_params.get("_summary") == "count":
+            main_result = self.main_query.count()
+        else:
+            main_result = self.main_query.fetchall()
+        assert main_result is not None
+
+        # _include
+        self.include_queries = self.include(main_result)
+        include_results: List[EngineResult] = [
+            q.fetchall() for q in self.include_queries
+        ]
+
+        # _revinclude
+        self.rev_include_queries = self.rev_include(main_result)
+        rev_include_results: List[EngineResult] = [
+            q.fetchall() for q in self.rev_include_queries
+        ]
+
+        all_includes = [*include_results, *rev_include_results]
+        return self.response(main_result, all_includes)
 
 
 class AsyncSearch(Search):
@@ -1264,11 +1499,54 @@ class AsyncSearch(Search):
 
     async def __call__(self):
         """ """
-        query_result = self.build()
-        result = await query_result.fetchall()
-        response = self.response(result)
+        # TODO: chaining
 
-        return response
+        # reverse chaining (_has)
+        if self.result_params.get("_has"):
+            has_queries = self.has()
+            # compute the intersection of referenced resources' ID
+            # from the result of _has queries.
+            self.reverse_chaining_results = {}
+            for ref_param, q in has_queries:
+                res = await q.fetchall()
+                self.reverse_chaining_results = {
+                    r_type: set(ids).intersection(self.reverse_chaining_results[r_type])
+                    if self.reverse_chaining_results.get(r_type)
+                    else set(ids)
+                    for r_type, ids in res.extract_references(ref_param).items()
+                    if r_type in self.context.resource_types
+                }
+
+            # if the _has predicates did not match any documents, return an empty result
+            # FIXME: we use the result of the last _has query to build the empty bundle,
+            # but we should be more explicit about the query context.
+            if not self.reverse_chaining_results:
+                return self.response(res, [])
+
+        # MAIN QUERY
+        self.main_query = self.build()
+
+        # TODO handle count with _includes
+        if self.result_params.get("_summary") == "count":
+            main_result = await self.main_query.count()
+        else:
+            main_result = await self.main_query.fetchall()
+        assert main_result is not None
+
+        # _include
+        self.include_queries = self.include(main_result)
+        include_results: List[EngineResult] = [
+            await q.fetchall() for q in self.include_queries
+        ]
+
+        # _revinclude
+        self.rev_include_queries = self.rev_include(main_result)
+        rev_include_results: List[EngineResult] = [
+            await q.fetchall() for q in self.rev_include_queries
+        ]
+
+        all_includes = [*include_results, *rev_include_results]
+        return self.response(main_result, all_includes)
 
 
 def fhir_search(context, query_string=None, params=None):

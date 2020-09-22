@@ -1,5 +1,7 @@
 # _*_ coding: utf-8 _*_
+import re
 from urllib.parse import urlencode
+from pytest import raises
 
 from fhirpath import Q_
 from fhirpath.enums import FHIR_VERSION
@@ -9,6 +11,12 @@ from fhirpath.enums import SortOrderType
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
+from fhirpath.exceptions import ValidationError
+
+from fhir.resources.patient import Patient
+from fhir.resources.observation import Observation
+from fhir.resources.practitioner import Practitioner
+from fhir.resources.medicationrequest import MedicationRequest
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -589,3 +597,287 @@ def test_issue8_without_param(es_data, engine):
     fhir_search = Search(search_context)
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_search_include(es_data, engine):
+    # typed _include
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:subject:Patient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Observation)
+    assert isinstance(bundle.entry[1].resource, Patient)
+
+    # untyped _include
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:subject"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Observation)
+    assert isinstance(bundle.entry[1].resource, Patient)
+
+    # many types
+    search_context = SearchContext(engine, "Observation")
+    params = (
+        ("_include", "Observation:subject:Patient"),
+        ("_include", "Observation:subject:Location"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Observation)
+    assert isinstance(bundle.entry[1].resource, Patient)
+
+    # .where(resolve() is Resource) constraint
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:patient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+
+    # many references
+    search_context = SearchContext(engine, "Observation")
+    params = (
+        ("_include", "Observation:subject:Patient"),
+        ("_include", "Observation:performer"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 3
+    assert isinstance(bundle.entry[0].resource, Observation)
+    assert isinstance(bundle.entry[1].resource, Patient)
+    assert isinstance(bundle.entry[2].resource, Practitioner)
+
+    # bad syntax
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "subject"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _include param 'subject', "
+            "should be Resource:search_param[:target_type]"
+        ),
+    ):
+        fhir_search()
+
+    # bad searchparam
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:category"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "search parameter Observation.category "
+            "must be of type 'reference', got token"
+        ),
+    ):
+        fhir_search()
+
+    # unknown searchparam
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:unknown"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "No search definition is available for search "
+            "parameter ``unknown`` on Resource ``Observation``."
+        ),
+    ):
+        fhir_search()
+
+    # bad target
+    search_context = SearchContext(engine, "Observation")
+    params = (("_include", "Observation:subject:DocumentReference"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "the search param Observation.subject may refer "
+            "to Group, Device, Patient, Location"
+            ", not to DocumentReference"
+        ),
+    ):
+        fhir_search()
+
+
+def test_search_has(es_data, engine):
+    # found
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:patient:code", "718-7"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+    assert isinstance(bundle.entry[0].resource, Patient)
+
+    # not found
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:patient:code", "XXX-YYY"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    # bad syntax
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:patient", "718-7"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _has param '_has:Observation:patient', "
+            "should be _has:Resource:ref_search_param:value_search_param=value"
+        ),
+    ):
+        fhir_search()
+
+    # bad searchparam
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:category:code", "something"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "search parameter Observation.category must be "
+            "of type 'reference', got token"
+        ),
+    ):
+        fhir_search()
+
+    # unknown searchparam
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:unknown:code", "something"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "No search definition is available for search "
+            "parameter ``unknown`` on Resource ``Observation``."
+        ),
+    ):
+        fhir_search()
+
+    # bad target
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:encounter:identifier", "something"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "invalid reference Observation.encounter (Encounter,EpisodeOfCare) "
+            "in the current search context (Patient)"
+        ),
+    ):
+        fhir_search()
+
+
+def test_search_revinclude(es_data, engine):
+    # untyped
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:subject"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # typed
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:subject:Patient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # double _revinclude
+    search_context = SearchContext(engine, "Patient")
+    params = (
+        ("_revinclude", "Observation:subject"),
+        ("_revinclude", "MedicationRequest:subject"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 3
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+    assert isinstance(bundle.entry[2].resource, MedicationRequest)
+
+    # with _has
+    search_context = SearchContext(engine, "Patient")
+    params = (
+        ("_has:Observation:patient:code", "718-7"),
+        ("_revinclude", "Observation:subject"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # bad syntax
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "subject"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _revinclude param 'subject', should be "
+            "Resource:search_param[:target_type]"
+        ),
+    ):
+        fhir_search()
+
+    # bad syntax
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:subject:too:long"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _revinclude param 'Observation:subject:too:long', "
+            "should be Resource:search_param[:target_type]"
+        ),
+    ):
+        fhir_search()
+
+    # bad searchparam
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:category"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "search parameter Observation.category must "
+            "be of type 'reference', got token"
+        ),
+    ):
+        fhir_search()
+
+    # unknown searchparam
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:unknown:code"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "No search definition is available for search "
+            "parameter ``unknown`` on Resource ``Observation``."
+        ),
+    ):
+        fhir_search()
+
+    # bad target
+    search_context = SearchContext(engine, "Patient")
+    params = (("_revinclude", "Observation:encounter:identifier"),)
+    fhir_search = Search(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "invalid reference Observation.encounter (Encounter,EpisodeOfCare) "
+            "in the current search context (Patient)"
+        ),
+    ):
+        fhir_search()
