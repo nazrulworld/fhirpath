@@ -25,7 +25,6 @@ from typing import (
 )
 
 import pkg_resources
-from fhir.resources import construct_fhir_element
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
@@ -567,8 +566,7 @@ class BundleWrapper:
             # entry = BundleEntry
             entry = dict()
             entry["fullUrl"] = "{0}/{1}".format(resource_type, resource_id)
-            # use the model factory in order to validate the resource
-            entry["resource"] = construct_fhir_element(resource_type, resource).json()
+            entry["resource"] = resource
             # search = BundleEntrySearch
             search = {"mode": mode}
             entry["search"] = search
