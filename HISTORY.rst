@@ -20,7 +20,7 @@ Breaking
 - ``fhirpath.search.SearchContext.resource_name`` has been changed ``fhirpath.search.SearchContext.resource_type`` and
   now datatype is List instead of string. Please check your API. [Jasopaum]
 
-- For case of ``Elasticsearch`` based engine, you have to use custom analyzer (``fhir_reference_analyzer``) for FHIR Reference type. For details see readme.
+- For case of ``Elasticsearch`` based engine, you should use custom analyzer (``fhir_reference_analyzer``) for FHIR Reference type. For details see readme.
 
 
 0.7.1 (2020-08-07)

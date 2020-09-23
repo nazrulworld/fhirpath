@@ -610,7 +610,10 @@ class ElasticSearchDialect(DialectBase):
         ):
             if custom_analyzer is None:
                 logger.warning(f"No custom analyzer found for reference {path_}")
-            qr = {"term": {path_: value}}
+            if term.comparison_operator == OPERATOR.sa:
+                qr = {"match_phrase_prefix": {path_: value}}
+            else:
+                qr = {"term": {path_: value}}
 
         # if a fulltext analyzer is configured, produce a full-text query
         elif custom_analyzer in fulltext_analyzers:

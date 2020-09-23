@@ -890,6 +890,12 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     """ References need to be indexed in a special way in order to be found"""
     search_context = SearchContext(engine, "Observation")
 
+    # search Normal
+    params = (("subject", "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
     # search by ID
     params = (("subject", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
@@ -925,3 +931,24 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 0
+
+    # search by resource_type as prefix
+    params = (("subject:below", "Patient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("subject", "saPatient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("subject:not", "saPatient"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("subject:not", "saDevice"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
