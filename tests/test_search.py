@@ -584,7 +584,10 @@ def test_search_negative_address(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
     params = (
-        ("_profile:not", "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",),
+        (
+            "_profile:not",
+            "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",
+        ),
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -883,20 +886,27 @@ def test_search_revinclude(es_data, engine):
         fhir_search()
 
 
-def test_search_fhirpath_analyzer(es_data, engine):
-    """ """
+def test_search_fhirpath_reference_analyzer(es_data, engine):
+    """ References need to be indexed in a special way in order to be found"""
     search_context = SearchContext(engine, "Observation")
-    # search by last part
-    params = (("subject", "19c5245f-89a8-49f8-b244-666b32adb92e"), )
+
+    # search by ID
+    params = (("subject", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
 
-    # search by first part
+    # search by (wrong) ID
+    params = (("subject", "29c5245f-89a8-49f8-b244-666b32adb92e"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    # search by resource_type (should not find anything)
     params = (("subject", "Patient"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 1
+    assert bundle.total == 0
 
     # test negative: search by last part
     params = (("subject:not", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
@@ -905,15 +915,13 @@ def test_search_fhirpath_analyzer(es_data, engine):
     assert bundle.total == 0
 
     # test full URI with wrong last part
-    params = (("subject:exact", "Patient/fake245f-89a8-49f8-b244-666b32adb92e"),)
+    params = (("subject", "Patient/fake245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    # fixme: should be no resource
     assert bundle.total == 0
 
     # test full URI with wrong first part
-    params = (("subject:exact", "Device/19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    params = (("subject", "Device/19c5245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    # fixme: that is definitely wrong
     assert bundle.total == 0

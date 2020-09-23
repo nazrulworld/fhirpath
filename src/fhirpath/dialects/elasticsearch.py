@@ -119,6 +119,21 @@ class ElasticSearchDialect(DialectBase):
         return q
 
     @staticmethod
+    def create_reference_term(term, root_replacer=None):
+        """ """
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
+        value = term.get_real_value()
+        return {
+            "bool": {
+                "should": [
+                    {"term": {path_: value}},
+                    {"term": {f"{path_}.raw": value}},
+                ],
+                "minimum_should_match": 1,
+            }
+        }
+
+    @staticmethod
     def create_sa_term(path, value):
         """Create ES Prefix Query"""
         if isinstance(value, (list, tuple)):
@@ -598,10 +613,22 @@ class ElasticSearchDialect(DialectBase):
         # xxx: could have support for free text search
         path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
 
-        fulltext_analyzers = ("standard",)
+        custom_analyzer = map_info.get("analyzer")
+        fulltext_analyzers = (None, "standard")
         value = term.get_real_value()
 
-        if map_info.get("analyzer", "standard") in fulltext_analyzers:
+        # when searching on a reference, the field must have been
+        # analyzed in a custom way.
+        if (
+            not term.path.context.is_root()
+            and term.path.context._get_parent().type_name == "Reference"
+        ):
+            if custom_analyzer is None:
+                logger.warning(f"No custom analyzer found for reference {path_}")
+            qr = ElasticSearchDialect.create_reference_term(term, root_replacer)
+
+        # if a fulltext analyzer is configured, produce a full-text query
+        elif custom_analyzer in fulltext_analyzers:
 
             if term.match_type == TermMatchType.EXACT:
                 qr = {"match_phrase": {path_: value}}
@@ -624,18 +651,13 @@ class ElasticSearchDialect(DialectBase):
             else:
                 qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
 
-        elif (
-            term.match_type == TermMatchType.EXACT
-            and map_info.get("analyzer", None) == "fhir_reference_analyzer"
-        ):
-            qr = {"match_phrase": {path_: value}}
+        # fallback on a regular query
         else:
             qr = ElasticSearchDialect.create_term(
                 path_, value, term.path.context.multiple
             )
 
-        resolved = qr, term.unary_operator
-        return resolved
+        return qr, term.unary_operator
 
     @staticmethod
     def resolve_exists_term(term, root_replacer=None):

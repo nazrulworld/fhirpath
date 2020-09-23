@@ -139,7 +139,11 @@ def _setup_es_index(es_conn):
                 "filter": {},
                 "tokenizer": {
                     "path_tokenizer": {"delimiter": "/", "type": "path_hierarchy"},
-                    "fhir_reference_tokenizer": {"type": "pattern", "pattern": "/"},
+                    "fhir_reference_tokenizer": {
+                        "type": "pattern",
+                        "pattern": r"(?:\w+\/)?(https?\:\/\/.*|[a-zA-Z0-9_-]+)",
+                        "group": 1,
+                    },
                 },
             },
             "index": {
