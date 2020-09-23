@@ -7,6 +7,7 @@ from .expressions import (
     and_,
     contains_,
     eb_,
+    exact_,
     exists_,
     in_,
     not_,
@@ -36,4 +37,5 @@ __all__ = [
     "eb_",
     "contains_",
     "ElementPath",
+    "exact_",
 ]

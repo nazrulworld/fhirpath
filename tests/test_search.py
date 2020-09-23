@@ -905,16 +905,15 @@ def test_search_fhirpath_analyzer(es_data, engine):
     assert bundle.total == 0
 
     # test full URI with wrong last part
-    params = (("subject", "Patient/fake245f-89a8-49f8-b244-666b32adb92e"),)
+    params = (("subject:exact", "Patient/fake245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     # fixme: should be no resource
-    # assert bundle.total == 0
+    assert bundle.total == 0
 
     # test full URI with wrong first part
-    params = (("subject", "Device/19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    params = (("subject:exact", "Device/19c5245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     # fixme: that is definitely wrong
-    # assert bundle.total == 0
-
+    assert bundle.total == 0

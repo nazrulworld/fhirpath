@@ -27,6 +27,7 @@ from fhirpath.fql import (
     V_,
     contains_,
     eb_,
+    exact_,
     exists_,
     not_,
     not_exists_,
@@ -1320,7 +1321,8 @@ class Search(object):
                 operator_ = "sa"
             elif modifier == "above" and operator_ == "eq":
                 operator_ = "eb"
-
+            elif modifier == "exact":
+                term = exact_(term)
             val = V_(original_value)
 
             if operator_ == "eq":

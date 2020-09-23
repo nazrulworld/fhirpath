@@ -600,6 +600,7 @@ class ElasticSearchDialect(DialectBase):
 
         fulltext_analyzers = ("standard",)
         value = term.get_real_value()
+
         if map_info.get("analyzer", "standard") in fulltext_analyzers:
 
             if term.match_type == TermMatchType.EXACT:
@@ -623,6 +624,11 @@ class ElasticSearchDialect(DialectBase):
             else:
                 qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
 
+        elif (
+            term.match_type == TermMatchType.EXACT
+            and map_info.get("analyzer", None) == "fhir_reference_analyzer"
+        ):
+            qr = {"match_phrase": {path_: value}}
         else:
             qr = ElasticSearchDialect.create_term(
                 path_, value, term.path.context.multiple

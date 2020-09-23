@@ -1,5 +1,5 @@
 # _*_ coding: utf-8 _*_
-from fhirpath.enums import OPERATOR
+from fhirpath.enums import OPERATOR, TermMatchType
 from fhirpath.interfaces.fql import IGroupTerm, ITerm
 from fhirpath.types import EMPTY_VALUE
 from fhirpath.utils import reraise
@@ -129,6 +129,13 @@ def not_(path, value=EMPTY_VALUE):
     term_or_group.unary_operator = OPERATOR.neg
 
     return term_or_group
+
+
+def exact_(path, value=EMPTY_VALUE):
+    """ """
+    term = _prepare_term_or_group(path, value=value)
+    ITerm(term).set_match_type(TermMatchType.EXACT)
+    return term
 
 
 def in_(path, values):

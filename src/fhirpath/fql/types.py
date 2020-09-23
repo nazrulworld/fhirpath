@@ -186,7 +186,9 @@ class BaseTerm(ABC):
 
     def set_match_type(self, type_):
         """ """
-        self.match_type = TermMatchType[type_]
+        if isinstance(type_, str):
+            type_ = TermMatchType[type_]
+        self.match_type: TermMatchType = type_
 
     def clone(self):
         """ """
