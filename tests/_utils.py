@@ -130,21 +130,20 @@ def _setup_es_index(es_conn):
         "settings": {
             "analysis": {
                 "analyzer": {
-                    "path_analyzer": {"tokenizer": "path_tokenizer"},
                     "fhir_reference_analyzer": {
-                        "tokenizer": "fhir_reference_tokenizer"
+                        "tokenizer": "keyword",
+                        "filter": ["fhir_reference_filter"],
+                    },
+                },
+                "filter": {
+                    "fhir_reference_filter": {
+                        "type": "pattern_capture",
+                        "preserve_original": True,
+                        "patterns": [r"(?:\w+\/)?(https?\:\/\/.*|[a-zA-Z0-9_-]+)"],
                     },
                 },
                 "char_filter": {},
-                "filter": {},
-                "tokenizer": {
-                    "path_tokenizer": {"delimiter": "/", "type": "path_hierarchy"},
-                    "fhir_reference_tokenizer": {
-                        "type": "pattern",
-                        "pattern": r"(?:\w+\/)?(https?\:\/\/.*|[a-zA-Z0-9_-]+)",
-                        "group": 1,
-                    },
-                },
+                "tokenizer": {},
             },
             "index": {
                 "mapping": {

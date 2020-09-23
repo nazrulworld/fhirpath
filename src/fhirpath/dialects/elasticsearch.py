@@ -119,21 +119,6 @@ class ElasticSearchDialect(DialectBase):
         return q
 
     @staticmethod
-    def create_reference_term(term, root_replacer=None):
-        """ """
-        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
-        value = term.get_real_value()
-        return {
-            "bool": {
-                "should": [
-                    {"term": {path_: value}},
-                    {"term": {f"{path_}.raw": value}},
-                ],
-                "minimum_should_match": 1,
-            }
-        }
-
-    @staticmethod
     def create_sa_term(path, value):
         """Create ES Prefix Query"""
         if isinstance(value, (list, tuple)):
@@ -625,7 +610,7 @@ class ElasticSearchDialect(DialectBase):
         ):
             if custom_analyzer is None:
                 logger.warning(f"No custom analyzer found for reference {path_}")
-            qr = ElasticSearchDialect.create_reference_term(term, root_replacer)
+            qr = {"term": {path_: value}}
 
         # if a fulltext analyzer is configured, produce a full-text query
         elif custom_analyzer in fulltext_analyzers:
