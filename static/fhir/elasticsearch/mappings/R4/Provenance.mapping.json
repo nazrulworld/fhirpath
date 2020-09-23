@@ -1,7 +1,7 @@
 {
   "resourceType": "Provenance",
   "meta": {
-    "lastUpdated": "2020-09-23T14:50:49.278458",
+    "lastUpdated": "2020-09-22T17:29:52.124996",
     "versionId": "R4"
   },
   "mapping": {
@@ -12,12 +12,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "fhir_reference_analyzer",
-            "fields": {
-              "raw": {
-                "type": "keyword"
-              }
-            }
+            "analyzer": "fhir_reference_analyzer"
           },
           "identifier": {
             "properties": {
@@ -114,12 +109,7 @@
             "type": "text",
             "index": true,
             "store": false,
-            "analyzer": "fhir_reference_analyzer",
-            "fields": {
-              "raw": {
-                "type": "keyword"
-              }
-            }
+            "analyzer": "fhir_reference_analyzer"
           },
           "identifier": {
             "properties": {
@@ -398,12 +388,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "fhir_reference_analyzer",
-                "fields": {
-                  "raw": {
-                    "type": "keyword"
-                  }
-                }
+                "analyzer": "fhir_reference_analyzer"
               },
               "identifier": {
                 "properties": {
@@ -465,12 +450,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "fhir_reference_analyzer",
-                "fields": {
-                  "raw": {
-                    "type": "keyword"
-                  }
-                }
+                "analyzer": "fhir_reference_analyzer"
               },
               "identifier": {
                 "properties": {
@@ -557,12 +537,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "fhir_reference_analyzer",
-                "fields": {
-                  "raw": {
-                    "type": "keyword"
-                  }
-                }
+                "analyzer": "fhir_reference_analyzer"
               },
               "identifier": {
                 "properties": {
@@ -677,12 +652,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "fhir_reference_analyzer",
-                "fields": {
-                  "raw": {
-                    "type": "keyword"
-                  }
-                }
+                "analyzer": "fhir_reference_analyzer"
               },
               "identifier": {
                 "properties": {
@@ -764,12 +734,7 @@
                 "type": "text",
                 "index": true,
                 "store": false,
-                "analyzer": "fhir_reference_analyzer",
-                "fields": {
-                  "raw": {
-                    "type": "keyword"
-                  }
-                }
+                "analyzer": "fhir_reference_analyzer"
               },
               "identifier": {
                 "properties": {
