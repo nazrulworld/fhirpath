@@ -539,7 +539,9 @@ class BundleWrapper:
         self.data["meta"] = {"lastUpdated": datetime.datetime.utcnow()}
 
         self.data["type"] = bundle_type
-        self.data["total"] = sum(r.header.total for r in [result, *includes])
+        # our pagination is based main query result.
+        # fixme: still issue for _has chaining
+        self.data["total"] = result.header.total
 
         # attach main results
         self.attach_entry(result, "match")
@@ -584,7 +586,7 @@ class BundleWrapper:
 
         container.append(self.make_link("self", url))
 
-        # let's pagitionation here
+        # let's pagination here
         if _total_results > _max_count:
             # Yes pagination is required!
             url_params["_count"] = _max_count
