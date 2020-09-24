@@ -608,7 +608,8 @@ def test_search_include(es_data, engine):
     params = (("_include", "Observation:subject:Patient"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Observation)
     assert isinstance(bundle.entry[1].resource, Patient)
 
@@ -617,7 +618,8 @@ def test_search_include(es_data, engine):
     params = (("_include", "Observation:subject"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Observation)
     assert isinstance(bundle.entry[1].resource, Patient)
 
@@ -629,7 +631,8 @@ def test_search_include(es_data, engine):
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Observation)
     assert isinstance(bundle.entry[1].resource, Patient)
 
@@ -638,7 +641,8 @@ def test_search_include(es_data, engine):
     params = (("_include", "Observation:patient"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
 
     # many references
     search_context = SearchContext(engine, "Observation")
@@ -648,7 +652,8 @@ def test_search_include(es_data, engine):
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 3
+    assert bundle.total == 1
+    assert len(bundle.entry) == 3
     assert isinstance(bundle.entry[0].resource, Observation)
     assert isinstance(bundle.entry[1].resource, Patient)
     assert isinstance(bundle.entry[2].resource, Practitioner)
@@ -782,7 +787,8 @@ def test_search_revinclude(es_data, engine):
     params = (("_revinclude", "Observation:subject"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
 
@@ -791,7 +797,8 @@ def test_search_revinclude(es_data, engine):
     params = (("_revinclude", "Observation:subject:Patient"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
 
@@ -803,7 +810,8 @@ def test_search_revinclude(es_data, engine):
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 3
+    assert bundle.total == 1
+    assert len(bundle.entry) == 3
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
     assert isinstance(bundle.entry[2].resource, MedicationRequest)
@@ -816,7 +824,8 @@ def test_search_revinclude(es_data, engine):
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
-    assert bundle.total == 2
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
 
