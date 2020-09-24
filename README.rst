@@ -175,6 +175,44 @@ unlisted
 Why are you waiting for? You are welcome to list your provider here!
 Developing provider should not be so hard, as ``fhirpath`` is giving you convenient APIs.
 
+
+Elasticsearch Custom Analyzer
+-----------------------------
+To get some special search features for reference type field, you will need to setup custom analyzer for your elasticsearch index.
+
+Example Custom Analyzer::
+
+    settings = {
+        "analysis": {
+            "analyzer": {
+                "fhir_reference_analyzer": {
+                    "tokenizer": "keyword",
+                    "filter": ["fhir_reference_filter"],
+                },
+            },
+            "filter": {
+                "fhir_reference_filter": {
+                    "type": "pattern_capture",
+                    "preserve_original": True,
+                    "patterns": [r"(?:\w+\/)?(https?\:\/\/.*|[a-zA-Z0-9_-]+)"],
+                },
+            },
+            "char_filter": {},
+            "tokenizer": {},
+        }
+
+
+Example Mapping (Reference Field)::
+
+    "properties": {
+      "reference": {
+        "type": "text",
+        "index": true,
+        "store": false,
+        "analyzer": "fhir_reference_analyzer"
+    }
+
+
 ToDo
 ----
 
