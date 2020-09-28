@@ -285,7 +285,30 @@ class ElasticsearchEngine(Engine):
         reference_analyzer: str = None,
         token_normalizer: str = None,
     ):
-        """ """
+        """
+        You may use this function to build the ES mapping.
+        Returns an object like:
+        {
+            "Patient": {
+                "properties": {
+                    "identifier": {
+                        "properties": {
+                            "use": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                    "raw": {
+                                        "type": "keyword"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        """
         fhir_spec = FhirSpecFactory.from_release(self.fhir_release)
 
         resources_elements: Dict[

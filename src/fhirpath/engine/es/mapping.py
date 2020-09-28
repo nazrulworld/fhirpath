@@ -67,19 +67,6 @@ def apply_default_paths(resource, defaults, container):
         container.append((_path, code, multiple))
 
 
-def add_mapping_meta(resource, mappings, fhir_release):
-    """ """
-    data = {
-        "resourceType": resource,
-        "meta": {
-            "lastUpdated": datetime.datetime.now().isoformat(),
-            "versionId": fhir_release,
-        },
-        "mapping": {"properties": mappings},
-    }
-    return data
-
-
 def create_resource_mapping(elements_paths_def, fhir_es_mappings):
     """ """
     mapped = dict()
