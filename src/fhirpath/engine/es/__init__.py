@@ -1,9 +1,11 @@
 # _*_ coding: utf-8 _*_
 import re
-from typing import Optional
+from typing import Optional, Dict, List
+from collections import defaultdict
 
 from zope.interface import implementer
 
+from fhirspec import FHIRStructureDefinitionElement
 from fhirpath.engine import EngineResultRow
 from fhirpath.engine.base import (
     Engine,
@@ -11,6 +13,12 @@ from fhirpath.engine.base import (
     EngineResultBody,
     EngineResultHeader,
 )
+from fhirpath.engine.es.mapping import (
+    build_elements_paths,
+    fhir_types_mapping,
+    create_resource_mapping,
+)
+from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ValidationError
 from fhirpath.interfaces import IElasticsearchEngine
@@ -271,3 +279,36 @@ class ElasticsearchEngine(Engine):
             includes = list()
         wrapper = BundleWrapper(self, result, includes, url, "searchset")
         return wrapper()
+
+    def generate_mappings(
+        self,
+        reference_analyzer: str = None,
+        token_normalizer: str = None,
+    ):
+        """ """
+        fhir_spec = FhirSpecFactory.from_release(self.fhir_release)
+
+        resources_elements: Dict[
+            str, List[FHIRStructureDefinitionElement]
+        ] = defaultdict()
+
+        for definition_klass in fhir_spec.profiles.values():
+            if definition_klass.name in ("Resource", "DomainResource"):
+                # exceptional
+                resources_elements[definition_klass.name] = definition_klass.elements
+                continue
+            if definition_klass.structure.subclass_of != "DomainResource":
+                # we accept domain resource only
+                continue
+
+            resources_elements[definition_klass.name] = definition_klass.elements
+
+        elements_paths = build_elements_paths(resources_elements)
+
+        fhir_es_mappings = fhir_types_mapping(
+            self.fhir_release, reference_analyzer, token_normalizer
+        )
+        return {
+            resource: create_resource_mapping(paths_def, fhir_es_mappings)
+            for resource, paths_def in elements_paths.items()
+        }
