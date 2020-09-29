@@ -7,6 +7,7 @@ History
 
 - Nothing changed yet.
 
+- Disable pydantic validation for Bundle in fhirpath.utils.BundleWrapper
 
 0.8.0 (2020-09-25)
 ------------------

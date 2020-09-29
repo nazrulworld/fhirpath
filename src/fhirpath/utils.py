@@ -637,7 +637,11 @@ class BundleWrapper:
 
     def __call__(self):
         """ """
-        return self.bundle_model.parse_obj(self.data)
+        # we use the `construct` method inherited from pydantic.BaseModel because
+        # we don't want to apply pydantic validation when formatting a Bundle.
+        # data should already be valid at this point since it already been indexed
+        # in elasticsearch
+        return self.bundle_model.construct(None, **self.data)
 
     def json(self):
         """ """
