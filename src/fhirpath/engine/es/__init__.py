@@ -309,7 +309,7 @@ class ElasticsearchEngine(Engine):
             }
         }
         """
-        fhir_spec = FhirSpecFactory.from_release(self.fhir_release)
+        fhir_spec = FhirSpecFactory.from_release(self.fhir_release.name)
 
         resources_elements: Dict[
             str, List[FHIRStructureDefinitionElement]
@@ -329,7 +329,7 @@ class ElasticsearchEngine(Engine):
         elements_paths = build_elements_paths(resources_elements)
 
         fhir_es_mappings = fhir_types_mapping(
-            self.fhir_release, reference_analyzer, token_normalizer
+            self.fhir_release.name, reference_analyzer, token_normalizer
         )
         return {
             resource: create_resource_mapping(paths_def, fhir_es_mappings)
