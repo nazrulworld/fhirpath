@@ -184,6 +184,9 @@ Example Custom Analyzer::
 
     settings = {
         "analysis": {
+            "normalizer": {
+                "fhir_token_normalizer": {"filter": ["lowercase", "asciifolding"]}
+            },
             "analyzer": {
                 "fhir_reference_analyzer": {
                     "tokenizer": "keyword",

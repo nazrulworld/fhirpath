@@ -1,7 +1,9 @@
 # _*_ coding: utf-8 _*_
 import re
-from typing import Optional
+from collections import defaultdict
+from typing import Dict, List, Optional
 
+from fhirspec import FHIRStructureDefinitionElement
 from zope.interface import implementer
 
 from fhirpath.engine import EngineResultRow
@@ -11,8 +13,14 @@ from fhirpath.engine.base import (
     EngineResultBody,
     EngineResultHeader,
 )
+from fhirpath.engine.es.mapping import (
+    build_elements_paths,
+    create_resource_mapping,
+    fhir_types_mapping,
+)
 from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ValidationError
+from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
@@ -271,3 +279,61 @@ class ElasticsearchEngine(Engine):
             includes = list()
         wrapper = BundleWrapper(self, result, includes, url, "searchset")
         return wrapper()
+
+    def generate_mappings(
+        self,
+        reference_analyzer: str = None,
+        token_normalizer: str = None,
+    ):
+        """
+        You may use this function to build the ES mapping.
+        Returns an object like:
+        {
+            "Patient": {
+                "properties": {
+                    "identifier": {
+                        "properties": {
+                            "use": {
+                                "type": "keyword",
+                                "index": true,
+                                "store": false,
+                                "fields": {
+                                    "raw": {
+                                        "type": "keyword"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        """
+        fhir_spec = FhirSpecFactory.from_release(self.fhir_release.name)
+
+        resources_elements: Dict[
+            str, List[FHIRStructureDefinitionElement]
+        ] = defaultdict()
+
+        for definition_klass in fhir_spec.profiles.values():
+            if definition_klass.name in ("Resource", "DomainResource"):
+                # exceptional
+                resources_elements[definition_klass.name] = definition_klass.elements
+                continue
+            if definition_klass.structure.subclass_of != "DomainResource":
+                # we accept domain resource only
+                continue
+
+            resources_elements[definition_klass.name] = definition_klass.elements
+
+        elements_paths = build_elements_paths(resources_elements)
+
+        fhir_es_mappings = fhir_types_mapping(
+            self.fhir_release.name, reference_analyzer, token_normalizer
+        )
+        return {
+            resource: {
+                "properties": create_resource_mapping(paths_def, fhir_es_mappings)
+            }
+            for resource, paths_def in elements_paths.items()
+        }
