@@ -1,4 +1,3 @@
-import datetime
 import logging
 from collections import defaultdict
 
@@ -91,7 +90,8 @@ def create_resource_mapping(elements_paths_def, fhir_es_mappings):
         try:
             map_ = fhir_es_mappings[code].copy()
         except KeyError:
-            # if the element is of type BackboneElement, it means that it has no external definition
+            # if the element is of type BackboneElement, it means that it has no
+            # external definition
             # and needs to be mapped dynamically based on its inline definition.
             if code == "BackboneElement":
                 map_ = {
@@ -119,9 +119,7 @@ def create_resource_mapping(elements_paths_def, fhir_es_mappings):
 
 
 def fhir_types_mapping(
-    fhir_release: str,
-    reference_analyzer=None,
-    token_normalizer=None,
+    fhir_release: str, reference_analyzer=None, token_normalizer=None,
 ):
     Boolean = {"type": "boolean", "store": False}
     Float = {"type": "float", "store": False}
@@ -241,7 +239,10 @@ def fhir_types_mapping(
     }
 
     ContactDetail = {
-        "properties": {"name": Token, "telecom": {**ContactPoint, "type": "nested"}}  # type: ignore
+        "properties": {
+            "name": Token,
+            "telecom": {**ContactPoint, "type": "nested"},  # type: ignore
+        }
     }
 
     Annotation = {
