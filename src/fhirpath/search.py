@@ -729,6 +729,8 @@ class Search(object):
                 term_factory = self.create_humanname_term
             elif klass_name == "Money":
                 term_factory = self.create_money_term
+            elif klass_name == "Period":
+                term_factory = self.create_period_term
             else:
                 raise NotImplementedError(
                     f"Can't perform search on element of type {klass_name}"
@@ -1277,6 +1279,91 @@ class Search(object):
         """ """
         assert self.context.engine.fhir_release == FHIR_VERSION.STU3
         return self.single_valued_quantity_term(path_, value, modifier)
+
+    def create_period_term(self, path_, param_value, modifier):
+        if isinstance(param_value, list):
+            terms = [
+                self.single_valued_period_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+
+        elif isinstance(param_value, tuple):
+            return self.single_valued_period_term(path_, param_value, modifier)
+
+        raise NotImplementedError
+
+    def single_valued_period_term(self, path_, value, modifier):
+        operator, original_value = value
+
+        if isinstance(original_value, list):
+            terms = [
+                self.single_valued_period_term(path_, val, modifier)
+                for val in original_value
+            ]
+            # IN Like Group
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+
+        if operator == "eq":
+            terms = [
+                self.create_term(path_ / "start", ("ge", original_value), modifier),
+                self.create_term(path_ / "end", ("le", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ne":
+            terms = [
+                self.create_term(path_ / "start", ("lt", original_value), modifier),
+                self.create_term(path_ / "end", ("gt", original_value), modifier),
+                not_exists_(path_ / "start"),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "gt":
+            terms = [
+                self.create_term(path_ / "end", ("gt", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "lt":
+            terms = [
+                self.create_term(path_ / "start", ("lt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ge":
+            terms = [
+                self.create_term(path_ / "end", ("ge", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "le":
+            terms = [
+                self.create_term(path_ / "start", ("le", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "sa":
+            terms = [
+                self.create_term(path_ / "start", ("gt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "eb":
+            terms = [
+                self.create_term(path_ / "end", ("lt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ap":
+            start_terms = [self.create_term(path_ / "start", ("le", original_value), modifier)]
+            start_group = G_(*start_terms, path=path_, type_=GroupType.COUPLED)
+            end_terms = [
+                self.create_term(path_ / "end", ("ge", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            end_group = G_(*end_terms, path=path_, type_=GroupType.DECOUPLED)
+            terms = [start_group, end_group]
+            type_ = GroupType.COUPLED
+        else:
+            raise NotImplementedError(f"prefix {operator} not handled for periods.")
+
+        return G_(*terms, path=path_, type_=type_)
 
     def validate_pre_term(self, operator_, path_, value, modifier):
         """ """
