@@ -1,7 +1,8 @@
-from collections import defaultdict
-from fhirpath.enums import FHIR_VERSION
 import datetime
 import logging
+from collections import defaultdict
+
+from fhirpath.enums import FHIR_VERSION
 
 ignored_datatype = [
     "markdown",
@@ -240,7 +241,7 @@ def fhir_types_mapping(
     }
 
     ContactDetail = {
-        "properties": {"name": Token, "telecom": {**ContactPoint, "type": "nested"}}
+        "properties": {"name": Token, "telecom": {**ContactPoint, "type": "nested"}}  # type: ignore
     }
 
     Annotation = {

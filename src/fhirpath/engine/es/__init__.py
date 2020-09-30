@@ -1,11 +1,11 @@
 # _*_ coding: utf-8 _*_
 import re
-from typing import Optional, Dict, List
 from collections import defaultdict
-
-from zope.interface import implementer
+from typing import Dict, List, Optional
 
 from fhirspec import FHIRStructureDefinitionElement
+from zope.interface import implementer
+
 from fhirpath.engine import EngineResultRow
 from fhirpath.engine.base import (
     Engine,
@@ -15,12 +15,12 @@ from fhirpath.engine.base import (
 )
 from fhirpath.engine.es.mapping import (
     build_elements_paths,
-    fhir_types_mapping,
     create_resource_mapping,
+    fhir_types_mapping,
 )
-from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.enums import EngineQueryType
 from fhirpath.exceptions import ValidationError
+from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
@@ -332,6 +332,8 @@ class ElasticsearchEngine(Engine):
             self.fhir_release.name, reference_analyzer, token_normalizer
         )
         return {
-            resource: create_resource_mapping(paths_def, fhir_es_mappings)
+            resource: {
+                "properties": create_resource_mapping(paths_def, fhir_es_mappings)
+            }
             for resource, paths_def in elements_paths.items()
         }
