@@ -658,6 +658,10 @@ class Search(object):
             # Extract IDs from the main query result
             ids = main_query_result.extract_ids()
 
+            # if no IDs were extracted from the main_query_result, skip.
+            if not ids:
+                continue
+
             # Build a Q_ (query) object to join the resource based on reference ids.
             builder = Q_([from_resource_type], self.context.engine)
             terms: List = []
@@ -1437,11 +1441,13 @@ class Search(object):
                 offset = (current_page - 1) * self.result_params["_count"]
         return builder.limit(self.result_params["_count"], offset)
 
-    def response(self, result, includes):
+    def response(self, result, includes, as_json):
         """ """
-        return self.context.engine.wrapped_with_bundle(result, includes)
+        return self.context.engine.wrapped_with_bundle(
+            result, includes=includes, as_json=as_json
+        )
 
-    def __call__(self):
+    def __call__(self, as_json=False):
         """ """
 
         # TODO: chaining
@@ -1467,7 +1473,9 @@ class Search(object):
             # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
                 return self.response(
-                    EngineResult(EngineResultHeader(total=0), EngineResultBody()), []
+                    EngineResult(EngineResultHeader(total=0), EngineResultBody()),
+                    [],
+                    as_json,
                 )
 
         # MAIN QUERY
@@ -1493,13 +1501,13 @@ class Search(object):
         ]
 
         all_includes = [*include_results, *rev_include_results]
-        return self.response(main_result, all_includes)
+        return self.response(main_result, all_includes, as_json)
 
 
 class AsyncSearch(Search):
     """ """
 
-    async def __call__(self):
+    async def __call__(self, as_json=False):
         """ """
         # TODO: chaining
 
@@ -1523,7 +1531,7 @@ class AsyncSearch(Search):
             # FIXME: we use the result of the last _has query to build the empty bundle,
             # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
-                return self.response(res, [])
+                return self.response(res, [], as_json)
 
         # MAIN QUERY
         self.main_query = self.build()
@@ -1548,7 +1556,7 @@ class AsyncSearch(Search):
         ]
 
         all_includes = [*include_results, *rev_include_results]
-        return self.response(main_result, all_includes)
+        return self.response(main_result, all_includes, as_json)
 
 
 def fhir_search(context, query_string=None, params=None):

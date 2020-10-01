@@ -439,6 +439,25 @@ def test_search_result(es_data, engine):
     assert bundle.total == 1
 
 
+def test_search_result_as_json(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Organization")
+    params = (
+        ("active", "true"),
+        ("_lastUpdated", "2010-05-28T05:35:56+00:00"),
+        ("_profile", "http://hl7.org/fhir/Organization"),
+        ("identifier", "urn:oid:2.16.528.1|91654"),
+        ("type", "http://hl7.org/fhir/organization-type|prov"),
+        ("address-postalcode", "9100 AA"),
+        ("address", "Den Burg"),
+    )
+    fhir_search = Search(search_context, params=params)
+
+    bundle = fhir_search(as_json=True)
+    assert bundle["total"] == 1
+    assert isinstance(bundle["entry"][0], dict)
+
+
 def test_search_missing_modifier(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Organization")
@@ -801,6 +820,14 @@ def test_search_revinclude(es_data, engine):
     assert len(bundle.entry) == 2
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
+
+    # no results
+    search_context = SearchContext(engine, "Location")
+    params = (("_revinclude", "Observation:subject"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+    assert len(bundle.entry) == 0
 
     # double _revinclude
     search_context = SearchContext(engine, "Patient")

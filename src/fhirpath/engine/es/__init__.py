@@ -272,13 +272,13 @@ class ElasticsearchEngine(Engine):
         return yarl.URL"""
         raise NotImplementedError
 
-    def wrapped_with_bundle(self, result, includes=None):
+    def wrapped_with_bundle(self, result, includes=None, as_json=False):
         """ """
         url = self.current_url()
         if includes is None:
             includes = list()
         wrapper = BundleWrapper(self, result, includes, url, "searchset")
-        return wrapper()
+        return wrapper(as_json=as_json)
 
     def generate_mappings(
         self,
