@@ -658,6 +658,10 @@ class Search(object):
             # Extract IDs from the main query result
             ids = main_query_result.extract_ids()
 
+            # if no IDs were extracted from the main_query_result, skip.
+            if not ids:
+                continue
+
             # Build a Q_ (query) object to join the resource based on reference ids.
             builder = Q_([from_resource_type], self.context.engine)
             terms: List = []

@@ -821,6 +821,14 @@ def test_search_revinclude(es_data, engine):
     assert isinstance(bundle.entry[0].resource, Patient)
     assert isinstance(bundle.entry[1].resource, Observation)
 
+    # no results
+    search_context = SearchContext(engine, "Location")
+    params = (("_revinclude", "Observation:subject"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+    assert len(bundle.entry) == 0
+
     # double _revinclude
     search_context = SearchContext(engine, "Patient")
     params = (
