@@ -961,3 +961,216 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_searchparam_type_date_period_eq(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "eq2015-01-17"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "eq2017-06-01"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+
+def test_searchparam_type_date_period_ne(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix ne: the range of the search value does not fully contain the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "ne2015-01-17"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "ne2017-06-01T17:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ne2017-06-01"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
+def test_searchparam_type_date_period_gt(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix gt: the range above the search value intersects (i.e. overlaps)
+        with the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "gt2015-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "gt2017-06-01T17:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "gt2017-06-02"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
+def test_searchparam_type_date_period_lt(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix lt: the range below the search value intersects (i.e. overlaps)
+        with the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "lt2015-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "lt2017-06-01T15:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
+def test_searchparam_type_date_period_ge(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix ge: the range above the search value intersects (i.e. overlaps)
+        with the range of the target value, or the range of the search
+        value fully contains the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "ge2015-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "ge2017-06-01T17:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ge2017-06-01"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ge2017-06-02"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
+def test_searchparam_type_date_period_le(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix le: the range below the search value intersects (i.e. overlaps)
+        with the range of the target value or the range of the search
+        value fully contains the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "le2015-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "le2017-06-01T16:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "le2017-06-01T15:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
+def test_searchparam_type_date_period_sa(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix sa: the range of the search value does not overlap with the range of the target value,
+        and the range above the search value contains the range of the target value
+    """
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "sa2017-06-01T17:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("date", "sa2017-06-01T12:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+
+def test_searchparam_type_date_period_eb(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix eb: the range of the search value does overlap not with the range of the target value,
+        and the range below the search value contains the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "eb2019-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "eb2017-06-01T18:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("date", "eb2019-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+
+def test_searchparam_type_date_period_ap(es_data, engine):
+    """Handle date search parameters on FHIR data type "period"
+    The date format is the standard XML format, though other formats may be supported
+    prefix ap: the range of the search value overlaps with the range of the target value
+    """
+    search_context = SearchContext(engine, "Encounter")
+    params = (("date", "ap2015-01-17T16:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ap2015-01-16T16:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("date", "ap2019-01-20"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "CarePlan")
+    params = (("date", "ap2017-06-01T17:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ap2017-06-01T19:00:00"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
