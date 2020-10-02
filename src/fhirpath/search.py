@@ -926,6 +926,7 @@ class Search(object):
 
         has_pipe = "|" in original_value
         terms = list()
+        subpredicate_modifier = None if modifier == "not" else modifier
 
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
@@ -940,14 +941,14 @@ class Search(object):
                 path_1 = path_ / "code"
                 new_value = (value[0], original_value[1:])
 
-                term = self.create_term(path_1, new_value, modifier)
+                term = self.create_term(path_1, new_value, subpredicate_modifier)
                 terms.append(term)
 
             elif original_value.endswith("|"):
                 path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
 
-                terms.append(self.create_term(path_1, new_value, modifier))
+                terms.append(self.create_term(path_1, new_value, subpredicate_modifier))
 
             else:
                 parts = original_value.split("|")
@@ -955,22 +956,22 @@ class Search(object):
                 try:
                     path_1 = path_ / "system"
                     new_value = (value[0], parts[0])
-                    term = self.create_term(path_1, new_value, modifier)
+                    term = self.create_term(path_1, new_value, subpredicate_modifier)
                     terms.append(term)
 
                     path_2 = path_ / "code"
                     new_value = (value[0], parts[1])
-                    term = self.create_term(path_2, new_value, modifier)
+                    term = self.create_term(path_2, new_value, subpredicate_modifier)
                     terms.append(term)
 
                 except IndexError:
                     pass
         else:
             path_1 = path_ / "code"
-            terms.append(self.create_term(path_1, value, modifier))
+            terms.append(self.create_term(path_1, value, subpredicate_modifier))
 
         group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-        if modifier == "not" and ignore_not_modifier is False:
+        if modifier == "not":
             group.match_operator = MatchType.NONE
         return group
 
@@ -1355,7 +1356,9 @@ class Search(object):
             ]
             type_ = GroupType.COUPLED
         elif operator == "ap":
-            start_terms = [self.create_term(path_ / "start", ("le", original_value), modifier)]
+            start_terms = [
+                self.create_term(path_ / "start", ("le", original_value), modifier)
+            ]
             start_group = G_(*start_terms, path=path_, type_=GroupType.COUPLED)
             end_terms = [
                 self.create_term(path_ / "end", ("ge", original_value), modifier),
@@ -1396,7 +1399,8 @@ class Search(object):
                 # xxx: should be validated already
                 terms_ = list()
                 for val in original_value:
-                    term_ = self.create_term(path_, val, modifier)
+                    subpredicate_modifier = None if modifier == "not" else modifier
+                    term_ = self.create_term(path_, val, subpredicate_modifier)
                     terms_.append(term_)
                 # IN Like Group
                 group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
