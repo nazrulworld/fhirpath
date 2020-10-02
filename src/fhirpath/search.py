@@ -911,9 +911,7 @@ class Search(object):
 
         raise NotImplementedError
 
-    def single_valued_coding_term(
-        self, path_, value, modifier, ignore_not_modifier=False
-    ):
+    def single_valued_coding_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
 
