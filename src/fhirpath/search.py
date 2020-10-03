@@ -733,6 +733,8 @@ class Search(object):
                 term_factory = self.create_humanname_term
             elif klass_name == "Money":
                 term_factory = self.create_money_term
+            elif klass_name == "Period":
+                term_factory = self.create_period_term
             else:
                 raise NotImplementedError(
                     f"Can't perform search on element of type {klass_name}"
@@ -909,9 +911,7 @@ class Search(object):
 
         raise NotImplementedError
 
-    def single_valued_coding_term(
-        self, path_, value, modifier, ignore_not_modifier=False
-    ):
+    def single_valued_coding_term(self, path_, value, modifier):
         """ """
         operator_, original_value = value
 
@@ -924,6 +924,7 @@ class Search(object):
 
         has_pipe = "|" in original_value
         terms = list()
+        subpredicate_modifier = None if modifier == "not" else modifier
 
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
@@ -938,14 +939,14 @@ class Search(object):
                 path_1 = path_ / "code"
                 new_value = (value[0], original_value[1:])
 
-                term = self.create_term(path_1, new_value, modifier)
+                term = self.create_term(path_1, new_value, subpredicate_modifier)
                 terms.append(term)
 
             elif original_value.endswith("|"):
                 path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
 
-                terms.append(self.create_term(path_1, new_value, modifier))
+                terms.append(self.create_term(path_1, new_value, subpredicate_modifier))
 
             else:
                 parts = original_value.split("|")
@@ -953,22 +954,22 @@ class Search(object):
                 try:
                     path_1 = path_ / "system"
                     new_value = (value[0], parts[0])
-                    term = self.create_term(path_1, new_value, modifier)
+                    term = self.create_term(path_1, new_value, subpredicate_modifier)
                     terms.append(term)
 
                     path_2 = path_ / "code"
                     new_value = (value[0], parts[1])
-                    term = self.create_term(path_2, new_value, modifier)
+                    term = self.create_term(path_2, new_value, subpredicate_modifier)
                     terms.append(term)
 
                 except IndexError:
                     pass
         else:
             path_1 = path_ / "code"
-            terms.append(self.create_term(path_1, value, modifier))
+            terms.append(self.create_term(path_1, value, subpredicate_modifier))
 
         group = G_(*terms, path=path_, type_=GroupType.COUPLED)
-        if modifier == "not" and ignore_not_modifier is False:
+        if modifier == "not":
             group.match_operator = MatchType.NONE
         return group
 
@@ -1282,6 +1283,93 @@ class Search(object):
         assert self.context.engine.fhir_release == FHIR_VERSION.STU3
         return self.single_valued_quantity_term(path_, value, modifier)
 
+    def create_period_term(self, path_, param_value, modifier):
+        if isinstance(param_value, list):
+            terms = [
+                self.single_valued_period_term(path_, value, modifier)
+                for value in param_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+
+        elif isinstance(param_value, tuple):
+            return self.single_valued_period_term(path_, param_value, modifier)
+
+        raise NotImplementedError
+
+    def single_valued_period_term(self, path_, value, modifier):
+        operator, original_value = value
+
+        if isinstance(original_value, list):
+            terms = [
+                self.single_valued_period_term(path_, val, modifier)
+                for val in original_value
+            ]
+            # IN Like Group
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+
+        if operator == "eq":
+            terms = [
+                self.create_term(path_ / "start", ("ge", original_value), modifier),
+                self.create_term(path_ / "end", ("le", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ne":
+            terms = [
+                self.create_term(path_ / "start", ("lt", original_value), modifier),
+                self.create_term(path_ / "end", ("gt", original_value), modifier),
+                not_exists_(path_ / "start"),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "gt":
+            terms = [
+                self.create_term(path_ / "end", ("gt", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "lt":
+            terms = [
+                self.create_term(path_ / "start", ("lt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ge":
+            terms = [
+                self.create_term(path_ / "end", ("ge", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            type_ = GroupType.DECOUPLED
+        elif operator == "le":
+            terms = [
+                self.create_term(path_ / "start", ("le", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "sa":
+            terms = [
+                self.create_term(path_ / "start", ("gt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "eb":
+            terms = [
+                self.create_term(path_ / "end", ("lt", original_value), modifier),
+            ]
+            type_ = GroupType.COUPLED
+        elif operator == "ap":
+            start_terms = [
+                self.create_term(path_ / "start", ("le", original_value), modifier)
+            ]
+            start_group = G_(*start_terms, path=path_, type_=GroupType.COUPLED)
+            end_terms = [
+                self.create_term(path_ / "end", ("ge", original_value), modifier),
+                not_exists_(path_ / "end"),
+            ]
+            end_group = G_(*end_terms, path=path_, type_=GroupType.DECOUPLED)
+            terms = [start_group, end_group]
+            type_ = GroupType.COUPLED
+        else:
+            raise NotImplementedError(f"prefix {operator} not handled for periods.")
+
+        return G_(*terms, path=path_, type_=type_)
+
     def validate_pre_term(self, operator_, path_, value, modifier):
         """ """
         if modifier in ("above", "below") and operator_ in ("sa", "eb"):
@@ -1309,7 +1397,8 @@ class Search(object):
                 # xxx: should be validated already
                 terms_ = list()
                 for val in original_value:
-                    term_ = self.create_term(path_, val, modifier)
+                    subpredicate_modifier = None if modifier == "not" else modifier
+                    term_ = self.create_term(path_, val, subpredicate_modifier)
                     terms_.append(term_)
                 # IN Like Group
                 group = G_(*terms_, path=path_, type_=GroupType.DECOUPLED)
