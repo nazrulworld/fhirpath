@@ -101,7 +101,7 @@ class ElasticSearchDialect(DialectBase):
         return qr
 
     @staticmethod
-    def create_term(path, value, multiple=False, all_resources=False):
+    def create_term(path, value, multiple=False, match_type=None, all_resources=False):
         """Create ES Query term"""
         multiple_ = isinstance(value, (list, tuple)) or multiple is True
         if multiple_ is True and not isinstance(value, (list, tuple)):
@@ -111,6 +111,8 @@ class ElasticSearchDialect(DialectBase):
             # TODO is there a better way to search on all resource types?
             # TODO does it work if both all_resources and multiple_ are True?
             q = {"multi_match": {"query": value, "fields": [path]}}
+        elif match_type == TermMatchType.EXACT:
+            q = {"term": {f"{path}.raw": value}}
         elif multiple_:
             q = {"terms": {path: value}}
         else:
@@ -450,6 +452,7 @@ class ElasticSearchDialect(DialectBase):
                                 dotted_path,
                                 value,
                                 multiple=multiple,
+                                match_type=term.match_type,
                                 all_resources=all_resources,
                             )
                         resolved = q, term.unary_operator

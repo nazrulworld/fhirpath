@@ -581,6 +581,36 @@ def test_search_result_with_contains_modifier(es_data, engine):
     assert bundle.total == 1
 
 
+def test_search_result_with_exact_modifier(es_data, engine):
+    """ """
+    search_context = SearchContext(engine, "Patient")
+
+    params = (("family:exact", "Saint"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("family:exact", "Other"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("family:exact", "Sain"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("family:exact", "saint"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+    params = (("family:exact", "Sàint"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
+
+
 def test_issue9_multiple_negative_terms_not_working(es_data, engine):
     """https://github.com/nazrulworld/fhirpath/issues/9"""
     search_context = SearchContext(engine, "Task")
