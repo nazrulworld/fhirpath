@@ -7,6 +7,8 @@ History
 
 - Disable pydantic validation for Bundle in fhirpath.utils.BundleWrapper [simonvadee]
 
+- Two helper functions ``json_dumps`` and ``json_loads`` are now available under utils module [nazrulworld]
+
 0.8.0 (2020-09-25)
 ------------------
 

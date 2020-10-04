@@ -54,7 +54,7 @@ requirements = [
     "multidict",
     "decorator",
     "fhirspec>=0.2.3",
-    "fhir.resources>=6.0.0b4,<7.0",
+    "fhir.resources>=6.0.0b5,<7.0",
     "jsonpatch",
     "yarl",
     "isodate",
