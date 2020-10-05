@@ -20,7 +20,6 @@ from fhirpath.fhirspec import (
     FHIRSearchSpecFactory,
     ResourceSearchParameterDefinition,
     SearchParameter,
-    search_param_prefixes,
 )
 from fhirpath.fql import (
     G_,
