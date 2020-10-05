@@ -523,11 +523,6 @@ def test_search_result_with_below_modifier(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
-    params = (("given", "saEel"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
     params = (("given:below", "Eel,Eve"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -544,11 +539,6 @@ def test_search_result_with_above_modifier(es_data, engine):
     # little bit complex
     search_context = SearchContext(engine, "Patient")
     params = (("identifier:above", "|0002"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
-    params = (("given", "ebctor"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
@@ -1004,17 +994,8 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
-    params = (("subject", "saPatient"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
-    params = (("subject:not", "saPatient"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 0
-
-    params = (("subject:not", "saDevice"),)
+    # search by ID as suffix
+    params = (("subject:above", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
