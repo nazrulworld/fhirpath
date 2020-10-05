@@ -158,12 +158,42 @@ def test_parameter_normalization_with_space_as(engine):
     """ """
     context = SearchContext(engine, "MedicationRequest")
 
-    path_, value_pack, modifier = context.normalize_param(
+    path_, value_pack, _ = context.normalize_param(
         "code", ["http://acme.org/conditions/codes|ha125"]
     )[0]
     # single valued
     assert isinstance(value_pack, tuple)
     assert path_.path == "MedicationRequest.medicationCodeableConcept"
+
+
+def test_parameter_normalization_prefix(engine):
+    """ """
+    # number
+    context = SearchContext(engine, "MolecularSequence")
+    _, value_pack, _ = context.normalize_param("variant-end", ["gt1"])[0]
+    assert value_pack == ("gt", "1")
+
+    # quantity
+    context = SearchContext(engine, "Substance")
+    _, value_pack, _ = context.normalize_param("quantity", ["ne1"])[0]
+    assert value_pack == ("ne", "1")
+
+    # date
+    context = SearchContext(engine, "Patient")
+    _, value_pack, _ = context.normalize_param("death-date", ["lt1980"])[0]
+    assert value_pack == ("lt", "1980")
+
+    # string
+    _, value_pack, _ = context.normalize_param("name", ["leslie"])[0]
+    assert value_pack == ("eq", "leslie")
+
+    # token
+    _, value_pack, _ = context.normalize_param("language", ["nepalese"])[0]
+    assert value_pack == ("eq", "nepalese")
+
+    # reference
+    _, value_pack, _ = context.normalize_param("organization", ["necker"])[0]
+    assert value_pack == ("eq", "necker")
 
 
 def test_create_term(engine):

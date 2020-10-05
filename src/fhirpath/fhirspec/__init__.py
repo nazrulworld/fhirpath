@@ -11,6 +11,7 @@ from fhirpath.enums import FHIR_VERSION
 from fhirpath.storage import FHIR_RESOURCE_SPEC_STORAGE, SEARCH_PARAMETERS_STORAGE
 
 from .spec import (  # noqa: F401
+    search_param_prefixes,
     FHIRSearchSpec,
     ResourceSearchParameterDefinition,
     SearchParameter,
