@@ -18,9 +18,9 @@ from fhirpath.enums import (
 from fhirpath.exceptions import ValidationError
 from fhirpath.fhirspec import (
     FHIRSearchSpecFactory,
-    search_param_prefixes,
     ResourceSearchParameterDefinition,
     SearchParameter,
+    search_param_prefixes,
 )
 from fhirpath.fql import (
     G_,
