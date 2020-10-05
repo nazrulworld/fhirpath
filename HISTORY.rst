@@ -9,6 +9,8 @@ History
 
 - Two helper functions ``json_dumps`` and ``json_loads`` are now available under utils module [nazrulworld]
 
+- Only apply search prefix on affected types #17 [simonvadee]
+
 0.8.0 (2020-09-25)
 ------------------
 
