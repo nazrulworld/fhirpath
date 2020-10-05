@@ -166,6 +166,13 @@ def test_parameter_normalization_with_space_as(engine):
     assert path_.path == "MedicationRequest.medicationCodeableConcept"
 
 
+def test_parameter_normalization_empty_value(engine):
+    context = SearchContext(engine, "MedicationRequest")
+    # normalize a param with an empty value: it should be ignored
+    params = context.normalize_param("code", [""])
+    assert len(params) == 0
+
+
 def test_parameter_normalization_prefix(engine):
     """ """
     # number
