@@ -5,7 +5,7 @@ History
 0.8.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Ignore empty search params #21 [simonvadee]
 
 
 0.8.1 (2020-10-05)

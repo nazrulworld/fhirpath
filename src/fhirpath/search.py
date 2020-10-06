@@ -165,6 +165,9 @@ class SearchContext(object):
             values: List = list()
             self.normalize_param_value(raw_value, sp, values)
 
+            if len(values) == 0:
+                # empty parameters are not considered an error, they should be ignored
+                continue
             if len(values) == 1:
                 param_value_ = values[0]
             else:
@@ -179,7 +182,10 @@ class SearchContext(object):
         self, raw_value: Union[List, str], search_param: SearchParameter, container
     ):
         """ """
-        if isinstance(raw_value, list):
+        if not raw_value:
+            return
+
+        elif isinstance(raw_value, list):
             bucket: List[str] = list()
             for rv in raw_value:
                 self.normalize_param_value(rv, search_param, bucket)
