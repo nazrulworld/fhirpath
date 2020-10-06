@@ -1,7 +1,19 @@
 # _*_ coding: utf-8 _*_
 import logging
 import re
-from typing import Dict, List, Optional, Pattern, Set, Text, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    Optional,
+    Pattern,
+    Set,
+    Text,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 from urllib.parse import unquote_plus
 
 from multidict import MultiDict, MultiDictProxy
@@ -83,8 +95,7 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self,
-        fhir_release: FHIR_VERSION,
+        self, fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -1657,11 +1668,18 @@ class AsyncSearch(Search):
         return self.response(main_result, all_includes, as_json)
 
 
-def fhir_search(context, query_string=None, params=None):
+def fhir_search(
+    context: SearchContext,
+    query_string: str = None,
+    params: Union[Dict[str, str], Tuple[Tuple[str, str]]] = None,
+    response_as_dict: bool = False,
+):
     """ """
+    if TYPE_CHECKING:
+        klass: Union[Type[AsyncSearch], Type[Search]]
     if context.async_result:
         klass = AsyncSearch
     else:
         klass = Search
     factory = klass(context, query_string=query_string, params=params)
-    return factory()
+    return factory(as_json=response_as_dict)
