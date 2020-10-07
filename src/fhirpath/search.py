@@ -95,7 +95,8 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self, fhir_release: FHIR_VERSION,
+        self,
+        fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -735,8 +736,12 @@ class Search(object):
             # we need normalization
             klass_name = path_.context.type_class.fhir_type_name()
             if klass_name == "Reference":
-                path_ = path_ / "reference"
-                term_factory = self.create_term
+                if modifier == "identifier":
+                    path_ = path_ / "identifier"
+                    term_factory = self.create_identifier_term
+                else:
+                    path_ = path_ / "reference"
+                    term_factory = self.create_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
             elif klass_name in ("Quantity", "Duration"):

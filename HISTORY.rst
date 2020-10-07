@@ -5,6 +5,8 @@ History
 0.8.2 (unreleased)
 ------------------
 
+- Handle ``:identifier`` modifier for reference search parameters [simonvadee]
+
 - ``Dict`` response option has bee added in ``fhirpath.search.fhir_search`` [nazrulworld]
 
 - Ignore empty search params #21 [simonvadee]
