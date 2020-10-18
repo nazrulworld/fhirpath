@@ -491,6 +491,7 @@ def test_search_result_as_json(es_data, engine):
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search(as_json=True)
+    assert bundle["resourceType"] == "Bundle"
     assert bundle["total"] == 1
     assert isinstance(bundle["entry"][0], dict)
 
