@@ -10,7 +10,7 @@ the MIT License: http://www.opensource.org/licenses/mit-license.php
 --------------------------------------------------------------------
 """
 import re
-from collections import Iterable
+from collections.abc import Iterable
 from urllib.parse import parse_qsl, unquote
 
 from zope.interface import Invalid, implementer

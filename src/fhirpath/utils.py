@@ -643,6 +643,8 @@ class BundleWrapper:
         if as_json:
             # if as_json is True, return the bundle as python dict
             # instead of building a pydantic.BaseModel
+            # important!
+            self.data["resourceType"] = self.bundle_model.get_resource_type()
             return self.data
         return self.bundle_model.parse_obj(self.data)
 
