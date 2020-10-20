@@ -20,7 +20,8 @@
     },
     "subject": {
         "reference": "Patient/19c5245f-89a8-49f8-b244-666b32adb92e",
-        "display": "P. van de Heuvel"
+        "display": "P. van de Heuvel",
+        "identifier": { "system": "CPR", "value": "240365-0002" }
     },
     "effectivePeriod": {
         "start": "2013-04-05T10:30:10+01:00",

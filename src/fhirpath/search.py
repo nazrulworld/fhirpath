@@ -736,8 +736,12 @@ class Search(object):
             # we need normalization
             klass_name = path_.context.type_class.fhir_type_name()
             if klass_name == "Reference":
-                path_ = path_ / "reference"
-                term_factory = self.create_term
+                if modifier == "identifier":
+                    path_ = path_ / "identifier"
+                    term_factory = self.create_identifier_term
+                else:
+                    path_ = path_ / "reference"
+                    term_factory = self.create_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
             elif klass_name in ("Quantity", "Duration"):
