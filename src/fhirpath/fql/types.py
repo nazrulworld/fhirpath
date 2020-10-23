@@ -86,6 +86,7 @@ class WhereClause(FqlClause):
 class SelectClause(FqlClause):
     """ """
 
+
 class ElementClause(FqlClause):
     """ """
 

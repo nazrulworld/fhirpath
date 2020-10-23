@@ -118,9 +118,7 @@ class EngineResult(object):
     body: EngineResultBody
 
     def __init__(
-        self,
-        header: EngineResultHeader,
-        body: EngineResultBody,
+        self, header: EngineResultHeader, body: EngineResultBody,
     ):
         """ """
         self.header = header
@@ -218,6 +216,7 @@ class EngineResult(object):
 
         return ids
 
+
 def navigate_indexed_path(source, path_):
     """ """
     parts = path_.split("[")
@@ -232,13 +231,12 @@ def navigate_indexed_path(source, path_):
     except IndexError:
         return None
 
+
 def _traverse_for_value(source, path_):
     """Looks path_ is innocent string key, but may content expression, function."""
     if isinstance(source, dict):
         # xxx: validate path, not blindly sending None
-        if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
-            path_
-        ):
+        if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(path_):
             raise ValidationError(
                 f"Invalid path {path_} has been supllied!"
                 "Path cannot contain function if source type is dict"

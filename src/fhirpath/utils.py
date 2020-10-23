@@ -33,7 +33,6 @@ from yarl import URL
 from zope.interface import implementer
 
 from fhirpath.thirdparty import Proxy
-from fhir.resources.fhirabstractmodel import FHIRAbstractModel
 
 from .enums import FHIR_VERSION
 from .interfaces import IPathInfoContext

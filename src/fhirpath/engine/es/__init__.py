@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 _*_
-import re
 from collections import defaultdict
 from typing import Dict, List, Optional
 
@@ -19,13 +18,11 @@ from fhirpath.engine.es.mapping import (
     fhir_types_mapping,
 )
 from fhirpath.enums import EngineQueryType
-from fhirpath.exceptions import ValidationError
 from fhirpath.fhirspec import FhirSpecFactory
 from fhirpath.interfaces import IElasticsearchEngine
 from fhirpath.utils import BundleWrapper
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
 
 
 @implementer(IElasticsearchEngine)
@@ -191,9 +188,7 @@ class ElasticsearchEngine(Engine):
         return wrapper(as_json=as_json)
 
     def generate_mappings(
-        self,
-        reference_analyzer: str = None,
-        token_normalizer: str = None,
+        self, reference_analyzer: str = None, token_normalizer: str = None,
     ):
         """
         You may use this function to build the ES mapping.

@@ -316,10 +316,7 @@ class ElasticSearchDialect(DialectBase):
             # "Resource" as path.context.resource_type
             # Use "*" as root_replacer to match any resource across the ES mapping.
             return self.compile_for_single_resource_type(
-                query,
-                resource_type="Resource",
-                mapping=None,
-                root_replacer="*",
+                query, resource_type="Resource", mapping=None, root_replacer="*",
             )
         elif len(query_fragments) > 1:
             return {
@@ -783,7 +780,9 @@ class ElasticSearchDialect(DialectBase):
                 includes.append(root_replacer)
         elif len(query.get_element()) > 0:
             # always include the resourceType in the ES response
-            includes.append(f"{root_replacer+'.' if root_replacer else ''}resourceType")
+            includes.append(
+                f"{root_replacer}.resourceType" if root_replacer else "resourceType"
+            )
             for path_el in query.get_element():
                 includes.append(replace(path_el))
 

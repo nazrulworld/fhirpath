@@ -372,7 +372,7 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        result = self._engine.execute(self._query, self._unrestricted)     
+        result = self._engine.execute(self._query, self._unrestricted)
         return result.filter(self._query.get_select())
 
     def single(self):
