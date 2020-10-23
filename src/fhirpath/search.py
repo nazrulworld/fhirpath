@@ -30,6 +30,7 @@ from fhirpath.enums import (
 from fhirpath.exceptions import ValidationError
 from fhirpath.fhirspec import (
     FHIRSearchSpecFactory,
+    lookup_fhir_resource_spec,
     ResourceSearchParameterDefinition,
     SearchParameter,
     search_param_prefixes,
@@ -95,8 +96,7 @@ class SearchContext(object):
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
     def get_parameters_definition(
-        self,
-        fhir_release: FHIR_VERSION,
+        self, fhir_release: FHIR_VERSION,
     ) -> List[ResourceSearchParameterDefinition]:
         """ """
         fhir_release = FHIR_VERSION.normalize(fhir_release)
@@ -468,6 +468,7 @@ class Search(object):
 
         builder = self.attach_where_terms(builder)
         builder = self.attach_sort_terms(builder)
+        builder = self.attach_summary_terms(builder)
         builder = self.attach_limit_terms(builder)
 
         # handle _has predicates
@@ -1556,6 +1557,75 @@ class Search(object):
             if current_page > 1:
                 offset = (current_page - 1) * self.result_params["_count"]
         return builder.limit(self.result_params["_count"], offset)
+
+    def attach_summary_terms(self, builder):
+        """ """
+        if "_summary" not in self.result_params:
+            return builder
+
+        if self.result_params["_summary"] in ["count", "false"]:
+            return builder
+
+        specs = [
+            lookup_fhir_resource_spec(r, True, FHIR_VERSION.R4)
+            for r in self.context.resource_types
+        ]
+
+        if self.result_params["_summary"] in ("data", "true"):
+
+            summary_elements = [
+                f"{r}.{attr}"
+                for r in self.context.resource_types
+                for attr in ["id", "meta"]
+            ]
+
+            def should_include(attr):
+                if self.result_params["_summary"] == "data":
+                    return (
+                        not attr.path.endswith(".text")
+                        and not attr.is_main_profile_element
+                    )
+                elif self.result_params["_summary"] == "true":
+                    return attr.is_summary
+
+            # filter all summary attributes
+            summary_attributes = [
+                attr for spec in specs for attr in spec.elements if should_include(attr)
+            ]
+
+            def get_attr_paths(attribute):
+                if attribute.path.endswith("[x]"):
+                    for prop in attribute.as_properties():
+                        return [
+                            f"{prop.path.rsplit('.', 1)[0]}.{prop.name}"
+                            for prop in attribute.as_properties()
+                        ]
+                else:
+                    return [attribute.path]
+
+            # append summary attributes' paths to summary_elements
+            summary_elements.extend(
+                [path for attr in summary_attributes for path in get_attr_paths(attr)]
+            )
+
+            return builder.element(*summary_elements)
+
+        if self.result_params["_summary"] == "text":
+            text_elements = [
+                el.path
+                for spec in specs
+                for el in spec.elements
+                if el.n_min is not None and el.n_min > 0
+            ]
+            text_elements.extend(
+                [
+                    f"{r}.{attr}"
+                    for r in self.context.resource_types
+                    for attr in ["text", "id", "meta"]
+                ]
+            )
+
+            return builder.element(*text_elements)
 
     def response(self, result, includes, as_json):
         """ """

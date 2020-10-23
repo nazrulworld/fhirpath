@@ -434,7 +434,7 @@ def test_build_query_from_search_params(engine):
     builder = builder.where(*terms_container)
     builder.finalize()
     query = builder.get_query()
-    assert len(query.get_select()) == 1
+    assert len(query.get_element()) == 1
     assert len(query.get_where()) == 3
 
 
@@ -1270,3 +1270,72 @@ def test_searchparam_ignored_pretty_format(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_searchparam_summary_true(es_data, engine):
+    """Handle _summary=true
+    Return a limited subset of elements from the resource. This subset SHOULD consist solely of all
+    supported elements that are marked as "summary" in the base definition of the resource(s)
+    """
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, params=(("_summary", "true"),))()
+    assert result.entry[0].resource.text is None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert (
+        result.entry[0].resource.birthDate is not None
+    )  # birthDate should not be in summary
+    assert (
+        result.entry[0].resource.maritalStatus is None
+    )  # maritalStatus should not be in summary
+
+
+def test_searchparam_summary_false(es_data, engine):
+    """Handle _summary=false
+    Return all parts of the resource(s)
+    """
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, params=(("_summary", "false"),))()
+    assert result.entry[0].resource.text is not None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert result.entry[0].resource.link is not None
+    assert result.entry[0].resource.birthDate is not None
+
+
+def test_searchparam_summary_text(es_data, engine):
+    """Handle _summary=text
+    Return only the "text" element, the 'id' element, the 'meta' element, and only top-level
+    mandatory elements
+    """
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, params=(("_summary", "text"),))()
+    assert result.entry[0].resource.text is not None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert result.entry[0].resource.link is not None  # link is a mandatory top element
+    # communication would also be a mandatory top element but is not in the document
+    assert result.entry[0].resource.birthDate is None  # birthDate is not mandatory
+
+
+def test_searchparam_summary_data(es_data, engine):
+    """Handle _summary=data
+    Remove the text element
+    """
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, params=(("_summary", "data"),))()
+    assert result.entry[0].resource.text is None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert result.entry[0].resource.link is not None
+    assert result.entry[0].resource.birthDate is not None
+
+
+def test_searchparam_summary_count(es_data, engine):
+    """Handle _summary=count
+    Search only: just return a count of the matching resources, without returning the actual matches
+    """
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, params=(("_summary", "count"),))()
+    assert result.entry == []
+    assert result.total == 1

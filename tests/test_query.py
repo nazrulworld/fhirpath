@@ -145,9 +145,8 @@ def test_result_count(es_data, engine):
     load_organizations_data(conn, 5)
     builder = Q_(resource="Organization", engine=engine)
     builder = builder.where(T_("Organization.active") == V_("true"))
-    total = builder(async_result=False).count()
-
-    assert total == 6
+    bundle = builder(async_result=False).count()
+    assert bundle.header.total == 6
 
 
 def test_result_empty(es_data, engine):

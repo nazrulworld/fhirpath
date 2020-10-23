@@ -761,7 +761,7 @@ class ElasticSearchDialect(DialectBase):
                 because here permission is not checking while getting full object.
         """
 
-        if len(query.get_select()) == 0:
+        if len(query.get_element()) == 0:
             # No select no source!
             body_structure["_source"] = False
             return
@@ -776,13 +776,15 @@ class ElasticSearchDialect(DialectBase):
                 return root_replacer
 
         includes = list()
-        if len(query.get_select()) == 1 and query.get_select()[0].star:
+        if len(query.get_element()) == 1 and query.get_element()[0].star:
             if root_replacer is None:
                 includes.append(query.get_from()[0][0])
             else:
                 includes.append(root_replacer)
-        elif len(query.get_select()) > 0:
-            for path_el in query.get_select():
+        elif len(query.get_element()) > 0:
+            # always include the resourceType in the ES response
+            includes.append(f"{root_replacer+'.' if root_replacer else ''}resourceType")
+            for path_el in query.get_element():
                 includes.append(replace(path_el))
 
         if len(includes) > 0:

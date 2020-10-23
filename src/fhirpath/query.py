@@ -2,6 +2,7 @@
 from abc import ABC
 from copy import copy
 from typing import TYPE_CHECKING, List, Optional, Union
+import re
 
 from zope.interface import implementer
 
@@ -11,10 +12,13 @@ from fhirpath.model import Model
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION, builder
 
+from fhirpath.engine import EngineResultBody, EngineResultRow
+
 from .constraints import required_finalized, required_not_finalized
 from .exceptions import MultipleResultsFound
 from .fql.expressions import and_, fql, sort_
 from .fql.types import (
+    ElementClause,
     ElementPath,
     FromClause,
     LimitClause,
@@ -39,6 +43,26 @@ if TYPE_CHECKING:
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+CONTAINS_INDEX_OR_FUNCTION = re.compile(r"[a-z09_]+(\[[0-9]+\])|(\([0-9]*\))$", re.I)
+CONTAINS_INDEX = re.compile(r"[a-z09_]+\[[0-9]+\]$", re.I)
+CONTAINS_FUNCTION = re.compile(r"[a-z09_]+\([0-9]*\)$", re.I)
+
+
+def navigate_indexed_path(source, path_):
+    """ """
+    parts = path_.split("[")
+    p_ = parts[0]
+    index = int(parts[1][:-1])
+    value = source.get(p_, None)
+    if value is None:
+        return value
+
+    try:
+        return value[index]
+    except IndexError:
+        return None
+
+
 @implementer(IQuery, ICloneable)
 class Query(ABC):
     """ """
@@ -48,6 +72,7 @@ class Query(ABC):
         fhir_release: FHIR_VERSION,
         from_: FromClause,
         select: SelectClause,
+        element: ElementClause,
         where: WhereClause,
         sort: SortClause,
         limit: LimitClause,
@@ -57,6 +82,7 @@ class Query(ABC):
         self.fhir_release: FHIR_VERSION = FHIR_VERSION.normalize(fhir_release)
         self._from: FromClause = from_
         self._select: SelectClause = select
+        self._element: ElementClause = element
         self._where: WhereClause = where
         self._sort: SortClause = sort
         self._limit: LimitClause = limit
@@ -77,6 +103,7 @@ class Query(ABC):
             builder._engine.fhir_release,  # type: ignore
             builder._from,  # type: ignore
             builder._select,  # type: ignore
+            builder._element,  # type: ignore
             builder._where,  # type: ignore
             builder._sort,  # type: ignore
             builder._limit,  # type: ignore
@@ -94,6 +121,10 @@ class Query(ABC):
     def get_select(self) -> SelectClause:
         """ """
         return self._select
+
+    def get_element(self) -> ElementClause:
+        """ """
+        return self._element
 
     def get_sort(self) -> SortClause:
         """ """
@@ -139,6 +170,7 @@ class QueryBuilder(ABC):
 
         self._from: FromClause = FromClause()
         self._select: SelectClause = SelectClause()
+        self._element: ElementClause = ElementClause()
         self._where: WhereClause = WhereClause()
         self._sort: SortClause = SortClause()
         self._limit: LimitClause = LimitClause()
@@ -164,9 +196,9 @@ class QueryBuilder(ABC):
                 f"Object from '{self.__class__.__name__}' must be bound with engine"
             )
         # xxx: do any validation?
-        if len(self._select) == 0:
+        if len(self._element) == 0:
             el_path = ElementPath("*")
-            self._select.append(el_path)
+            self._element.append(el_path)
 
         # Finalize path elements
         [se.finalize(self._engine) for se in self._select]
@@ -192,6 +224,7 @@ class QueryBuilder(ABC):
         newone._limit = copy(self._limit)
         newone._from = copy(self._from)
         newone._select = copy(self._select)
+        newone._element = copy(self._element)
         newone._where = copy(self._where)
         newone._sort = copy(self._sort)
 
@@ -223,6 +256,19 @@ class QueryBuilder(ABC):
             if not (el_path.star or el_path.non_fhir):
                 self._validate_root_path(str(el_path))
             self._select.append(el_path)
+
+    @builder
+    def element(self, *args):
+        """ """
+        self._pre_check()
+
+        for el_path in args:
+            if not IElementPath.providedBy(el_path):
+                el_path = ElementPath(el_path)
+            # Make sure correct root path
+            if not (el_path.star or el_path.non_fhir):
+                self._validate_root_path(str(el_path))
+            self._element.append(el_path)
 
     @builder
     def where(self, *args, **kwargs):
@@ -337,6 +383,74 @@ class QueryBuilder(ABC):
             self._validate_root_path(str(term.path))
 
 
+def _traverse_for_value(source, path_):
+    """Looks path_ is innocent string key, but may content expression, function."""
+    if isinstance(source, dict):
+        # xxx: validate path, not blindly sending None
+        if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
+            path_
+        ):
+            raise ValidationError(
+                f"Invalid path {path_} has been supllied!"
+                "Path cannot contain function if source type is dict"
+            )
+        if CONTAINS_INDEX.match(path_):
+            return navigate_indexed_path(source, path_)
+        if path_ == "*":
+            # TODO check if we can have other keys than resource
+            return source[list(source.keys())[0]]
+
+        return source.get(path_, None)
+
+    elif isinstance(source, list):
+        if not CONTAINS_FUNCTION.match(path_):
+            raise ValidationError(
+                f"Invalid path {path_} has been supllied!"
+                "Path should contain function if source type is list"
+            )
+        parts = path_.split("(")
+        func_name = parts[0]
+        index = None
+        if len(parts[1]) > 1:
+            index = int(parts[1][:-1])
+        if func_name == "count":
+            return len(source)
+        elif func_name == "first":
+            return source[0]
+        elif func_name == "last":
+            return source[-1]
+        elif func_name == "Skip":
+            new_order = list()
+            for idx, no in enumerate(source):
+                if idx == index:
+                    continue
+                new_order.append(no)
+            return new_order
+        elif func_name == "Take":
+            try:
+                return source[index]
+            except IndexError:
+                return None
+        else:
+            raise NotImplementedError
+    elif isinstance(source, (bytes, str)):
+        if not CONTAINS_FUNCTION.match(path_):
+            raise ValidationError(
+                f"Invalid path {path_} has been supplied!"
+                "Path should contain function if source type is list"
+            )
+        parts = path_.split("(")
+        func_name = parts[0]
+        index = len(parts[1]) > 1 and int(parts[1][:-1]) or None
+        if func_name == "count":
+            return len(source)
+        else:
+            raise NotImplementedError
+
+    else:
+        raise NotImplementedError
+
+
 @implementer(IQueryResult)
 class QueryResult(ABC):
     """ """
@@ -349,7 +463,24 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        return self._engine.execute(self._query, self._unrestricted)
+        result = self._engine.execute(self._query, self._unrestricted)
+        selects = self._query.get_select()
+
+        if len(selects) > 0:
+            new_body = EngineResultBody()
+            for row in result.body:
+                new_row = EngineResultRow()
+                source = row[0]
+                for fullpath in selects:
+                    for path_ in fullpath.split("."):
+                        source = _traverse_for_value(source, path_)
+                        if source is None:
+                            break
+                    new_row.append(source)
+                new_body.append(new_row)
+            result.body = new_body
+        
+        return result
 
     def single(self):
         """Will return the single item in the input if there is just one item.
@@ -399,20 +530,21 @@ class QueryResult(ABC):
         if the input collection is empty ({ }), take returns an empty collection."""
 
     def count(self):
-        """Returns a collection with a single value which is the integer count of
-        the number of items in the input collection.
-        Returns 0 when the input collection is empty."""
+        """Returns a Bundle without with an empty set of item.
+        Only the header is filled with the number of resources
+        matching the query.
+        """
         return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        ).header.total
+        )
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return self.count() == 0
+        return self.count().header.total == 0
 
     def __len__(self):
-        """ """
-        return self.count()
+        """ Returns the number of resources matching the query"""
+        return self.count().header.total
 
     def OFF__getitem__(self, key):
         """
@@ -517,15 +649,15 @@ class AsyncQueryResult(QueryResult):
         """ """
         return await self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        ).header.total
+        )
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return await self.count() == 0
+        return await self.count().header.total == 0
 
     def __len__(self):
         """ """
-        return self.count()
+        return self.count().header.total
 
 
 def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
