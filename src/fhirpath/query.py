@@ -2,7 +2,6 @@
 from abc import ABC
 from copy import copy
 from typing import TYPE_CHECKING, List, Optional, Union
-import re
 
 from zope.interface import implementer
 
@@ -11,8 +10,6 @@ from fhirpath.exceptions import ConstraintNotSatisfied, ValidationError
 from fhirpath.model import Model
 from fhirpath.thirdparty import Proxy
 from fhirpath.utils import FHIR_VERSION, builder
-
-from fhirpath.engine import EngineResultBody, EngineResultRow
 
 from .constraints import required_finalized, required_not_finalized
 from .exceptions import MultipleResultsFound
@@ -41,26 +38,6 @@ if TYPE_CHECKING:
     from fhirpath.engine.base import Engine
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
-
-
-CONTAINS_INDEX_OR_FUNCTION = re.compile(r"[a-z09_]+(\[[0-9]+\])|(\([0-9]*\))$", re.I)
-CONTAINS_INDEX = re.compile(r"[a-z09_]+\[[0-9]+\]$", re.I)
-CONTAINS_FUNCTION = re.compile(r"[a-z09_]+\([0-9]*\)$", re.I)
-
-
-def navigate_indexed_path(source, path_):
-    """ """
-    parts = path_.split("[")
-    p_ = parts[0]
-    index = int(parts[1][:-1])
-    value = source.get(p_, None)
-    if value is None:
-        return value
-
-    try:
-        return value[index]
-    except IndexError:
-        return None
 
 
 @implementer(IQuery, ICloneable)
@@ -383,74 +360,6 @@ class QueryBuilder(ABC):
             self._validate_root_path(str(term.path))
 
 
-def _traverse_for_value(source, path_):
-    """Looks path_ is innocent string key, but may content expression, function."""
-    if isinstance(source, dict):
-        # xxx: validate path, not blindly sending None
-        if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(
-            path_
-        ):
-            raise ValidationError(
-                f"Invalid path {path_} has been supllied!"
-                "Path cannot contain function if source type is dict"
-            )
-        if CONTAINS_INDEX.match(path_):
-            return navigate_indexed_path(source, path_)
-        if path_ == "*":
-            # TODO check if we can have other keys than resource
-            return source[list(source.keys())[0]]
-
-        return source.get(path_, None)
-
-    elif isinstance(source, list):
-        if not CONTAINS_FUNCTION.match(path_):
-            raise ValidationError(
-                f"Invalid path {path_} has been supllied!"
-                "Path should contain function if source type is list"
-            )
-        parts = path_.split("(")
-        func_name = parts[0]
-        index = None
-        if len(parts[1]) > 1:
-            index = int(parts[1][:-1])
-        if func_name == "count":
-            return len(source)
-        elif func_name == "first":
-            return source[0]
-        elif func_name == "last":
-            return source[-1]
-        elif func_name == "Skip":
-            new_order = list()
-            for idx, no in enumerate(source):
-                if idx == index:
-                    continue
-                new_order.append(no)
-            return new_order
-        elif func_name == "Take":
-            try:
-                return source[index]
-            except IndexError:
-                return None
-        else:
-            raise NotImplementedError
-    elif isinstance(source, (bytes, str)):
-        if not CONTAINS_FUNCTION.match(path_):
-            raise ValidationError(
-                f"Invalid path {path_} has been supplied!"
-                "Path should contain function if source type is list"
-            )
-        parts = path_.split("(")
-        func_name = parts[0]
-        index = len(parts[1]) > 1 and int(parts[1][:-1]) or None
-        if func_name == "count":
-            return len(source)
-        else:
-            raise NotImplementedError
-
-    else:
-        raise NotImplementedError
-
-
 @implementer(IQueryResult)
 class QueryResult(ABC):
     """ """
@@ -463,24 +372,8 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        result = self._engine.execute(self._query, self._unrestricted)
-        selects = self._query.get_select()
-
-        if len(selects) > 0:
-            new_body = EngineResultBody()
-            for row in result.body:
-                new_row = EngineResultRow()
-                source = row[0]
-                for fullpath in selects:
-                    for path_ in fullpath.split("."):
-                        source = _traverse_for_value(source, path_)
-                        if source is None:
-                            break
-                    new_row.append(source)
-                new_body.append(new_row)
-            result.body = new_body
-        
-        return result
+        result = self._engine.execute(self._query, self._unrestricted)     
+        return result.filter(self._query.get_select())
 
     def single(self):
         """Will return the single item in the input if there is just one item.
