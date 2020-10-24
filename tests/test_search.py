@@ -653,21 +653,11 @@ def test_search_identifier_modifier(es_data, engine):
     # [param-ref]:identifier=[system]|[value]: the value of [code] matches an
     # reference.identifier.value, and the value of [system] matches the system
     # property of the Identifier
-    params = (
-        (
-            "subject:identifier",
-            "CPR|240365-0002",
-        ),
-    )
+    params = (("subject:identifier", "CPR|240365-0002",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
-    params = (
-        (
-            "subject:identifier",
-            "CPR|123456789",
-        ),
-    )
+    params = (("subject:identifier", "CPR|123456789",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 0
 
@@ -685,12 +675,7 @@ def test_search_identifier_modifier(es_data, engine):
 
     # [param-ref]:identifier=[system]|: any element where the value of [system] matches the
     # system property of the Identifier
-    params = (
-        (
-            "subject:identifier",
-            "CPR|",
-        ),
-    )
+    params = (("subject:identifier", "CPR|",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
@@ -721,10 +706,7 @@ def test_search_negative_address(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
     params = (
-        (
-            "_profile:not",
-            "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",
-        ),
+        ("_profile:not", "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",),
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -1267,3 +1249,24 @@ def test_searchparam_type_date_period_ap(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 0
+
+
+def test_searchparam_ignored_pretty_format(es_data, engine):
+    search_context = SearchContext(engine, "Encounter")
+    params = (
+        ("date", "ap2015-01-17T16:00:00"),
+        ("_pretty", "true"),
+        ("_format", "application/fhir+json"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(engine, "Patient")
+    params = (
+        ("_pretty", "true"),
+        ("_format", "application/fhir+json"),
+    )
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1

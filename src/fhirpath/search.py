@@ -239,6 +239,8 @@ class SearchContext(object):
         for definition in self.definitions:
             search_param = getattr(definition, param_name, None)
             if search_param is None:
+                if param_name in ("_format", "_pretty"):
+                    continue
                 raise ValidationError(
                     "No search definition is available for search parameter "
                     f"``{param_name}`` on Resource ``{definition.resource_type}``."
