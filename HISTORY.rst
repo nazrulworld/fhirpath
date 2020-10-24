@@ -2,7 +2,7 @@
 History
 =======
 
-0.9.1 (unreleased)
+0.9.1 (2020-10-24)
 ------------------
 
 - Added supports for ``_format`` and ``_pretty`` params, now there should no complain for those, instead of simply ignored. [nazrulworld]
