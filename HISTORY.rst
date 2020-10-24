@@ -2,7 +2,7 @@
 History
 =======
 
-0.8.2 (unreleased)
+0.9.0 (unreleased)
 ------------------
 
 - Handle ``:identifier`` modifier for reference search parameters [simonvadee]
@@ -13,6 +13,7 @@ History
 
 - Ignore empty search params #21 [simonvadee]
 
+- Just for performance optimization issue minimum required ``zope.interface`` version is ``5.1.2``.
 
 0.8.1 (2020-10-05)
 ------------------

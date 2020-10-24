@@ -19,11 +19,9 @@ mypy = {version = "==0.761"}
 
 [packages]
 fhirspec = "*"
-fhir-resources = {version = "==6.0.0b3"}
-zope-interface = {version = "==4.6.0"}
-zope-component = {version = "==4.5"}
+fhir-resources = {version = "==6.0.0b6"}
+zope-interface = {version = "==5.1.2"}
 multidict = {version = "==4.5.2"}
-decorator = {version = "==4.4.0"}
 sphinx = {version = "==2.2.0"}
 sphinx-rtd-theme = {version = "==0.4.3"}
 sphinxcontrib-httpdomain = {version = "==1.7.0"}

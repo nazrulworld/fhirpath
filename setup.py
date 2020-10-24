@@ -48,14 +48,10 @@ with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
 requirements = [
-    "Click>=6.0",
-    "zope.interface>=4.6.0",
-    "zope.component>=4.5",
+    "zope.interface>=5.1.2",
     "multidict",
-    "decorator",
     "fhirspec>=0.2.3",
-    "fhir.resources>=6.0.0b5,<7.0",
-    "jsonpatch",
+    "fhir.resources>=6.0.0b6,<7.0",
     "yarl",
     "isodate",
 ]
@@ -63,6 +59,7 @@ requirements = [
 setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
 
 test_requirements = [
+    "more-itertools",
     "pytest",
     "pytest-cov",
     "pytest-mock",
@@ -97,7 +94,7 @@ development_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.8.2.dev0",
+    version="0.9.0.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
