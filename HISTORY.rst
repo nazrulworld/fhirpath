@@ -2,7 +2,7 @@
 History
 =======
 
-0.9.0 (unreleased)
+0.9.0 (2020-10-24)
 ------------------
 
 - Handle ``:identifier`` modifier for reference search parameters [simonvadee]
