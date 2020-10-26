@@ -1,5 +1,4 @@
 # _*_ coding: utf-8 _*_
-import re
 import time
 from abc import ABC
 from collections import defaultdict, deque
@@ -21,10 +20,6 @@ from fhirpath.interfaces.engine import (
 from fhirpath.thirdparty import Proxy
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
-
-CONTAINS_INDEX_OR_FUNCTION = re.compile(r"[a-z09_]+(\[[0-9]+\])|(\([0-9]*\))$", re.I)
-CONTAINS_INDEX = re.compile(r"[a-z09_]+\[[0-9]+\]$", re.I)
-CONTAINS_FUNCTION = re.compile(r"[a-z09_]+\([0-9]*\)$", re.I)
 
 
 @implementer(IEngine)
@@ -200,18 +195,3 @@ class EngineResult(object):
                 append_ref(ref_attribute)
 
         return ids
-
-
-def navigate_indexed_path(source, path_):
-    """ """
-    parts = path_.split("[")
-    p_ = parts[0]
-    index = int(parts[1][:-1])
-    value = source.get(p_, None)
-    if value is None:
-        return value
-
-    try:
-        return value[index]
-    except IndexError:
-        return None
