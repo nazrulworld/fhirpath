@@ -1,8 +1,8 @@
 # _*_ coding: utf-8 _*_
+import re
 import time
 from abc import ABC
 from collections import defaultdict, deque
-import re
 from typing import Dict, List
 
 from zope.interface import implementer

@@ -653,18 +653,28 @@ def test_search_identifier_modifier(es_data, engine):
     # [param-ref]:identifier=[system]|[value]: the value of [code] matches an
     # reference.identifier.value, and the value of [system] matches the system
     # property of the Identifier
-    params = (("subject:identifier", "CPR|240365-0002",),)
+    params = (
+        (
+            "subject:identifier",
+            "CPR|240365-0002",
+        ),
+    )
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
-    params = (("subject:identifier", "CPR|123456789",),)
+    params = (
+        (
+            "subject:identifier",
+            "CPR|123456789",
+        ),
+    )
     bundle = Search(search_context, params=params)()
     assert bundle.total == 0
 
-    # TODO: not working yet, when omitting the system, the search is applied only on the value
-    # (it should also filter by empty system)
-    # [param-ref]:identifier=|[code]: the value of [code] matches a reference.identifier.value,
-    # and the Identifier has no system property
+    # TODO: not working yet, when omitting the system, the search is applied only
+    # on the value (it should also filter by empty system)
+    # [param-ref]:identifier=|[code]: the value of [code] matches a
+    # reference.identifier.value, and the Identifier has no system property
     params = (("subject:identifier", "|240365-0002"),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
@@ -673,9 +683,14 @@ def test_search_identifier_modifier(es_data, engine):
     bundle = Search(search_context, params=params)()
     assert bundle.total == 0
 
-    # [param-ref]:identifier=[system]|: any element where the value of [system] matches the
-    # system property of the Identifier
-    params = (("subject:identifier", "CPR|",),)
+    # [param-ref]:identifier=[system]|: any element where the value of [system] matches
+    # the system property of the Identifier
+    params = (
+        (
+            "subject:identifier",
+            "CPR|",
+        ),
+    )
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
@@ -706,7 +721,10 @@ def test_search_negative_address(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
     params = (
-        ("_profile:not", "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",),
+        (
+            "_profile:not",
+            "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",
+        ),
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -1274,8 +1292,9 @@ def test_searchparam_ignored_pretty_format(es_data, engine):
 
 def test_searchparam_summary_true(es_data, engine):
     """Handle _summary=true
-    Return a limited subset of elements from the resource. This subset SHOULD consist solely of all
-    supported elements that are marked as "summary" in the base definition of the resource(s)
+    Return a limited subset of elements from the resource. This subset SHOULD consist
+    solely of all supported elements that are marked as "summary" in the base definition
+    of the resource(s)
     """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, params=(("_summary", "true"),))()
@@ -1305,8 +1324,8 @@ def test_searchparam_summary_false(es_data, engine):
 
 def test_searchparam_summary_text(es_data, engine):
     """Handle _summary=text
-    Return only the "text" element, the 'id' element, the 'meta' element, and only top-level
-    mandatory elements
+    Return only the "text" element, the 'id' element, the 'meta' element,
+    and only top-level mandatory elements
     """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, params=(("_summary", "text"),))()
@@ -1333,7 +1352,8 @@ def test_searchparam_summary_data(es_data, engine):
 
 def test_searchparam_summary_count(es_data, engine):
     """Handle _summary=count
-    Search only: just return a count of the matching resources, without returning the actual matches
+    Search only: just return a count of the matching resources, without returning the
+    actual matches
     """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, params=(("_summary", "count"),))()

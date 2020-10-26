@@ -30,9 +30,9 @@ from fhirpath.enums import (
 from fhirpath.exceptions import ValidationError
 from fhirpath.fhirspec import (
     FHIRSearchSpecFactory,
-    lookup_fhir_resource_spec,
     ResourceSearchParameterDefinition,
     SearchParameter,
+    lookup_fhir_resource_spec,
     search_param_prefixes,
 )
 from fhirpath.fql import (
