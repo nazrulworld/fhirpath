@@ -188,7 +188,9 @@ class ElasticsearchEngine(Engine):
         return wrapper(as_json=as_json)
 
     def generate_mappings(
-        self, reference_analyzer: str = None, token_normalizer: str = None,
+        self,
+        reference_analyzer: str = None,
+        token_normalizer: str = None,
     ):
         """
         You may use this function to build the ES mapping.

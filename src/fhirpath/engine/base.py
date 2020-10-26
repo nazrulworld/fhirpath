@@ -118,7 +118,9 @@ class EngineResult(object):
     body: EngineResultBody
 
     def __init__(
-        self, header: EngineResultHeader, body: EngineResultBody,
+        self,
+        header: EngineResultHeader,
+        body: EngineResultBody,
     ):
         """ """
         self.header = header

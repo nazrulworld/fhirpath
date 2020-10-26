@@ -119,7 +119,9 @@ def create_resource_mapping(elements_paths_def, fhir_es_mappings):
 
 
 def fhir_types_mapping(
-    fhir_release: str, reference_analyzer=None, token_normalizer=None,
+    fhir_release: str,
+    reference_analyzer=None,
+    token_normalizer=None,
 ):
     Boolean = {"type": "boolean", "store": False}
     Float = {"type": "float", "store": False}
