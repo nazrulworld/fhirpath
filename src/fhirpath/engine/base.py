@@ -126,23 +126,6 @@ class EngineResult(object):
         self.header = header
         self.body = body
 
-    def filter(self, selects):
-        if len(selects) > 0:
-            new_body = EngineResultBody()
-            for row in self.body:
-                new_row = EngineResultRow()
-                source = row[0]
-                for fullpath in selects:
-                    for path_ in fullpath.split("."):
-                        source = _traverse_for_value(source, path_)
-                        if source is None:
-                            break
-                    new_row.append(source)
-                new_body.append(new_row)
-            self.body = new_body
-
-        return self
-
     def extract_ids(self) -> Dict[str, List[str]]:
         ids: Dict = defaultdict(list)
         for row in self.body:
@@ -232,69 +215,3 @@ def navigate_indexed_path(source, path_):
         return value[index]
     except IndexError:
         return None
-
-
-def _traverse_for_value(source, path_):
-    """Looks path_ is innocent string key, but may content expression, function."""
-    if isinstance(source, dict):
-        # xxx: validate path, not blindly sending None
-        if CONTAINS_INDEX_OR_FUNCTION.search(path_) and CONTAINS_FUNCTION.match(path_):
-            raise ValidationError(
-                f"Invalid path {path_} has been supllied!"
-                "Path cannot contain function if source type is dict"
-            )
-        if CONTAINS_INDEX.match(path_):
-            return navigate_indexed_path(source, path_)
-        if path_ == "*":
-            # TODO check if we can have other keys than resource
-            return source[list(source.keys())[0]]
-
-        return source.get(path_, None)
-
-    elif isinstance(source, list):
-        if not CONTAINS_FUNCTION.match(path_):
-            raise ValidationError(
-                f"Invalid path {path_} has been supllied!"
-                "Path should contain function if source type is list"
-            )
-        parts = path_.split("(")
-        func_name = parts[0]
-        index = None
-        if len(parts[1]) > 1:
-            index = int(parts[1][:-1])
-        if func_name == "count":
-            return len(source)
-        elif func_name == "first":
-            return source[0]
-        elif func_name == "last":
-            return source[-1]
-        elif func_name == "Skip":
-            new_order = list()
-            for idx, no in enumerate(source):
-                if idx == index:
-                    continue
-                new_order.append(no)
-            return new_order
-        elif func_name == "Take":
-            try:
-                return source[index]
-            except IndexError:
-                return None
-        else:
-            raise NotImplementedError
-    elif isinstance(source, (bytes, str)):
-        if not CONTAINS_FUNCTION.match(path_):
-            raise ValidationError(
-                f"Invalid path {path_} has been supplied!"
-                "Path should contain function if source type is list"
-            )
-        parts = path_.split("(")
-        func_name = parts[0]
-        index = len(parts[1]) > 1 and int(parts[1][:-1]) or None
-        if func_name == "count":
-            return len(source)
-        else:
-            raise NotImplementedError
-
-    else:
-        raise NotImplementedError

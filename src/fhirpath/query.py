@@ -372,8 +372,7 @@ class QueryResult(ABC):
 
     def fetchall(self):
         """ """
-        result = self._engine.execute(self._query, self._unrestricted)
-        return result.filter(self._query.get_select())
+        return self._engine.execute(self._query, self._unrestricted)
 
     def single(self):
         """Will return the single item in the input if there is just one item.
@@ -496,7 +495,7 @@ class QueryResult(ABC):
         result = self._engine.execute(self._query, self._unrestricted)
         model_class = self._query.get_from()[0][1]
         for row in result.body:
-            if self._query.get_select()[0].star:
+            if self._query.get_element()[0].star:
                 yield model_class(**row[0])
             else:
                 yield row
