@@ -15,6 +15,7 @@ from .constraints import required_finalized, required_not_finalized
 from .exceptions import MultipleResultsFound
 from .fql.expressions import and_, fql, sort_
 from .fql.types import (
+    ElementClause,
     ElementPath,
     FromClause,
     LimitClause,
@@ -48,6 +49,7 @@ class Query(ABC):
         fhir_release: FHIR_VERSION,
         from_: FromClause,
         select: SelectClause,
+        element: ElementClause,
         where: WhereClause,
         sort: SortClause,
         limit: LimitClause,
@@ -57,6 +59,7 @@ class Query(ABC):
         self.fhir_release: FHIR_VERSION = FHIR_VERSION.normalize(fhir_release)
         self._from: FromClause = from_
         self._select: SelectClause = select
+        self._element: ElementClause = element
         self._where: WhereClause = where
         self._sort: SortClause = sort
         self._limit: LimitClause = limit
@@ -77,6 +80,7 @@ class Query(ABC):
             builder._engine.fhir_release,  # type: ignore
             builder._from,  # type: ignore
             builder._select,  # type: ignore
+            builder._element,  # type: ignore
             builder._where,  # type: ignore
             builder._sort,  # type: ignore
             builder._limit,  # type: ignore
@@ -94,6 +98,10 @@ class Query(ABC):
     def get_select(self) -> SelectClause:
         """ """
         return self._select
+
+    def get_element(self) -> ElementClause:
+        """ """
+        return self._element
 
     def get_sort(self) -> SortClause:
         """ """
@@ -139,6 +147,7 @@ class QueryBuilder(ABC):
 
         self._from: FromClause = FromClause()
         self._select: SelectClause = SelectClause()
+        self._element: ElementClause = ElementClause()
         self._where: WhereClause = WhereClause()
         self._sort: SortClause = SortClause()
         self._limit: LimitClause = LimitClause()
@@ -164,9 +173,9 @@ class QueryBuilder(ABC):
                 f"Object from '{self.__class__.__name__}' must be bound with engine"
             )
         # xxx: do any validation?
-        if len(self._select) == 0:
+        if len(self._element) == 0:
             el_path = ElementPath("*")
-            self._select.append(el_path)
+            self._element.append(el_path)
 
         # Finalize path elements
         [se.finalize(self._engine) for se in self._select]
@@ -192,6 +201,7 @@ class QueryBuilder(ABC):
         newone._limit = copy(self._limit)
         newone._from = copy(self._from)
         newone._select = copy(self._select)
+        newone._element = copy(self._element)
         newone._where = copy(self._where)
         newone._sort = copy(self._sort)
 
@@ -223,6 +233,19 @@ class QueryBuilder(ABC):
             if not (el_path.star or el_path.non_fhir):
                 self._validate_root_path(str(el_path))
             self._select.append(el_path)
+
+    @builder
+    def element(self, *args):
+        """ """
+        self._pre_check()
+
+        for el_path in args:
+            if not IElementPath.providedBy(el_path):
+                el_path = ElementPath(el_path)
+            # Make sure correct root path
+            if not (el_path.star or el_path.non_fhir):
+                self._validate_root_path(str(el_path))
+            self._element.append(el_path)
 
     @builder
     def where(self, *args, **kwargs):
@@ -399,20 +422,21 @@ class QueryResult(ABC):
         if the input collection is empty ({ }), take returns an empty collection."""
 
     def count(self):
-        """Returns a collection with a single value which is the integer count of
-        the number of items in the input collection.
-        Returns 0 when the input collection is empty."""
+        """Returns a Bundle without with an empty set of item.
+        Only the header is filled with the number of resources
+        matching the query.
+        """
         return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        ).header.total
+        )
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return self.count() == 0
+        return self.count().header.total == 0
 
     def __len__(self):
-        """ """
-        return self.count()
+        """ Returns the number of resources matching the query"""
+        return self.count().header.total
 
     def OFF__getitem__(self, key):
         """
@@ -471,7 +495,7 @@ class QueryResult(ABC):
         result = self._engine.execute(self._query, self._unrestricted)
         model_class = self._query.get_from()[0][1]
         for row in result.body:
-            if self._query.get_select()[0].star:
+            if self._query.get_element()[0].star:
                 yield model_class(**row[0])
             else:
                 yield row
@@ -517,15 +541,15 @@ class AsyncQueryResult(QueryResult):
         """ """
         return await self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
-        ).header.total
+        )
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return await self.count() == 0
+        return await self.count().header.total == 0
 
     def __len__(self):
         """ """
-        return self.count()
+        return self.count().header.total
 
 
 def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):

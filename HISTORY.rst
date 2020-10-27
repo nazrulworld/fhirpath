@@ -5,7 +5,9 @@ History
 0.9.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Added support for `_summary=text|data|count|true|false`. [arkhn]
+
+- `QueryResult.count()` now returns a fhir.resources.bundle.Bundle instead of an integer. The previous behaviour of `.count()` is still implemented by the `.__len__()` method. [arkhn]
 
 
 0.9.1 (2020-10-24)

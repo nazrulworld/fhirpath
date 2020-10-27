@@ -212,14 +212,17 @@ class ElasticsearchEngine(Engine):
             if res["_type"] != doc_type:
                 continue
             row = EngineResultRow()
-            for fullpath in source_filters:
-                source = res["_source"]
-                for path_ in fullpath.split("."):
-                    source = self._traverse_for_value(source, path_)
-                    if source is None:
-                        break
-                row.append(source)
-
+            if len(source_filters) > 0:
+                for fullpath in source_filters:
+                    source = res["_source"]
+                    for path_ in fullpath.split("."):
+                        source = self._traverse_for_value(source, path_)
+                        if source is None:
+                            break
+                    row.append(source)
+            else:
+                for resource_data in res["_source"].values():
+                    row.append(resource_data)
             container.add(row)
 
     def process_raw_result(self, rawresult, selects, query_type):
@@ -238,9 +241,7 @@ class ElasticsearchEngine(Engine):
         result = EngineResult(
             header=EngineResultHeader(total=total), body=EngineResultBody()
         )
-        if len(selects) == 0:
-            # Nothing would be in body
-            return result
+
         # extract primary data
         if query_type != EngineQueryType.COUNT:
             self.extract_hits(source_filters, rawresult["hits"]["hits"], result.body)

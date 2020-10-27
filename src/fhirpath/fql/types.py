@@ -87,6 +87,10 @@ class SelectClause(FqlClause):
     """ """
 
 
+class ElementClause(FqlClause):
+    """ """
+
+
 class FromClause(FqlClause):
     """ """
 

@@ -565,9 +565,13 @@ class BundleWrapper:
             if isinstance(resource, dict):
                 resource_id = resource["id"]
                 resource_type = resource["resourceType"]
-            else:
+            elif isinstance(resource, FHIRAbstractModel):
                 resource_id = resource.id
                 resource_type = resource.resource_type
+            else:
+                raise NotImplementedError(
+                    f"EngineRowResult must be a dict or FHIRAbstractModel, got: {row}"
+                )
             # entry = BundleEntry
             entry = dict()
             entry["fullUrl"] = "{0}/{1}".format(resource_type, resource_id)
