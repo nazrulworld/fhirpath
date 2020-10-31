@@ -13,7 +13,7 @@ def make_url(connection_str):
     return _parse_rfc1738_args(connection_str)
 
 
-def create_connection(conn_string, klass=None):
+def create_connection(conn_string, klass=None, **extra):
     """ """
     mod_pattern = "fhirpath.connectors.factory.{driver_mod}.create"
     if isinstance(conn_string, (tuple, list)):
@@ -25,7 +25,7 @@ def create_connection(conn_string, klass=None):
     driver_mod = url_.drivername.split("+")[0]
     try:
         factory = import_string(mod_pattern.format(driver_mod=driver_mod))
-        return factory(url, klass)
+        return factory(url, klass, **extra)
     except ImportError:
         reraise(
             Invalid,

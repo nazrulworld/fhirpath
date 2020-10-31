@@ -9,10 +9,10 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
 @implementer(IConnectionFactory)
-class ConnectionFactory(object):
+class ConnectionFactory:
     """ """
 
-    def __init__(self, url, klass):
+    def __init__(self, url, klass, **extra):
         """
         :param url: URL instance.
 
@@ -27,6 +27,7 @@ class ConnectionFactory(object):
             klass = import_string(klass)
 
         self.klass = klass
+        self.extra = extra
 
     def wrap(self, raw_conn):
         """ """

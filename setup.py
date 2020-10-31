@@ -51,7 +51,7 @@ requirements = [
     "zope.interface>=5.1.2",
     "multidict",
     "fhirspec>=0.2.3",
-    "fhir.resources>=6.0.0b6,<7.0",
+    "fhir.resources>=6.0.0b7,<7.0",
     "yarl",
     "isodate",
 ]
@@ -135,7 +135,7 @@ setup(
     url="https://nazrul.me/fhirpath/",
     python_requires=", ".join((">=3.6",)),
     project_urls={
-        "CI: Travis": "https://travis-ci.com/nazrulworld/fhirpath",
+        "CI: Travis": "https://travis-ci.org/nazrulworld/fhirpath",
         "Coverage: codecov": "https://codecov.io/github/nazrulworld/fhirpath",
         "Docs: RTD": "https://fhirpath.readthedocs.io/",
         "GitHub: issues": "https://github.com/nazrulworld/fhirpath/issues",

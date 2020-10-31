@@ -2,13 +2,12 @@
 from zope.interface import implementer
 
 from fhirpath.interfaces import IConnection
-from fhirpath.thirdparty import Proxy
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
 @implementer(IConnection)
-class Connection(object):
+class Connection:
     """ """
 
     def __init__(self, conn):
@@ -39,16 +38,3 @@ class Connection(object):
     def from_config(cls, config: dict):
         """ """
         raise NotImplementedError
-
-    def __proxy__(self):
-        """ """
-        return ConnectionProxy(self)
-
-
-class ConnectionProxy(Proxy):
-    """ """
-
-    def __init__(self, obj):
-        """ """
-        super(ConnectionProxy, self).__init__()
-        self.initialize(IConnection(obj))

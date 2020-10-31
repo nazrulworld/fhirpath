@@ -5,6 +5,8 @@ History
 0.9.2 (unreleased)
 ------------------
 
+- Added ``orjson`` based json serializer for Elasticsearch by default (when connection is made from connection factory).
+
 - Added support for `_summary=text|data|count|true|false`. [arkhn]
 
 - `QueryResult.count()` now returns a fhir.resources.bundle.Bundle instead of an integer. The previous behaviour of `.count()` is still implemented by the `.__len__()` method. [arkhn]
