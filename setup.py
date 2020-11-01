@@ -60,7 +60,7 @@ setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
 
 test_requirements = [
     "more-itertools",
-    "pytest",
+    "pytest>=6.0.1",
     "pytest-cov",
     "pytest-mock",
     "pytest-asyncio",
