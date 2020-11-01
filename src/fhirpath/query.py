@@ -1,7 +1,7 @@
 # _*_ coding: utf-8 _*_
+import typing
 from abc import ABC
 from copy import copy
-import typing
 from warnings import warn
 
 from zope.interface import implementer
@@ -435,11 +435,15 @@ class QueryResult(ABC):
         or less if there are less than num items. If num is less than or equal to 0, or
         if the input collection is empty ({ }), take returns an empty collection."""
 
-    def count(self):
+    def count_raw(self):
         """Returns EngineResult"""
         return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
         )
+
+    def count(self):
+        """Returns EngineResult"""
+        return self.count_raw()
 
     def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
@@ -552,9 +556,7 @@ class AsyncQueryResult(QueryResult):
         """
         :return: EngineResult
         """
-        return await self._engine.execute(
-            self._query, self._unrestricted, EngineQueryType.COUNT
-        )
+        return await self.count_raw()
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""

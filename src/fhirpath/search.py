@@ -1665,7 +1665,7 @@ class Search(object):
 
         # TODO handle count with _includes
         if self.result_params.get("_summary") == "count":
-            main_result = self.main_query.count()
+            main_result = self.main_query.count_raw()
         else:
             main_result = self.main_query.fetchall()
         assert main_result is not None
@@ -1720,7 +1720,7 @@ class AsyncSearch(Search):
 
         # TODO handle count with _includes
         if self.result_params.get("_summary") == "count":
-            main_result = await self.main_query.count()
+            main_result = await self.main_query.count_raw()
         else:
             main_result = await self.main_query.fetchall()
         assert main_result is not None
