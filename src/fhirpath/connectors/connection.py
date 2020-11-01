@@ -38,3 +38,7 @@ class Connection:
     def from_config(cls, config: dict):
         """ """
         raise NotImplementedError
+
+    @classmethod
+    def is_async(cls):
+        return False

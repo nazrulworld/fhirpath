@@ -3,7 +3,6 @@
 """Tests for `fhirpath` package."""
 from fhirpath.search import Search
 from fhirpath.search import SearchContext
-from fhirpath.connectors.factory.es import finalize_search_params
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -45,7 +44,7 @@ async def test_dialect_generated_raw_query(es_data, engine):
         calculate_field_index_name=engine.calculate_field_index_name,
         get_mapping=engine.get_mapping,
     )
-    search_params = finalize_search_params(compiled)
+    search_params = search_context.engine.connection.finalize_search_params(compiled)
     conn = engine.connection.raw_connection
     index_name = engine.get_index_name()
     result = conn.search(index=index_name, **search_params)
@@ -70,7 +69,7 @@ async def test_dialect_generated_raw_query(es_data, engine):
         calculate_field_index_name=engine.calculate_field_index_name,
         get_mapping=engine.get_mapping,
     )
-    search_params = finalize_search_params(compiled)
+    search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
     assert len(result["hits"]["hits"]) == 1
 
@@ -90,6 +89,6 @@ async def test_dialect_generated_raw_query(es_data, engine):
         calculate_field_index_name=engine.calculate_field_index_name,
         get_mapping=engine.get_mapping,
     )
-    search_params = finalize_search_params(compiled)
+    search_params = search_context.engine.connection.finalize_search_params(compiled)
     result = conn.search(index=index_name, **search_params)
     assert len(result["hits"]["hits"]) == 1

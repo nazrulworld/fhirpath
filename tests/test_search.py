@@ -2,7 +2,7 @@
 import re
 from urllib.parse import urlencode
 from pytest import raises
-
+import pytest
 from fhirpath import Q_
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.enums import OPERATOR
@@ -10,6 +10,7 @@ from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
 from fhirpath.interfaces.fql import IGroupTerm
 from fhirpath.search import Search
+from fhirpath.search import AsyncSearch
 from fhirpath.search import SearchContext
 from fhirpath.exceptions import ValidationError
 
@@ -609,6 +610,28 @@ def test_search_result_with_contains_modifier(es_data, engine):
     assert bundle.total == 1
 
 
+@pytest.mark.asyncio
+async def test_async_search_result_with_contains_modifier(es_data, async_engine):
+    """ """
+    # little bit complex
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("identifier:contains", "|365"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+    params = (("given:contains", "ect"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(async_engine, "Organization")
+    params = (("name:contains", "Medical"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+
 def test_search_result_with_exact_modifier(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Patient")
@@ -705,6 +728,16 @@ def test_issue9_multiple_negative_terms_not_working(es_data, engine):
     params = (("status:not", "ready,cancelled"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
+    assert bundle.total == 1
+
+
+@pytest.mark.asyncio
+async def test_async_issue9_multiple_negative_terms_not_working(es_data, async_engine):
+    """https://github.com/nazrulworld/fhirpath/issues/9"""
+    search_context = SearchContext(async_engine, "Task")
+    params = (("status:not", "ready,cancelled"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
     assert bundle.total == 1
 
 
@@ -1040,6 +1073,129 @@ def test_search_revinclude(es_data, engine):
         fhir_search()
 
 
+@pytest.mark.asyncio
+async def test_async_search_revinclude(es_data, async_engine):
+    # untyped
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:subject"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # typed
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:subject:Patient"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # no results
+    search_context = SearchContext(async_engine, "Location")
+    params = (("_revinclude", "Observation:subject"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 0
+    assert len(bundle.entry) == 0
+
+    # double _revinclude
+    search_context = SearchContext(async_engine, "Patient")
+    params = (
+        ("_revinclude", "Observation:subject"),
+        ("_revinclude", "MedicationRequest:subject"),
+    )
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+    assert len(bundle.entry) == 3
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+    assert isinstance(bundle.entry[2].resource, MedicationRequest)
+
+    # with _has
+    search_context = SearchContext(async_engine, "Patient")
+    params = (
+        ("_has:Observation:patient:code", "718-7"),
+        ("_revinclude", "Observation:subject"),
+    )
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+    assert len(bundle.entry) == 2
+    assert isinstance(bundle.entry[0].resource, Patient)
+    assert isinstance(bundle.entry[1].resource, Observation)
+
+    # bad syntax
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "subject"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _revinclude param 'subject', should be "
+            "Resource:search_param[:target_type]"
+        ),
+    ):
+        await fhir_search()
+
+    # bad syntax
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:subject:too:long"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _revinclude param 'Observation:subject:too:long', "
+            "should be Resource:search_param[:target_type]"
+        ),
+    ):
+        await fhir_search()
+
+    # bad searchparam
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:category"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "search parameter Observation.category must "
+            "be of type 'reference', got token"
+        ),
+    ):
+        await fhir_search()
+
+    # unknown searchparam
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:unknown:code"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "No search definition is available for search "
+            "parameter ``unknown`` on Resource ``Observation``."
+        ),
+    ):
+        await fhir_search()
+
+    # bad target
+    search_context = SearchContext(async_engine, "Patient")
+    params = (("_revinclude", "Observation:encounter:identifier"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "invalid reference Observation.encounter (Encounter,EpisodeOfCare) "
+            "in the current search context (Patient)"
+        ),
+    ):
+        await fhir_search()
+
+
 def test_search_fhirpath_reference_analyzer(es_data, engine):
     """ References need to be indexed in a special way in order to be found"""
     search_context = SearchContext(engine, "Observation")
@@ -1221,6 +1377,20 @@ def test_searchparam_type_date_period_sa(es_data, engine):
     assert bundle.total == 1
 
 
+@pytest.mark.asyncio
+async def test_async_searchparam_type_date_period_sa(es_data, async_engine):
+    search_context = SearchContext(async_engine, "CarePlan")
+    params = (("date", "sa2017-06-01T17:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 0
+
+    params = (("date", "sa2017-06-01T12:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+
 def test_searchparam_type_date_period_eb(es_data, engine):
     search_context = SearchContext(engine, "Encounter")
     params = (("date", "eb2019-01-20"),)
@@ -1269,6 +1439,36 @@ def test_searchparam_type_date_period_ap(es_data, engine):
     assert bundle.total == 0
 
 
+@pytest.mark.asyncio
+async def test_async_searchparam_type_date_period_ap(es_data, async_engine):
+    search_context = SearchContext(async_engine, "Encounter")
+    params = (("date", "ap2015-01-17T16:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ap2015-01-16T16:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 0
+
+    params = (("date", "ap2019-01-20"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+    search_context = SearchContext(async_engine, "CarePlan")
+    params = (("date", "ap2017-06-01T17:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 1
+
+    params = (("date", "ap2017-06-01T19:00:00"),)
+    fhir_search = AsyncSearch(search_context, params=params)
+    bundle = await fhir_search()
+    assert bundle.total == 0
+
+
 def test_searchparam_ignored_pretty_format(es_data, engine):
     search_context = SearchContext(engine, "Encounter")
     params = (
@@ -1298,6 +1498,26 @@ def test_searchparam_summary_true(es_data, engine):
     """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, params=(("_summary", "true"),))()
+    assert result.entry[0].resource.text is None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert (
+        result.entry[0].resource.birthDate is not None
+    )  # birthDate should not be in summary
+    assert (
+        result.entry[0].resource.maritalStatus is None
+    )  # maritalStatus should not be in summary
+
+
+@pytest.mark.asyncio
+async def test_async_searchparam_summary_true(es_data, async_engine):
+    """Handle _summary=true
+    Return a limited subset of elements from the resource. This subset SHOULD consist
+    solely of all supported elements that are marked as "summary" in the base definition
+    of the resource(s)
+    """
+    search_context = SearchContext(async_engine, "Patient")
+    result = await AsyncSearch(search_context, params=(("_summary", "true"),))()
     assert result.entry[0].resource.text is None
     assert result.entry[0].resource.id is not None
     assert result.entry[0].resource.meta is not None
@@ -1350,6 +1570,20 @@ def test_searchparam_summary_data(es_data, engine):
     assert result.entry[0].resource.birthDate is not None
 
 
+@pytest.mark.asyncio
+async def test_async_searchparam_summary_data(es_data, async_engine):
+    """Handle _summary=data
+    Remove the text element
+    """
+    search_context = SearchContext(async_engine, "Patient")
+    result = await AsyncSearch(search_context, params=(("_summary", "data"),))()
+    assert result.entry[0].resource.text is None
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.meta is not None
+    assert result.entry[0].resource.link is not None
+    assert result.entry[0].resource.birthDate is not None
+
+
 def test_searchparam_summary_count(es_data, engine):
     """Handle _summary=count
     Search only: just return a count of the matching resources, without returning the
@@ -1357,5 +1591,17 @@ def test_searchparam_summary_count(es_data, engine):
     """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, params=(("_summary", "count"),))()
+    assert result.entry == []
+    assert result.total == 1
+
+
+@pytest.mark.asyncio
+async def test_async_searchparam_summary_count(es_data, async_engine):
+    """Handle _summary=count
+    Search only: just return a count of the matching resources, without returning the
+    actual matches
+    """
+    search_context = SearchContext(async_engine, "Patient")
+    result = await AsyncSearch(search_context, params=(("_summary", "count"),))()
     assert result.entry == []
     assert result.total == 1

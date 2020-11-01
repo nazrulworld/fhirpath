@@ -1,7 +1,6 @@
 # _*_ coding: utf-8 _*_
 import inspect
 import logging
-from abc import ABC
 
 import orjson
 from elasticsearch.exceptions import SerializationError
@@ -45,40 +44,40 @@ class OrJSONSerializer:
             raise SerializationError(data, e)
 
 
-def evaluate_result(result):
-    """ """
-    if result.get("_shards", {}).get("failed", 0) > 0:
-        logger.warning(f'Error running query: {result["_shards"]}')
-        error_message = "Unknown"
-        for failure in result["_shards"].get("failures") or []:
-            error_message = failure["reason"]
-        raise Invalid(error_message)
+class EsConnMixin:
+    def evaluate_result(self, result):
+        """ """
+        if result.get("_shards", {}).get("failed", 0) > 0:
+            logger.warning(f'Error running query: {result["_shards"]}')
+            error_message = "Unknown"
+            for failure in result["_shards"].get("failures") or []:
+                error_message = failure["reason"]
+            raise Invalid(error_message)
+
+    def finalize_search_params(self, compiled_query, query_type=EngineQueryType.DML):
+        """ """
+        compiled_query = compiled_query.copy()
+        params = dict()
+
+        from_ = compiled_query.pop("from", 0)
+        size = compiled_query.pop("size", 100)
+        scroll = compiled_query.pop("scroll", None)
+        ignore_unavailable = compiled_query.pop("ignore_unavailable", True)
+
+        if query_type == EngineQueryType.DML:
+            params["from_"] = from_
+            params["size"] = size
+            if scroll is not None:
+                params["scroll"] = scroll
+        elif query_type == EngineQueryType.COUNT:
+            compiled_query.pop("_source", None)
+
+        params["ignore_unavailable"] = ignore_unavailable
+        params["body"] = compiled_query
+        return params
 
 
-def finalize_search_params(compiled_query, query_type=EngineQueryType.DML):
-    """ """
-    compiled_query = compiled_query.copy()
-    params = dict()
-
-    from_ = compiled_query.pop("from", 0)
-    size = compiled_query.pop("size", 100)
-    scroll = compiled_query.pop("scroll", None)
-    ignore_unavailable = compiled_query.pop("ignore_unavailable", True)
-
-    if query_type == EngineQueryType.DML:
-        params["from_"] = from_
-        params["size"] = size
-        if scroll is not None:
-            params["scroll"] = scroll
-    elif query_type == EngineQueryType.COUNT:
-        compiled_query.pop("_source", None)
-
-    params["ignore_unavailable"] = ignore_unavailable
-    params["body"] = compiled_query
-    return params
-
-
-class ElasticsearchConnection(Connection, ABC):
+class ElasticsearchConnection(Connection, EsConnMixin):
     """Elasticsearch Connection"""
 
     @classmethod
@@ -101,9 +100,6 @@ class ElasticsearchConnection(Connection, ABC):
             return index()
         raise NotImplementedError
 
-    def finalize_search_params(self, compiled_query, query_type=EngineQueryType.DML):
-        return finalize_search_params(compiled_query, query_type)
-
     def server_info(self):
         """ """
         info = {}
@@ -124,22 +120,24 @@ class ElasticsearchConnection(Connection, ABC):
         https://stackoverflow.com/questions/50376713/
         elasticsearch-scroll-api-with-multi-threading
         """
-        search_params = finalize_search_params(compiled_query, EngineQueryType.DML)
+        search_params = self.finalize_search_params(compiled_query, EngineQueryType.DML)
         conn = self.raw_connection
         result = conn.search(
             index=ElasticsearchConnection.real_index(index), **search_params
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
     def count(self, index, compiled_query):
         """ """
-        search_params = finalize_search_params(compiled_query, EngineQueryType.COUNT)
+        search_params = self.finalize_search_params(
+            compiled_query, EngineQueryType.COUNT
+        )
         conn = self.raw_connection
         result = conn.count(
             index=ElasticsearchConnection.real_index(index), **search_params
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
     def scroll(self, scroll_id, scroll="30s"):
@@ -147,15 +145,16 @@ class ElasticsearchConnection(Connection, ABC):
         result = self.raw_connection.scroll(
             body={"scroll_id": scroll_id}, scroll=scroll
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
 
-class AsyncElasticsearchConnection(Connection, ABC):
+class AsyncElasticsearchConnection(Connection, EsConnMixin):
     """Elasticsearch Connection"""
 
-    def finalize_search_params(self, compiled_query, query_type=EngineQueryType.DML):
-        return finalize_search_params(compiled_query, query_type)
+    @classmethod
+    def is_async(cls):
+        return True
 
     @classmethod
     def from_url(cls, url: str):
@@ -201,22 +200,24 @@ class AsyncElasticsearchConnection(Connection, ABC):
         https://stackoverflow.com/questions/50376713/
         elasticsearch-scroll-api-with-multi-threading
         """
-        search_params = finalize_search_params(compiled_query, EngineQueryType.DML)
+        search_params = self.finalize_search_params(compiled_query, EngineQueryType.DML)
         conn = self.raw_connection
         result = await conn.search(
             index=await AsyncElasticsearchConnection.real_index(index), **search_params
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
     async def count(self, index, compiled_query):
         """ """
-        search_params = finalize_search_params(compiled_query, EngineQueryType.COUNT)
+        search_params = self.finalize_search_params(
+            compiled_query, EngineQueryType.COUNT
+        )
         conn = self.raw_connection
         result = await conn.count(
             index=await AsyncElasticsearchConnection.real_index(index), **search_params
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
     async def scroll(self, scroll_id, scroll="30s"):
@@ -224,7 +225,7 @@ class AsyncElasticsearchConnection(Connection, ABC):
         result = await self.raw_connection.scroll(
             body={"scroll_id": scroll_id}, scroll=scroll
         )
-        evaluate_result(result)
+        self.evaluate_result(result)
         return result
 
 
@@ -302,7 +303,7 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
             if "retry_on_timeout" in query:
                 params["retry_on_timeout"] = _make_bool(query.pop("retry_on_timeout"))
             if "serializer" in query:
-                params["serializer"] = import_string(query.pop("serializer"))
+                params["serializer"] = import_string(query.pop("serializer"))()
             if "host_info_callback" in query:
                 params["host_info_callback"] = import_string(
                     query.pop("host_info_callback")

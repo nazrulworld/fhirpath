@@ -15,6 +15,7 @@ from typing import (
     cast,
 )
 from urllib.parse import unquote_plus
+from warnings import warn
 
 from multidict import MultiDict, MultiDictProxy
 from zope.interface import implementer
@@ -86,12 +87,18 @@ class SearchContext(object):
 
     definitions: List[ResourceSearchParameterDefinition]
 
-    def __init__(self, engine, resource_type, unrestricted=False, async_result=False):
+    def __init__(self, engine, resource_type, unrestricted=False, async_result=None):
         """ """
         self.engine = engine
         self.resource_types = [resource_type] if resource_type else []
         self.unrestricted = unrestricted
-        self.async_result = async_result
+        self.async_result = self.engine.__class__.is_async()
+        if async_result is not None:
+            warn(
+                "'async_result' is no longer used, as Engine has that info already. "
+                "this parameter will be removed in future release.",
+                category=DeprecationWarning,
+            )
 
         self.definitions = self.get_parameters_definition(self.engine.fhir_release)
 
@@ -483,10 +490,7 @@ class Search(object):
 
             builder = builder.where(*terms)
 
-        result: QueryResult = builder(
-            unrestricted=self.context.unrestricted,
-            async_result=self.context.async_result,
-        )
+        result: QueryResult = builder(unrestricted=self.context.unrestricted)
 
         return result
 
@@ -551,10 +555,7 @@ class Search(object):
             builder = builder.where(*terms_container)
             self.attach_limit_terms(builder)
 
-            result: QueryResult = builder(
-                unrestricted=self.context.unrestricted,
-                async_result=self.context.async_result,
-            )
+            result: QueryResult = builder(unrestricted=self.context.unrestricted)
             has_queries.append((ref_param, result))
 
         return has_queries
@@ -631,10 +632,7 @@ class Search(object):
             # FIXME: find a better way to handle the limit
             builder = builder.limit(DEFAULT_RESULT_COUNT)
 
-            result: QueryResult = builder(
-                unrestricted=self.context.unrestricted,
-                async_result=self.context.async_result,
-            )
+            result: QueryResult = builder(unrestricted=self.context.unrestricted)
             include_queries.append(result)
 
         return include_queries
@@ -701,10 +699,7 @@ class Search(object):
             builder = builder.where(*terms)
             self.attach_limit_terms(builder)
 
-            result: QueryResult = builder(
-                unrestricted=self.context.unrestricted,
-                async_result=self.context.async_result,
-            )
+            result: QueryResult = builder(unrestricted=self.context.unrestricted)
             include_queries.append(result)
 
         return include_queries
@@ -1755,7 +1750,7 @@ def fhir_search(
     """ """
     if TYPE_CHECKING:
         klass: Union[Type[AsyncSearch], Type[Search]]
-    if context.async_result:
+    if context.engine.__class__.is_async():
         klass = AsyncSearch
     else:
         klass = Search

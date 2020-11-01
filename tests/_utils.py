@@ -13,6 +13,7 @@ from pytest_docker_fixtures.containers._base import BaseImage
 
 from fhirpath.engine import dialect_factory
 from fhirpath.engine.es import ElasticsearchEngine
+from fhirpath.engine.es import AsyncElasticsearchEngine
 from fhirpath.enums import FHIR_VERSION
 from fhirpath.storage import MemoryStorage
 
@@ -44,6 +45,39 @@ IS_TRAVIS = os.environ.get("TRAVIS", "") != ""
 
 
 class TestElasticsearchEngine(ElasticsearchEngine):
+    """ """
+
+    def __init__(self, connection):
+        """ """
+        ElasticsearchEngine.__init__(
+            self, FHIR_VERSION.R4, lambda x: connection, dialect_factory
+        )
+
+    def get_index_name(self):
+        """ """
+        return ES_INDEX_NAME_REAL
+
+    def calculate_field_index_name(self, resource_type):
+        """ """
+        return "{0}_resource".format(resource_type.lower())
+
+    def get_mapping(self, resource_type):
+        """ """
+        mapping = fhir_resource_mapping(resource_type)
+        return mapping
+
+    def current_url(self):
+        """ """
+        return yarl.URL("http://nohost/@fhir")
+
+    def extract_hits(self, selects, hits, container):
+        """ """
+        return ElasticsearchEngine.extract_hits(
+            self, selects, hits, container, DOC_TYPE
+        )
+
+
+class TestAsyncElasticsearchEngine(AsyncElasticsearchEngine):
     """ """
 
     def __init__(self, connection):

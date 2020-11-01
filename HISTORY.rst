@@ -5,9 +5,20 @@ History
 0.9.2 (unreleased)
 ------------------
 
+Improvements
+
+
+- Introducing `AsyncElasticsearchConnection`` and ``AsyncElasticsearchEngine`` the asyncio based connection and engine for Elasticsearch. See `Using Asyncio with Elasticsearch <https://elasticsearch-py.readthedocs.io/en/7.9.1/async.html>`_
+
 - Added ``orjson`` based json serializer for Elasticsearch by default (when connection is made from connection factory).
 
 - Added support for `_summary=text|data|count|true|false`. [arkhn]
+
+
+Breaking
+
+- ``async_result`` parameter is no longer needed for SearchContext, Search and Query (included async version) as from now all
+  engine contains that information (``engine_class.is_async()``).
 
 - `QueryResult.count()` now returns a fhir.resources.bundle.Bundle instead of an integer. The previous behaviour of `.count()` is still implemented by the `.__len__()` method. [arkhn]
 

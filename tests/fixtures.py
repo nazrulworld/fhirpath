@@ -9,9 +9,9 @@ from pytest_docker_fixtures import images
 
 from fhirpath.connectors import create_connection
 from fhirpath.fhirspec import settings
-from fhirpath.utils import proxy
 
 from ._utils import TestElasticsearchEngine
+from ._utils import TestAsyncElasticsearchEngine
 from ._utils import _cleanup_es
 from ._utils import _init_fhirbase_structure
 from ._utils import _load_es_data
@@ -87,11 +87,29 @@ def es_connection(es):
     yield conn
 
 
+@pytest.fixture
+async def async_es_connection(es):
+    """ """
+    host, port = es
+    conn_str = "es://@{0}:{1}/".format(host, port)
+    conn = create_connection(conn_str, "elasticsearch.AsyncElasticsearch")
+    assert await conn.raw_connection.ping()
+    yield conn
+    await conn.raw_connection.close()
+
+
 @pytest.fixture(scope="session")
 def engine(es_connection):
     """ """
     engine = TestElasticsearchEngine(es_connection)
-    yield proxy(engine)
+    yield engine
+
+
+@pytest.fixture
+async def async_engine(async_es_connection):
+    """ """
+    engine = TestAsyncElasticsearchEngine(async_es_connection)
+    yield engine
 
 
 @pytest.fixture

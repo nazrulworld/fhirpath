@@ -1,7 +1,8 @@
 # _*_ coding: utf-8 _*_
 from abc import ABC
 from copy import copy
-from typing import TYPE_CHECKING, List, Optional, Union
+import typing
+from warnings import warn
 
 from zope.interface import implementer
 
@@ -34,7 +35,7 @@ from .interfaces import (
     ITerm,
 )
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from fhirpath.engine.base import Engine
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -65,7 +66,7 @@ class Query(ABC):
         self._limit: LimitClause = limit
 
     @classmethod
-    def _builder(cls, engine: Optional["Engine"] = None) -> "QueryBuilder":
+    def _builder(cls, engine: typing.Optional["Engine"] = None) -> "QueryBuilder":
         return QueryBuilder(engine)
 
     @classmethod
@@ -140,9 +141,9 @@ class Query(ABC):
 class QueryBuilder(ABC):
     """ """
 
-    def __init__(self, engine: Optional["Engine"] = None):
+    def __init__(self, engine: typing.Optional["Engine"] = None):
         """ """
-        self._engine: Optional["Engine"] = engine
+        self._engine: typing.Optional["Engine"] = engine
         self._finalized: bool = False
 
         self._from: FromClause = FromClause()
@@ -161,7 +162,7 @@ class QueryBuilder(ABC):
         """ """
         return self.__copy__()
 
-    def finalize(self, engine: Optional["Engine"] = None):
+    def finalize(self, engine: typing.Optional["Engine"] = None):
         """ """
         self._pre_check()
 
@@ -208,7 +209,7 @@ class QueryBuilder(ABC):
         return newone
 
     @builder
-    def from_(self, resource_type: Union[str, List[str]]):
+    def from_(self, resource_type: typing.Union[str, typing.List[str]]):
         """ """
         required_not_finalized(self)
 
@@ -306,19 +307,32 @@ class QueryBuilder(ABC):
     def __call__(
         self,
         unrestricted: bool = False,
-        engine: Optional["Engine"] = None,
-        async_result: bool = False,
-    ) -> Union["QueryResult", "AsyncQueryResult"]:
+        engine: typing.Optional["Engine"] = None,
+        async_result: bool = None,
+    ) -> typing.Union["QueryResult", "AsyncQueryResult"]:
         """ """
+        if async_result is not None:
+            warn(
+                "'async_result' is no longer used, as Engine has that info already. "
+                "this parameter will be removed in future release.",
+                category=DeprecationWarning,
+            )
         if not self._finalized and (engine or self._engine):
             self.finalize(engine)
 
         query = self.get_query()
-        result_factory = QueryResult
-        if async_result is True:
-            result_factory = AsyncQueryResult
-        if TYPE_CHECKING:
+        if typing.TYPE_CHECKING:
             assert self._engine
+
+        if typing.TYPE_CHECKING:
+            result_factory: typing.Union[
+                typing.Type[AsyncQueryResult], typing.Type[QueryResult]
+            ]
+        if self._engine.__class__.is_async() is True:
+            result_factory = AsyncQueryResult
+        else:
+            result_factory = QueryResult
+
         result = result_factory(
             query=query, engine=self._engine, unrestricted=unrestricted
         )
@@ -422,10 +436,7 @@ class QueryResult(ABC):
         if the input collection is empty ({ }), take returns an empty collection."""
 
     def count(self):
-        """Returns a Bundle without with an empty set of item.
-        Only the header is filled with the number of resources
-        matching the query.
-        """
+        """Returns EngineResult"""
         return self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
         )
@@ -514,7 +525,7 @@ class AsyncQueryResult(QueryResult):
         result = await self._engine.execute(self._query, self._unrestricted)
         model_class = self._query.get_from()[0][1]
         for row in result.body:
-            if self._query.get_select()[0].star:
+            if self._query.get_element()[0].star:
                 yield model_class(**row[0])
             else:
                 yield row
@@ -538,21 +549,26 @@ class AsyncQueryResult(QueryResult):
         return None
 
     async def count(self):
-        """ """
+        """
+        :return: EngineResult
+        """
         return await self._engine.execute(
             self._query, self._unrestricted, EngineQueryType.COUNT
         )
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return await self.count().header.total == 0
+        total = await self.count()
+        return total.header.total == 0
 
     def __len__(self):
         """ """
         return self.count().header.total
 
 
-def Q_(resource: Optional[Union[str, List[str]]] = None, engine=None):
+def Q_(
+    resource: typing.Optional[typing.Union[str, typing.List[str]]] = None, engine=None
+):
     """ """
     builder = Query._builder(engine)
     if resource:

@@ -63,11 +63,11 @@ test_requirements = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
+    "pytest-asyncio",
     "pytest-docker-fixtures",
     "psycopg2",
-    "elasticsearch",
+    "elasticsearch[async]>7.8.0,<8.0.0",
     "SQLAlchemy",
-    "aioelasticsearch",
     "pytz",
 ]
 docs_requirements = [

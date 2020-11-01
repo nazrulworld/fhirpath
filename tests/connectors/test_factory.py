@@ -20,7 +20,7 @@ async def test_elasticsearch_conn_creation(es):
 
     # test from string path
     es_conn_factory = ES.ElasticsearchConnectionFactory(
-        url, "aioelasticsearch.Elasticsearch"
+        url, "elasticsearch.AsyncElasticsearch"
     )
     conn = es_conn_factory()
     assert await conn.raw_connection.ping() is True
@@ -29,3 +29,20 @@ async def test_elasticsearch_conn_creation(es):
     # with default connection class elasticsearch.Elasticsearch
     conn = ES.create(url)
     assert conn.raw_connection.ping() is True
+
+
+def test_es_factory_complex_url_params():
+    """ """
+    url = (
+        "es://user:secret@127.0.0.1:9200/?"
+        "use_ssl=1&sniff_on_start=True&sniffer_timeout=3&"
+        "max_retries=3&retry_on_status=310,330,334&url_prefix=es"
+        "&serializer=fhirpath.connectors.factory.es.OrJSONSerializer"
+    )
+    factory = ES.ElasticsearchConnectionFactory(
+        make_url(url), "elasticsearch.AsyncElasticsearch"
+    )
+    params = factory.prepare_params()
+    assert params["hosts"][0]["use_ssl"] is True
+    assert params["retry_on_status"] == (310, 330, 334)
+    assert isinstance(params["serializer"], ES.OrJSONSerializer)
