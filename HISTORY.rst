@@ -20,9 +20,6 @@ Breaking
 - ``async_result`` parameter is no longer needed for SearchContext, Search and Query (included async version) as from now all
   engine contains that information (``engine_class.is_async()``).
 
-- `QueryResult.count()` now returns a fhir.resources.bundle.Bundle instead of an integer. The previous behaviour of `.count()` is still implemented by the `.__len__()` method. [arkhn]
-
-
 0.9.1 (2020-10-24)
 ------------------
 

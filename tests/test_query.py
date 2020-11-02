@@ -225,8 +225,11 @@ def test_result_count(es_data, engine):
     load_organizations_data(conn, 5)
     builder = Q_(resource="Organization", engine=engine)
     builder = builder.where(T_("Organization.active") == V_("true"))
-    bundle = builder().count()
-    assert bundle.header.total == 6
+    assert builder().count() == 6
+
+    builder = Q_(resource="Organization", engine=engine)
+    builder = builder.where(T_("Organization.active") == V_("false"))
+    assert builder().count() == 0
 
 
 @pytest.mark.asyncio
@@ -237,7 +240,12 @@ async def test_async_result_count(es_data, async_engine):
     builder = Q_(resource="Organization", engine=async_engine)
     builder = builder.where(T_("Organization.active") == V_("true"))
     result = await builder().count()
-    assert result.header.total == 6
+    assert result == 6
+
+    builder = Q_(resource="Organization", engine=async_engine)
+    builder = builder.where(T_("Organization.active") == V_("false"))
+    result = await builder().count()
+    assert result == 0
 
 
 def test_result_empty(es_data, engine):

@@ -441,17 +441,18 @@ class QueryResult(ABC):
             self._query, self._unrestricted, EngineQueryType.COUNT
         )
 
-    def count(self):
-        """Returns EngineResult"""
-        return self.count_raw()
+    def count(self) -> int:
+        """Returns the integer count of the number of items in the input collection.
+        Returns 0 when the input collection is empty."""
+        return self.count_raw().header.total
 
-    def empty(self):
+    def empty(self) -> bool:
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        return self.count().header.total == 0
+        return self.count() == 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         """ Returns the number of resources matching the query"""
-        return self.count().header.total
+        return self.count()
 
     def OFF__getitem__(self, key):
         """
@@ -553,19 +554,15 @@ class AsyncQueryResult(QueryResult):
         return None
 
     async def count(self):
-        """
-        :return: EngineResult
-        """
-        return await self.count_raw()
+        """Returns the integer count of the number of items in the input collection.
+        Returns 0 when the input collection is empty."""
+        result = await self.count_raw()
+        return result.header.total
 
     async def empty(self):
         """Returns true if the input collection is empty ({ }) and false otherwise."""
-        total = await self.count()
-        return total.header.total == 0
-
-    def __len__(self):
-        """ """
-        return self.count().header.total
+        count = await self.count()
+        return count == 0
 
 
 def Q_(

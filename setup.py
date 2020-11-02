@@ -50,8 +50,8 @@ with open("HISTORY.rst") as history_file:
 requirements = [
     "zope.interface>=5.1.2",
     "multidict",
-    "fhirspec>=0.2.3",
-    "fhir.resources>=6.0.0b7,<7.0",
+    "fhirspec>=0.2.5",
+    "fhir.resources>=6.0.0b8,<7.0",
     "yarl",
     "isodate",
 ]
