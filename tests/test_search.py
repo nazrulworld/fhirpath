@@ -1473,17 +1473,25 @@ def test_searchparam_ignored_pretty_format(es_data, engine):
 
 
 def test_searchparam_elements(es_data, engine):
-    """Handle _summary=true
-    Return a limited subset of elements from the resource. This subset SHOULD consist
-    solely of all supported elements that are marked as "summary" in the base definition
-    of the resource(s)
-    """
     search_context = SearchContext(engine, "Patient")
     result = Search(search_context, query_string="_elements=identifier,active,link")()
     assert result.entry[0].resource.id is not None
     assert result.entry[0].resource.identifier is not None
     assert result.entry[0].resource.active is not None
     assert result.entry[0].resource.link is not None
+    assert result.entry[0].resource.meta is None
+    assert result.entry[0].resource.birthDate is None
+    assert result.entry[0].resource.maritalStatus is None
+
+
+def test_searchparam_unexisting_elements(es_data, engine):
+    """Elements that don't exist should be ignored"""
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, query_string="_elements=active,unexisting")()
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.identifier is None
+    assert result.entry[0].resource.active is not None
+    assert result.entry[0].resource.link is None
     assert result.entry[0].resource.meta is None
     assert result.entry[0].resource.birthDate is None
     assert result.entry[0].resource.maritalStatus is None
