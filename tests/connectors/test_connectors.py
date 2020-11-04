@@ -4,6 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch import AsyncElasticsearch
 
 from fhirpath.connectors import create_connection
+from fhirpath.connectors.factory import es as ES
 from fhirpath.connectors.factory import pg
 from tests._utils import IS_TRAVIS
 
@@ -18,12 +19,19 @@ def test_es_connection_creation(es):
     conn = create_connection(conn_str, Elasticsearch)
     assert conn.raw_connection.ping() is True
 
+    conn = ES.ElasticsearchConnection.from_url(conn_str)
+    assert conn.raw_connection.ping() is True
+
 
 async def test_async_es_connection_creation(es):
     """ """
     host, port = es
     conn_str = "es://@{0}:{1}/".format(host, port)
     conn = create_connection(conn_str, "elasticsearch.AsyncElasticsearch")
+    assert isinstance(conn.raw_connection, AsyncElasticsearch)
+    assert await conn.raw_connection.ping() is True
+
+    conn = ES.AsyncElasticsearchConnection.from_url(conn_str)
     assert isinstance(conn.raw_connection, AsyncElasticsearch)
     assert await conn.raw_connection.ping() is True
 

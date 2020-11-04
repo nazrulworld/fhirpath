@@ -5,7 +5,9 @@ History
 0.10.1 (unreleased)
 -------------------
 
-- Nothing changed yet.
+Bugfixes
+
+- ``Connection.raw_connection`` was wrongly wrapped by ``AsyncElasticsearchConnection/ElasticsearchConnection.from_url()`` with self, instead of ``elasticsearch.AsyncElasticsearch/elasticsearch.Elasticsearch``'s instance.
 
 
 0.10.0 (2020-11-04)

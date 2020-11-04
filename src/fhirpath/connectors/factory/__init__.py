@@ -27,6 +27,7 @@ class ConnectionFactory:
             klass = import_string(klass)
 
         self.klass = klass
+        self.wrapper_class = extra.pop("wrapper_class", None)
         self.extra = extra
 
     def wrap(self, raw_conn):

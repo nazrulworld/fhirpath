@@ -88,7 +88,7 @@ class ElasticsearchConnection(Connection, EsConnMixin):
         else:
             url = _parse_rfc1738_args(url)
 
-        self = cls(create(url, "elasticsearch.Elasticsearch"))
+        self = create(url, "elasticsearch.Elasticsearch", wrapper_class=cls)
         return self
 
     @staticmethod
@@ -164,7 +164,7 @@ class AsyncElasticsearchConnection(Connection, EsConnMixin):
         else:
             url = _parse_rfc1738_args(url)
 
-        self = cls(create(url, "elasticsearch.AsyncElasticsearch"))
+        self = create(url, "elasticsearch.AsyncElasticsearch", wrapper_class=cls)
         return self
 
     async def server_info(self):
@@ -239,7 +239,7 @@ class ElasticsearchConnectionFactory(ConnectionFactory):
         else:
             url_ = self.url
 
-        wrapper_class = url_.query.get("wrapper_class", None)
+        wrapper_class = url_.query.get("wrapper_class", self.wrapper_class)
         if wrapper_class is None:
             if raw_conn.__class__.__name__ == "AsyncElasticsearch":
                 wrapper_class = AsyncElasticsearchConnection
