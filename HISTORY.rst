@@ -14,6 +14,8 @@ Improvements
 
 - Added support for `_summary=text|data|count|true|false`. [arkhn]
 
+- Added support for `_elements` search parameter. [arkhn]
+
 
 Breaking
 
