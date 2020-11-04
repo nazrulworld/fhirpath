@@ -2,8 +2,8 @@
 History
 =======
 
-0.9.2 (unreleased)
-------------------
+0.10.0 (unreleased)
+-------------------
 
 Improvements
 
