@@ -458,7 +458,7 @@ class Search(object):
 
         _elements = all_params.popone("_elements", [])
         if len(_elements) > 0:
-            self.result_params["_elements"] = ",".join(_elements)
+            self.result_params["_elements"] = _elements.split(",")
 
         _contained = all_params.popone("_contained", None)
         if _contained:
@@ -475,6 +475,7 @@ class Search(object):
         builder = Q_(self.context.resource_types, self.context.engine)
 
         builder = self.attach_where_terms(builder)
+        builder = self.attach_elements_terms(builder)
         builder = self.attach_sort_terms(builder)
         builder = self.attach_summary_terms(builder)
         builder = self.attach_limit_terms(builder)
@@ -1553,6 +1554,21 @@ class Search(object):
             if current_page > 1:
                 offset = (current_page - 1) * self.result_params["_count"]
         return builder.limit(self.result_params["_count"], offset)
+
+    def attach_elements_terms(self, builder):
+        """ """
+        if "_elements" not in self.result_params:
+            return builder
+
+        paths = [
+            f"{r}.{el}"
+            for el in self.result_params["_elements"]
+            for r in self.context.resource_types
+        ]
+        mandatories = [
+            f"{r}.{el}" for el in ["id"] for r in self.context.resource_types
+        ]
+        return builder.element(*paths, *mandatories)
 
     def attach_summary_terms(self, builder):
         """ """

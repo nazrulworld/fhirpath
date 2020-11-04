@@ -676,21 +676,11 @@ def test_search_identifier_modifier(es_data, engine):
     # [param-ref]:identifier=[system]|[value]: the value of [code] matches an
     # reference.identifier.value, and the value of [system] matches the system
     # property of the Identifier
-    params = (
-        (
-            "subject:identifier",
-            "CPR|240365-0002",
-        ),
-    )
+    params = (("subject:identifier", "CPR|240365-0002",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
-    params = (
-        (
-            "subject:identifier",
-            "CPR|123456789",
-        ),
-    )
+    params = (("subject:identifier", "CPR|123456789",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 0
 
@@ -708,12 +698,7 @@ def test_search_identifier_modifier(es_data, engine):
 
     # [param-ref]:identifier=[system]|: any element where the value of [system] matches
     # the system property of the Identifier
-    params = (
-        (
-            "subject:identifier",
-            "CPR|",
-        ),
-    )
+    params = (("subject:identifier", "CPR|",),)
     bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
@@ -754,10 +739,7 @@ def test_search_negative_address(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
     params = (
-        (
-            "_profile:not",
-            "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",
-        ),
+        ("_profile:not", "urn:oid:002.160,urn:oid:002.260,http://hl7.org/fhir/Other",),
     )
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -1488,6 +1470,31 @@ def test_searchparam_ignored_pretty_format(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
+
+
+def test_searchparam_elements(es_data, engine):
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, query_string="_elements=identifier,active,link")()
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.identifier is not None
+    assert result.entry[0].resource.active is not None
+    assert result.entry[0].resource.link is not None
+    assert result.entry[0].resource.meta is None
+    assert result.entry[0].resource.birthDate is None
+    assert result.entry[0].resource.maritalStatus is None
+
+
+def test_searchparam_unexisting_elements(es_data, engine):
+    """Elements that don't exist should be ignored"""
+    search_context = SearchContext(engine, "Patient")
+    result = Search(search_context, query_string="_elements=active,unexisting")()
+    assert result.entry[0].resource.id is not None
+    assert result.entry[0].resource.identifier is None
+    assert result.entry[0].resource.active is not None
+    assert result.entry[0].resource.link is None
+    assert result.entry[0].resource.meta is None
+    assert result.entry[0].resource.birthDate is None
+    assert result.entry[0].resource.maritalStatus is None
 
 
 def test_searchparam_summary_true(es_data, engine):
