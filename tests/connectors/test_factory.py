@@ -37,7 +37,7 @@ def test_es_factory_complex_url_params():
         "es://user:secret@127.0.0.1:9200/?"
         "use_ssl=1&sniff_on_start=True&sniffer_timeout=3&"
         "max_retries=3&retry_on_status=310,330,334&url_prefix=es"
-        "&serializer=fhirpath.connectors.factory.es.OrJSONSerializer"
+        "&serializer=fhirpath.connectors.factory.es.ElasticsearchJSONSerializer"
     )
     factory = ES.ElasticsearchConnectionFactory(
         make_url(url), "elasticsearch.AsyncElasticsearch"
@@ -45,4 +45,4 @@ def test_es_factory_complex_url_params():
     params = factory.prepare_params()
     assert params["hosts"][0]["use_ssl"] is True
     assert params["retry_on_status"] == (310, 330, 334)
-    assert isinstance(params["serializer"], ES.OrJSONSerializer)
+    assert isinstance(params["serializer"], ES.ElasticsearchJSONSerializer)

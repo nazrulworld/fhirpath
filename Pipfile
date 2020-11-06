@@ -14,6 +14,7 @@ sphinxcontrib-httpexample = {version = "==0.10.3"}
 tox = {version = "==3.14.0"}
 certifi = {version = "==2019.9.11"}
 zest-releaser = {extras = ["recommended"],version = "*"}
+fhirpath = {editable = true, extras = ["all"], path = "."}
 
 [requires]
 python_version = "3.7"

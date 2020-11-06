@@ -13,7 +13,6 @@ from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     List,
     Match,
@@ -25,9 +24,7 @@ from typing import (
     cast,
 )
 
-import orjson
 import pkg_resources
-from pydantic.json import pydantic_encoder
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
@@ -36,6 +33,7 @@ from fhirpath.thirdparty import Proxy
 
 from .enums import FHIR_VERSION
 from .interfaces import IPathInfoContext
+from .json import json_dumps, json_loads  # noqa: F401
 from .storage import FHIR_RESOURCE_CLASS_STORAGE, PATH_INFO_STORAGE
 from .types import PrimitiveDataTypes
 
@@ -655,46 +653,3 @@ class BundleWrapper:
     def json(self):
         """ """
         return self.__call__().json()
-
-
-def json_dumps(
-    value: Union[List[Dict[str, Any]], Dict[str, Any]],
-    *,
-    default: Callable = None,
-    option: int = 0,
-    indent: int = None,
-    sort_keys: bool = None,
-    return_bytes: bool = False,
-) -> Union[str, bytes]:
-    """Special helper function to serialize to json str, powered by ``orjson``"""
-    if default is None:
-        default = pydantic_encoder
-
-    params: Any = {"default": default}
-    option_ = option
-    if option_ == 0:
-        if indent is not None:
-            # only indent 2 is accepted
-            option_ |= orjson.OPT_INDENT_2
-        if sort_keys is not None and sort_keys:
-            option_ |= orjson.OPT_SORT_KEYS
-
-    if option_ > 0:
-        params.update({"option": option_})
-
-    v = orjson.dumps(value, **params)
-    if return_bytes is False:
-        return force_str(v)
-    return v
-
-
-def json_loads(
-    value: Union[bytes, bytearray, str]
-) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
-    """bytes, bytearray, and str input are accepted.
-    If the input exists as bytes (was read directly from a source),
-    it is recommended to pass bytes. This has lower memory usage and lower latency.
-
-    The input must be valid UTF-8."""
-
-    return orjson.loads(value)

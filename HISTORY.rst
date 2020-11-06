@@ -5,7 +5,10 @@ History
 0.10.2 (unreleased)
 -------------------
 
-- Nothing changed yet.
+Improvements
+
+- ``orjson`` is no longer required. ``json_dumps`` and ``json_loads`` now dynamically supports
+  orjson and simplejson.
 
 
 0.10.1 (2020-11-04)
