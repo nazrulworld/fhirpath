@@ -2,7 +2,7 @@
 History
 =======
 
-0.10.2 (unreleased)
+0.10.2 (2020-11-06)
 -------------------
 
 Improvements
