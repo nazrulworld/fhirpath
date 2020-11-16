@@ -6,6 +6,7 @@ import os
 import pkgutil
 import re
 import sys
+import time
 import uuid
 from importlib import import_module
 from inspect import signature
@@ -49,6 +50,8 @@ if TYPE_CHECKING:
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
+
+LOCAL_TIMEZONE: Optional[datetime.timezone] = None
 
 
 def _reraise(tp, value, tb=None):
@@ -529,15 +532,21 @@ class BundleWrapper:
     """ """
 
     def __init__(
-        self, engine, result, includes: List, url: URL, bundle_type="searchset"
+        self,
+        engine,
+        result,
+        includes: List,
+        url: URL,
+        bundle_type="searchset",
+        init_data: Dict[str, Any] = None,
     ):
         """ """
         self.fhir_version = engine.fhir_release
         self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
-        self.data: Dict[str, Any] = dict()
-        self.data["id"] = str(uuid.uuid4())
-
-        self.data["meta"] = {"lastUpdated": datetime.datetime.utcnow()}
+        if init_data:
+            self.data = init_data
+        else:
+            self.data = BundleWrapper.init_data()
 
         self.data["type"] = bundle_type
         # our pagination is based main query result.
@@ -552,6 +561,12 @@ class BundleWrapper:
             self.attach_entry(_include, "include")
 
         self.attach_links(url, len(result.body))
+
+    @staticmethod
+    def init_data() -> Dict[str, Any]:
+        """Initialized Bundle data"""
+        data = {"id": str(uuid.uuid4()), "meta": {"lastUpdated": timestamp_utc()}}
+        return data
 
     def attach_entry(self, result, mode="match"):
         """ """
@@ -653,3 +668,25 @@ class BundleWrapper:
     def json(self):
         """ """
         return self.__call__().json()
+
+
+def get_local_timezone() -> datetime.timezone:
+    if LOCAL_TIMEZONE is not None:
+        return LOCAL_TIMEZONE
+
+    is_dst = time.daylight and time.localtime().tm_isdst > 0
+    seconds = -(time.altzone if is_dst else time.timezone)
+    tz = datetime.timezone(datetime.timedelta(seconds=seconds))
+    return tz
+
+
+def timestamp_utc() -> datetime.datetime:
+    """UTC datetime with timezone offset"""
+    dt_now = datetime.datetime.utcnow()
+    dt_now.replace(tzinfo=datetime.timezone.utc)
+    return dt_now
+
+
+def timestamp_local() -> datetime.datetime:
+    """Timezone aware datetime with local timezone offset"""
+    return datetime.datetime.now(tz=get_local_timezone())

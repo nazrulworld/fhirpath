@@ -5,8 +5,17 @@ History
 0.10.3 (unreleased)
 -------------------
 
-- Nothing changed yet.
+Improvements
 
+- More helper functions (``get_local_timezone``, ``timestamp_utc``, ``timestamp_utc``) are created.
+
+- ``initial_bundle_data`` method is now available in Base Elasticsearch engine class,
+  meaning that it is possible construct Bundle initial data into the derived class, so more flexibility.
+
+Bugfixes
+
+- Default bundle initial data was constructed ``meta.lastUpdated`` value with utc now time but without timezone offset, so
+  during json serialization, timezone info was missed as a result reverse construct of Bundle complains validation error.
 
 0.10.2 (2020-11-06)
 -------------------

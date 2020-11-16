@@ -47,6 +47,10 @@ def navigate_indexed_path(source, path_):
 
 
 class ElasticsearchEngineBase(Engine):
+    def initial_bundle_data(self):
+        """Can be overridden in sub class"""
+        return BundleWrapper.init_data()
+
     def extract_hits(self, source_filters, hits, container, doc_type="_doc"):
         """ """
         for res in hits:
@@ -92,7 +96,10 @@ class ElasticsearchEngineBase(Engine):
         url = self.current_url()
         if includes is None:
             includes = list()
-        wrapper = BundleWrapper(self, result, includes, url, "searchset")
+        init_data = self.initial_bundle_data()
+        wrapper = BundleWrapper(
+            self, result, includes, url, "searchset", init_data=init_data
+        )
         return wrapper(as_json=as_json)
 
     def generate_mappings(
