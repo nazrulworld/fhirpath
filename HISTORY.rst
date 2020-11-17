@@ -5,7 +5,7 @@ History
 0.10.4 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- fixes ``FHIRAbstractModel`` was imported on typing enabled condition at ``utils`` module.
 
 
 0.10.3 (2020-11-17)

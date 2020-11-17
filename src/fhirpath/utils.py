@@ -26,6 +26,7 @@ from typing import (
 )
 
 import pkg_resources
+from fhir.resources.fhirabstractmodel import FHIRAbstractModel
 from pydantic.validators import bool_validator
 from yarl import URL
 from zope.interface import implementer
@@ -39,7 +40,6 @@ from .storage import FHIR_RESOURCE_CLASS_STORAGE, PATH_INFO_STORAGE
 from .types import PrimitiveDataTypes
 
 if TYPE_CHECKING:
-    from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
     from fhir.resources.fhirtypes import (  # noqa: F401
         AbstractBaseType,
         AbstractType,
@@ -216,7 +216,7 @@ def lookup_fhir_class_path(
 
 def lookup_fhir_class(
     resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
-) -> Type["FHIRAbstractModel"]:  # noqa: E999
+) -> Type[FHIRAbstractModel]:  # noqa: E999
     factory_paths: List[str] = ["fhir", "resources"]
     if (
         FHIR_VERSION["DEFAULT"].value != fhir_release.name
@@ -234,7 +234,7 @@ def lookup_fhir_class(
 
 
 CONTAINS_PY_PACKAGE: Pattern = re.compile(
-    r"^\${(?P<package_name>[0-9a-z._]+)\}", re.IGNORECASE
+    r"^\${(?P<package_name>[0-9a-z._]+)}", re.IGNORECASE
 )
 
 
@@ -367,8 +367,8 @@ class PathInfoContext:
         parts = pathname.split(".")
         resource_type = parts[0]
         model_path = lookup_fhir_class_path(resource_type, fhir_release=fhir_release)
-        model_class: Type["FHIRAbstractModel"] = cast(
-            Type["FHIRAbstractModel"], import_string(cast(Text, model_path))
+        model_class: Type[FHIRAbstractModel] = cast(
+            Type[FHIRAbstractModel], import_string(cast(Text, model_path))
         )
         new_path: Text = parts[0]
         context: Optional["PathInfoContext"] = None
