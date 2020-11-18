@@ -5,7 +5,9 @@ History
 0.10.4 (unreleased)
 -------------------
 
-- fixes ``FHIRAbstractModel`` was imported on typing enabled condition at ``utils`` module.
+- fixes ``FHIRAbstractModel`` comparing at ``utils`` module for BundleWrapper.
+
+- ``fallback_callable`` helper function is available at ``utils`` module.
 
 
 0.10.3 (2020-11-17)
