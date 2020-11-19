@@ -55,8 +55,7 @@ LOCAL_TIMEZONE: Optional[datetime.timezone] = None
 
 
 def fallback_callable(*args, **kwargs):
-    """Always return None
-    """
+    """Always return None"""
     return None
 
 
