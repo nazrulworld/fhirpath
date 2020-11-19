@@ -524,7 +524,7 @@ def test_in_search(es_data, engine):
 def test_composite_param_search(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Observation")
-    params = (("code-value-quantity", "http://loinc.org|718-7&7.2"),)
+    params = (("code-value-quantity", "http://loinc.org|718-7$7.2"),)
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search()

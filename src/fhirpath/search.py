@@ -182,8 +182,7 @@ class SearchContext(object):
             elif len(raw_value) == 1:
                 raw_value = raw_value[0]
 
-            values: List = list()
-            self.normalize_param_value(raw_value, sp, values)
+            values: List = self.normalize_param_value(raw_value, sp, values)
 
             if len(values) == 0:
                 # empty parameters are not considered an error, they should be ignored
@@ -199,20 +198,20 @@ class SearchContext(object):
         return normalized_params
 
     def normalize_param_value(
-        self, raw_value: Union[List, str], search_param: SearchParameter, container
+        self, raw_value: Union[List, str], search_param: SearchParameter
     ):
-        """ """
+        normalized_values = []
         if not raw_value:
-            return
+            return []
 
         elif isinstance(raw_value, list):
             bucket: List[str] = list()
             for rv in raw_value:
-                self.normalize_param_value(rv, search_param, bucket)
+                bucket.extend(self.normalize_param_value(rv, search_param))
             if len(bucket) == 1:
-                container.append(bucket[0])
+                normalized_values.append(bucket[0])
             else:
-                container.append(bucket)
+                normalized_values.append(bucket)
 
         else:
             escape_ = has_escape_comma(raw_value)
@@ -237,9 +236,11 @@ class SearchContext(object):
                         break
                 bucket_.append((comparison_operator, val_))
             if len(bucket_) == 1:
-                container.append(bucket_[0])
+                normalized_values.append(bucket_[0])
             else:
-                container.append((None, bucket_))
+                normalized_values.append((None, bucket_))
+
+        return normalized_values
 
     def _get_search_param_definitions(self, param_name) -> List[SearchParameter]:
         """ """
@@ -271,45 +272,39 @@ class SearchContext(object):
             raise NotImplementedError(
                 "Currently duplicate composite type params are not allowed or supported"
             )
-        value_parts = raw_value[0].split("&")
-        assert len(value_parts) == 2
-
-        composite_bucket = list()
-
-        part1 = [
-            ".".join([param_def.expression, param_def.component[0]["expression"]]),
-            value_parts[0],
-        ]
-        part1_param_value = list()
-        self.normalize_param_value(part1[1], param_def, part1_param_value)
-        if len(part1_param_value) == 1:
-            part1_param_value = part1_param_value[0]
-        composite_bucket.append(
-            (self._dotted_path_to_path_context(part1[0]), part1_param_value, modifier)
-        )
-        part2 = list()
-        for expr in param_def.component[1]["expression"].split("|"):
-            part_ = [
-                ".".join([param_def.expression, expr.strip()]),
-                value_parts[1],
-            ]
-            part2.append(part_)
-        part2_param_value = list()
-        self.normalize_param_value(part2[0][1], param_def, part2_param_value)
-
-        if len(part2_param_value) == 1:
-            part2_param_value = part2_param_value[0]
-        part2_temp = list()
-        for pr in part2:
-            part2_temp.append(
-                (self._dotted_path_to_path_context(pr[0]), part2_param_value, modifier)
+        value_parts = raw_value[0].split("$")
+        if len(value_parts) != len(param_def.component):
+            raise ValueError(
+                f"Composite search param {param_def.name} expects {len(param_def.component)} "
+                f"values separated by a '$', got {len(value_parts)}."
             )
-        if len(part2_temp) == 1:
-            part2_temp = part2_temp[0]
 
-        composite_bucket.append(part2_temp)
+        if any("|" in component["expression"] for component in param_def.component):
+            raise NotImplementedError("Can't perform search on choice elements.")
 
-        return composite_bucket
+        return [
+            self.parse_composite_parameter_component(
+	            component, value_part, param_def, modifier
+            )
+            for component, value_part in zip(param_def.component, value_parts)
+	    ]
+
+    def parse_composite_parameter_component(
+        self, component, raw_value, param_def, modifier
+    ):
+        component_dotted_path = ".".join(
+            [param_def.expression, component["expression"]]
+        )
+
+        component_param_value = self.normalize_param_value(raw_value, param_def)
+        if len(component_param_value) == 1:
+            component_param_value = component_param_value[0]
+
+        return (
+            self._dotted_path_to_path_context(component_dotted_path),
+            component_param_value,
+            modifier,
+        )
 
 
 @implementer(ISearch)
@@ -712,7 +707,12 @@ class Search(object):
                 terms = list()
                 for nd in normalized_data:
                     self.add_term(nd, terms)
-                return G_(*terms, path=None, type_=GroupType.DECOUPLED)
+                # I think we'll be there only in the case of composite search params
+                # The Group path is only needed to build nested queries so using
+                # whichever component path should be ok. This could still use a refacto though...
+                group_term = G_(*terms, path=nd[0], type_=GroupType.COUPLED)
+                terms_container.append(group_term)
+                return group_term
 
             else:
                 normalized_data = normalized_data[0]
