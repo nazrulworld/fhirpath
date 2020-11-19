@@ -2,7 +2,7 @@
 History
 =======
 
-0.10.4 (unreleased)
+0.10.4 (2020-11-19)
 -------------------
 
 - fixes ``FHIRAbstractModel`` comparing at ``utils`` module for BundleWrapper.
