@@ -688,8 +688,7 @@ def get_local_timezone() -> datetime.timezone:
 def timestamp_utc() -> datetime.datetime:
     """UTC datetime with timezone offset"""
     dt_now = datetime.datetime.utcnow()
-    dt_now.replace(tzinfo=datetime.timezone.utc)
-    return dt_now
+    return dt_now.replace(tzinfo=datetime.timezone.utc)
 
 
 def timestamp_local() -> datetime.datetime:
