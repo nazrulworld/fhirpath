@@ -182,7 +182,7 @@ class SearchContext(object):
             elif len(raw_value) == 1:
                 raw_value = raw_value[0]
 
-            values: List = self.normalize_param_value(raw_value, sp, values)
+            values: List = self.normalize_param_value(raw_value, sp)
 
             if len(values) == 0:
                 # empty parameters are not considered an error, they should be ignored
@@ -284,10 +284,10 @@ class SearchContext(object):
 
         return [
             self.parse_composite_parameter_component(
-	            component, value_part, param_def, modifier
+                component, value_part, param_def, modifier
             )
             for component, value_part in zip(param_def.component, value_parts)
-	    ]
+        ]
 
     def parse_composite_parameter_component(
         self, component, raw_value, param_def, modifier
