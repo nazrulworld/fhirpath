@@ -5,7 +5,7 @@ History
 0.10.5 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- fixes ``EngineResult.extract_references``.
 
 
 0.10.4 (2020-11-19)

@@ -134,7 +134,8 @@ class EngineResult(object):
         """
         if search_param.type != "reference":
             raise ValueError(
-                "You cannot extract a reference for a search parameter that is not of type reference."
+                "You cannot extract a reference for a search parameter "
+                "that is not of type reference."
             )
         if not isinstance(search_param.expression, str):
             raise ValueError(
