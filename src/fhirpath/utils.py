@@ -572,18 +572,29 @@ class BundleWrapper:
 
     @staticmethod
     def calculate_fhir_base_url(url: URL) -> URL:
-        """ """
+        """
+        r"(?P<history>/_history)?)|(?P<search>/_search))?)?"
+        """
         _url = url
+        raw_path = url.raw_path
+        if len(raw_path) > 1 and raw_path.endswith("/"):
+            raw_path = raw_path[:-1]
+
         SERVER_PATH_MATCH = re.compile(
-            r"^/([A-Za-z0-9\-.%@]*/)*"
-            r"((?P<resource_name>Task|Patient)(/(?P<resource_id>[A-Za-z0-9\-.]{1,64}"
-            r"(?P<history>/_history)?)|(?P<search>/_search))?)?"
-            r"(?P<graphql>/\$graphql/?)?"
+            r"((/(?P<resource_name>Task|Patient)"
+            r"("
+            r"(?P<search2>/_search)|"
+            r"(?P<resource_id>/[A-Za-z0-9\-.]{1,64})(?P<history>/_history)?"
+            r")?"
+            r")|(?P<search1>/_search))?"
+            r"(?P<graphql>/\$graphql)?$"
         )
-        matches = SERVER_PATH_MATCH.match(url.raw_path)
+        matches = SERVER_PATH_MATCH.search(raw_path)
         group_dict = {}
         if matches:
             group_dict = matches.groupdict()
+        print(matches)
+        print(group_dict)
 
         if group_dict.get("resource_name"):
             _url = _url.parent
@@ -591,8 +602,11 @@ class BundleWrapper:
                 _url = _url.parent
                 if group_dict.get("history"):
                     _url = _url.parent
-            if group_dict.get("search"):
+            elif group_dict.get("search2"):
                 _url = _url.parent
+        elif group_dict.get("search1"):
+            _url = _url.parent
+
         if group_dict.get("graphql"):
             _url = _url.parent
         return _url
