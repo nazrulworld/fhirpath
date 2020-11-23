@@ -279,9 +279,6 @@ class SearchContext(object):
                 f"values separated by a '$', got {len(value_parts)}."
             )
 
-        if any("|" in component["expression"] for component in param_def.component):
-            raise NotImplementedError("Can't perform search on choice elements.")
-
         return [
             self.parse_composite_parameter_component(
                 component, value_part, param_def, modifier
@@ -292,20 +289,23 @@ class SearchContext(object):
     def parse_composite_parameter_component(
         self, component, raw_value, param_def, modifier
     ):
-        component_dotted_path = ".".join(
-            [param_def.expression, component["expression"]]
-        )
+        result = []
+        for expr in component["expression"].split("|"):	
+            component_dotted_path = ".".join([param_def.expression, expr.strip()])
 
-        component_param_value = self.normalize_param_value(raw_value, param_def)
-        if len(component_param_value) == 1:
-            component_param_value = component_param_value[0]
+            component_param_value = self.normalize_param_value(raw_value, param_def)
+            if len(component_param_value) == 1:
+                component_param_value = component_param_value[0]
 
-        return (
-            self._dotted_path_to_path_context(component_dotted_path),
-            component_param_value,
-            modifier,
-        )
+            result.append((
+                self._dotted_path_to_path_context(component_dotted_path),
+                component_param_value,
+                modifier,
+            ))
 
+        if len(result) == 1:
+            return result[0]
+        return result
 
 @implementer(ISearch)
 class Search(object):
@@ -709,7 +709,8 @@ class Search(object):
                     self.add_term(nd, terms)
                 # I think we'll be there only in the case of composite search params
                 # The Group path is only needed to build nested queries so using
-                # whichever component path should be ok. This could still use a refacto though...
+                # whichever component path should be ok.
+                # This could still use a refacto though...
                 group_term = G_(*terms, path=nd[0], type_=GroupType.COUPLED)
                 terms_container.append(group_term)
                 return group_term

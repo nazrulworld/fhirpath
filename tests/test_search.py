@@ -141,7 +141,7 @@ def test_parameter_normalization(engine):
 def test_composite_parameter_normalization(engine):
     """ """
     context = SearchContext(engine, "ChargeItemDefinition")
-    normalize_value = context.normalize_param("context-type-quantity", ["HL7&99"])[0]
+    normalize_value = context.normalize_param("context-type-quantity", ["HL7$99"])[0]
     assert len(normalize_value) == 2
     assert normalize_value[0][0].path.endswith(".code")
     # value.as(Quantity) | value.as(Range)
@@ -150,7 +150,7 @@ def test_composite_parameter_normalization(engine):
 
     context = SearchContext(engine, "Observation")
     normalize_value = context.normalize_param(
-        "code-value-quantity", ["http://loinc.org|11557-6&6.2"]
+        "code-value-quantity", ["http://loinc.org|11557-6$6.2"]
     )[0]
     assert isinstance(normalize_value[1], tuple)
 
@@ -523,8 +523,8 @@ def test_in_search(es_data, engine):
 
 def test_composite_param_search(es_data, engine):
     """ """
-    search_context = SearchContext(engine, "Observation")
-    params = (("code-value-quantity", "http://loinc.org|718-7$7.2"),)
+    search_context = SearchContext(engine, "DocumentReference")
+    params = (("relationship", "appends$ref1"),)
     fhir_search = Search(search_context, params=params)
 
     bundle = fhir_search()
