@@ -5,6 +5,7 @@ History
 0.10.5 (unreleased)
 -------------------
 
+- fixes how composite search params are parsed.
 - fixes ``EngineResult.extract_references``.
 
 

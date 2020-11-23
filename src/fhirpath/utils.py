@@ -543,11 +543,14 @@ class BundleWrapper:
         includes: List,
         url: URL,
         bundle_type="searchset",
+        *,
+        base_url: URL = None,
         init_data: Dict[str, Any] = None,
     ):
         """ """
         self.fhir_version = engine.fhir_release
         self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
+        self.base_url: URL = base_url or BundleWrapper.calculate_fhir_base_url(url)
         if init_data:
             self.data = init_data
         else:
@@ -566,6 +569,33 @@ class BundleWrapper:
             self.attach_entry(_include, "include")
 
         self.attach_links(url, len(result.body))
+
+    @staticmethod
+    def calculate_fhir_base_url(url: URL) -> URL:
+        """ """
+        _url = url
+        SERVER_PATH_MATCH = re.compile(
+            r"^/([A-Za-z0-9\-.%@]*/)*"
+            r"((?P<resource_name>Task|Patient)(/(?P<resource_id>[A-Za-z0-9\-.]{1,64}"
+            r"(?P<history>/_history)?)|(?P<search>/_search))?)?"
+            r"(?P<graphql>/\$graphql/?)?"
+        )
+        matches = SERVER_PATH_MATCH.match(url.raw_path)
+        group_dict = {}
+        if matches:
+            group_dict = matches.groupdict()
+
+        if group_dict.get("resource_name"):
+            _url = _url.parent
+            if group_dict.get("resource_id"):
+                _url = _url.parent
+                if group_dict.get("history"):
+                    _url = _url.parent
+            if group_dict.get("search"):
+                _url = _url.parent
+        if group_dict.get("graphql"):
+            _url = _url.parent
+        return _url
 
     @staticmethod
     def init_data() -> Dict[str, Any]:
@@ -688,8 +718,7 @@ def get_local_timezone() -> datetime.timezone:
 def timestamp_utc() -> datetime.datetime:
     """UTC datetime with timezone offset"""
     dt_now = datetime.datetime.utcnow()
-    dt_now.replace(tzinfo=datetime.timezone.utc)
-    return dt_now
+    return dt_now.replace(tzinfo=datetime.timezone.utc)
 
 
 def timestamp_local() -> datetime.datetime:
