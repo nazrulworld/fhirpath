@@ -3,6 +3,7 @@ import logging
 import re
 from typing import (
     TYPE_CHECKING,
+    Any,
     Dict,
     List,
     Optional,
@@ -200,7 +201,7 @@ class SearchContext(object):
     def normalize_param_value(
         self, raw_value: Union[List, str], search_param: SearchParameter
     ):
-        normalized_values = []
+        normalized_values: List[Any] = []
         if not raw_value:
             return []
 
@@ -290,22 +291,25 @@ class SearchContext(object):
         self, component, raw_value, param_def, modifier
     ):
         result = []
-        for expr in component["expression"].split("|"):	
+        for expr in component["expression"].split("|"):
             component_dotted_path = ".".join([param_def.expression, expr.strip()])
 
             component_param_value = self.normalize_param_value(raw_value, param_def)
             if len(component_param_value) == 1:
                 component_param_value = component_param_value[0]
 
-            result.append((
-                self._dotted_path_to_path_context(component_dotted_path),
-                component_param_value,
-                modifier,
-            ))
+            result.append(
+                (
+                    self._dotted_path_to_path_context(component_dotted_path),
+                    component_param_value,
+                    modifier,
+                )
+            )
 
         if len(result) == 1:
             return result[0]
         return result
+
 
 @implementer(ISearch)
 class Search(object):

@@ -5,7 +5,9 @@ History
 0.10.5 (unreleased)
 -------------------
 
-- fixes ``EngineResult.extract_references``.
+- fixes ``EngineResult.extract_references``. [Jason Paumier]
+
+- fixes how composite search params are parsed. [Jason Paumier]
 
 
 0.10.4 (2020-11-19)
