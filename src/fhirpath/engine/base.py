@@ -132,51 +132,60 @@ class EngineResult(object):
         Returns a dict like:
         {"Patient": ["list", "of", "referenced", "patient", "ids"], "Observation": []}
         """
-        assert search_param.type == "reference"
-        assert isinstance(
-            search_param.expression, str
-        ), f"'expression' is not defined for search parameter {search_param.name}"
+        if search_param.type != "reference":
+            raise ValueError(
+                "You cannot extract a reference for a search parameter "
+                "that is not of type reference."
+            )
+        if not isinstance(search_param.expression, str):
+            raise ValueError(
+                f"'expression' is not defined for search parameter {search_param.name}"
+            )
+
         ids: Dict = defaultdict(list)
+
+        # use ElementPath to parse fhirpath expressions like .where()
+        path_element = ElementPath(search_param.expression)
 
         def browse(node, path):
             parts = path.split(".", 1)
 
             if len(parts) == 0:
                 return node
+            elif parts[0] not in node:
+                return None
             elif len(parts) == 1:
                 return node[parts[0]]
             else:
                 return browse(node[parts[0]], parts[1])
 
         def append_ref(ref_attr):
-            if "reference" not in ref_attr:
-                raise ValidationError(f"attribute {ref_attr} is not a Reference")
-            # FIXME: this does not work with references using absolute URLs
-            referenced_resource, _id = ref_attr["reference"].split("/")
-            ids[referenced_resource].append(_id)
-
-        if not search_param.expression:
-            raise Exception()
-
-        # use ElementPath to parse fhirpath expressions like .where()
-        path_element = ElementPath(search_param.expression)
-        # remove the resource type from the path
-        _, path = path_element._path.split(".", 1)
-        for row in self.body:
-            resource = row[0]
-            ref_attribute = browse(resource, path)
-
             # if the searchparam expression contains .where() statement, skip references
             # that do not match the required resource type
             if (
                 path_element._where
                 and path_element._where.type == WhereConstraintType.T2
             ):
-                ref_target_type = ref_attribute["reference"].split("/")[0]
+                ref_target_type = ref_attr["reference"].split("/")[0]
                 if path_element._where.value != ref_target_type:
-                    continue
+                    return
 
-            if isinstance(ref_attribute, list):
+            if "reference" not in ref_attr:
+                return
+
+            # FIXME: this does not work with references using absolute URLs
+            referenced_resource, _id = ref_attr["reference"].split("/")
+            ids[referenced_resource].append(_id)
+
+        # remove the resource type from the path
+        _, path = path_element._path.split(".", 1)
+        for row in self.body:
+            resource = row[0]
+            ref_attribute = browse(resource, path)
+
+            if ref_attribute is None:
+                continue
+            elif isinstance(ref_attribute, list):
                 for r in ref_attribute:
                     append_ref(r)
             else:
