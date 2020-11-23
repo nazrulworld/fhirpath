@@ -207,8 +207,9 @@ def _setup_es_index(es_conn):
     chargeitem_mapping = fhir_resource_mapping("ChargeItem")
     observation_mapping = fhir_resource_mapping("Observation")
     task_mapping = fhir_resource_mapping("Task")
-    careplan_mapping = fhir_resource_mapping("Encounter")
-    encounter_mapping = fhir_resource_mapping("CarePlan")
+    encounter_mapping = fhir_resource_mapping("Encounter")
+    careplan_mapping = fhir_resource_mapping("CarePlan")
+    documentreference_mapping = fhir_resource_mapping("DocumentReference")
 
     body["mappings"]["properties"]["organization_resource"] = org_mapping
     body["mappings"]["properties"]["patient_resource"] = patient_mapping
@@ -221,6 +222,7 @@ def _setup_es_index(es_conn):
     body["mappings"]["properties"]["task_resource"] = task_mapping
     body["mappings"]["properties"]["encounter_resource"] = encounter_mapping
     body["mappings"]["properties"]["careplan_resource"] = careplan_mapping
+    body["mappings"]["properties"]["documentreference_resource"] = documentreference_mapping
 
     conn.indices.create(ES_INDEX_NAME_REAL, body=body)
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
@@ -334,6 +336,14 @@ def _load_es_data(es_conn):
     bulk_data = [
         {"index": {"_id": careplan_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
         careplan_data,
+    ]
+    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
+    assert res["errors"] is False
+
+    documentreference_data = _make_index_item("DocumentReference")
+    bulk_data = [
+        {"index": {"_id": documentreference_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
+        documentreference_data,
     ]
     res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
     assert res["errors"] is False

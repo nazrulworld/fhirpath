@@ -5,7 +5,7 @@ History
 0.10.5 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- fixes how composite search params are parsed.
 
 
 0.10.4 (2020-11-19)
