@@ -155,6 +155,36 @@ def builder(func):
     return _copy
 
 
+def lookup_all_fhir_domain_resource_classes(
+    fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
+) -> Dict[str, str]:
+    """ """
+    container: Dict[str, str] = {}
+    fhir_release = FHIR_VERSION.normalize(fhir_release)
+    pkg = "fhir.resources"
+    if fhir_release.name != FHIR_VERSION.DEFAULT.value:
+        pkg += f".{fhir_release.name}"
+
+    prime_module_type: ModuleType = import_module(pkg)
+
+    for _importer, module_name, ispkg in pkgutil.walk_packages(
+        prime_module_type.__path__,  # type: ignore
+        prime_module_type.__name__ + ".",
+        onerror=lambda x: None,
+    ):
+        if ispkg or (len(pkg.split(".")) + 1) < len(module_name.split(".")):
+            continue
+
+        module_type: ModuleType = import_module(module_name)
+
+        for klass_name, _klass in inspect.getmembers(module_type, inspect.isclass):
+            if inspect.getmro(_klass)[1].__name__ != "DomainResource":
+                continue
+
+            container[klass_name] = f"{_klass.__module__}.{klass_name}"
+    return container
+
+
 def lookup_fhir_class_path(
     resource_type: Text,
     cache: bool = True,
@@ -536,6 +566,8 @@ class PathInfoContextProxy(Proxy):
 class BundleWrapper:
     """ """
 
+    FHIR_REST_SERVER_PATH_PATTERN: Optional[Pattern] = None
+
     def __init__(
         self,
         engine,
@@ -570,26 +602,46 @@ class BundleWrapper:
 
         self.attach_links(url, len(result.body))
 
+    @classmethod
+    def fhir_rest_server_path_pattern(cls):
+        """ """
+        if cls.FHIR_REST_SERVER_PATH_PATTERN is None:
+            all_resource_domain_types = set(
+                list(lookup_all_fhir_domain_resource_classes(FHIR_VERSION.R4).keys())
+                + list(
+                    lookup_all_fhir_domain_resource_classes(FHIR_VERSION.STU3).keys()
+                )
+                + list(
+                    lookup_all_fhir_domain_resource_classes(FHIR_VERSION.DSTU2).keys()
+                )
+            )
+            all_resources = "|".join(all_resource_domain_types)
+
+            pattern = re.compile(
+                r"(?:(/(?P<resource_name>" + all_resources + r")"
+                r"(?:"
+                r"(?P<search2>/_search)|"
+                r"(?P<resource_id>/[A-Za-z0-9\-.]{1,64})(?P<history>/_history)?"
+                r")?"
+                r")|(?P<search1>/_search))?"
+                r"(?P<graphql>/\$graphql)?$"
+            )
+            cls.FHIR_REST_SERVER_PATH_PATTERN = pattern
+
+        return cls.FHIR_REST_SERVER_PATH_PATTERN
+
     @staticmethod
     def calculate_fhir_base_url(url: URL) -> URL:
-        """
-        r"(?P<history>/_history)?)|(?P<search>/_search))?)?"
+        """https://www.hl7.org/fhir/Bundle.html
+        Section: 2.36.4 Resource URL & Uniqueness rules in a bundle.
+        Section: 2.36.4.1 Resolving references in Bundles.
         """
         _url = url
         raw_path = url.raw_path
         if len(raw_path) > 1 and raw_path.endswith("/"):
             raw_path = raw_path[:-1]
 
-        SERVER_PATH_MATCH = re.compile(
-            r"((/(?P<resource_name>Task|Patient)"
-            r"("
-            r"(?P<search2>/_search)|"
-            r"(?P<resource_id>/[A-Za-z0-9\-.]{1,64})(?P<history>/_history)?"
-            r")?"
-            r")|(?P<search1>/_search))?"
-            r"(?P<graphql>/\$graphql)?$"
-        )
-        matches = SERVER_PATH_MATCH.search(raw_path)
+        matches = BundleWrapper.fhir_rest_server_path_pattern().search(raw_path)
         group_dict = {}
         if matches:
             group_dict = matches.groupdict()
@@ -713,6 +765,17 @@ class BundleWrapper:
             self.data["resourceType"] = self.bundle_model.get_resource_type()
             return self.data
         return self.bundle_model.parse_obj(self.data)
+
+    def resolve_absolute_uri(self, relative_path: str) -> URL:
+        """ """
+        try:
+            resource, id = relative_path.split("/")
+        except ValueError:
+            raise ValueError(
+                f"'{relative_path}' is not valid relative path. "
+                "Format 'ResourceType/ResourceID'"
+            )
+        return self.base_url / resource / id
 
     def json(self):
         """ """

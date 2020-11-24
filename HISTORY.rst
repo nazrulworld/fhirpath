@@ -5,6 +5,13 @@ History
 0.10.5 (unreleased)
 -------------------
 
+Improvement
+
+- ``BundleWrapper`` is providing two optional methods, ``calculate_fhir_base_url`` and ``resolve_absolute_uri`` and is now also taking optional parameter ``base_url``.
+
+
+Fixes
+
 - fixes ``EngineResult.extract_references``. [Jason Paumier]
 
 - fixes how composite search params are parsed. [Jason Paumier]
