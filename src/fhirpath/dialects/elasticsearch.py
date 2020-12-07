@@ -111,9 +111,11 @@ class ElasticSearchDialect(DialectBase):
             # TODO is there a better way to search on all resource types?
             # TODO does it work if both all_resources and multiple_ are True?
             q = {"multi_match": {"query": value, "fields": [path]}}
-        elif match_type == TermMatchType.EXACT:
+        elif match_type == TermMatchType.EXACT and not multiple_:
             q = {"term": {f"{path}.raw": value}}
-        elif multiple_:
+        elif match_type == TermMatchType.EXACT and multiple_:
+            q = {"terms": {f"{path}.raw": value}}
+        elif match_type != TermMatchType.EXACT and multiple_:
             q = {"terms": {path: value}}
         else:
             q = {"match": {path: value}}
