@@ -60,6 +60,7 @@ async def test_dialect_generated_raw_query(es_data, engine):
         ("name", "Saint"),
         ("email", "demo1@example.com"),
         ("phone", "2562000002"),
+        ("given:exact", "Eelector"),
     )
     search_tool = Search(context=search_context, params=params)
     result_query = search_tool.build()

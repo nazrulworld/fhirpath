@@ -11,6 +11,7 @@ Improvement
 
 
 Fixes
+- fixes ``ElasticSearchDialect.create_term`` [Kartik Sayani]
 
 - fixes ``EngineResult.extract_references``. [Jason Paumier]
 
