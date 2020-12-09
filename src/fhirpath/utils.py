@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Match,
@@ -645,9 +646,6 @@ class BundleWrapper:
         group_dict = {}
         if matches:
             group_dict = matches.groupdict()
-        print(matches)
-        print(group_dict)
-
         if group_dict.get("resource_name"):
             _url = _url.parent
             if group_dict.get("resource_id"):

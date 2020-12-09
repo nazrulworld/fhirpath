@@ -17,6 +17,7 @@ Fixes
 
 - fixes how composite search params are parsed. [Jason Paumier]
 
+- Issue#28 `Nested GroupTerm search returns no matches <https://github.com/nazrulworld/fhirpath/issues/28>`_
 
 0.10.4 (2020-11-19)
 -------------------

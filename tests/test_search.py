@@ -266,21 +266,21 @@ def test_create_codeableconcept_term(engine):
             "|performer",
         ],
     )[0]
-    term = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
-    term.finalize(fhir_search.context.engine)
+    terms = fhir_search.create_codeableconcept_term(path_, value_pack, modifier)
+    [t.finalize(fhir_search.context.engine) for t in terms]
 
-    assert IGroupTerm.providedBy(term.terms[0]) is True
-    code1_group = term.terms[0]
+    assert IGroupTerm.providedBy(terms[0]) is True
+    code1_group = terms[0]
     assert code1_group.terms[0].path.path == "Task.code.coding.system"
     assert code1_group.terms[1].path.path == "Task.code.coding.code"
 
-    assert IGroupTerm.providedBy(term.terms[1]) is True
-    assert IGroupTerm.providedBy(term.terms[2]) is True
+    assert IGroupTerm.providedBy(terms[1]) is True
+    assert IGroupTerm.providedBy(terms[2]) is True
 
-    code2_group = term.terms[1]
+    code2_group = terms[1]
     assert code2_group.terms[0].path.path == "Task.code.coding.system"
 
-    code3_group = term.terms[2]
+    code3_group = terms[2]
     assert code3_group.terms[0].path.path == "Task.code.coding.code"
 
     path_, value_pack, modifier = context.normalize_param("code:text", ["Performer"])[0]
@@ -310,16 +310,16 @@ def test_create_identifier_term(engine):
             "|performer",
         ],
     )[0]
-    term = fhir_search.create_identifier_term(path_, value_pack, modifier)
-    term.finalize(fhir_search.context.engine)
+    terms = fhir_search.create_identifier_term(path_, value_pack, modifier)
+    [t.finalize(fhir_search.context.engine) for t in terms]
 
-    assert IGroupTerm.providedBy(term.terms[0]) is True
-    identifier_group = term.terms[0]
+    assert IGroupTerm.providedBy(terms[0]) is True
+    identifier_group = terms[0]
     assert identifier_group.terms[0].path.path == "Task.identifier.system"
     assert identifier_group.terms[1].path.path == "Task.identifier.value"
 
-    assert term.terms[1].terms[0].path.path == "Task.identifier.system"
-    assert term.terms[2].terms[0].path.path == "Task.identifier.value"
+    assert terms[1].terms[0].path.path == "Task.identifier.system"
+    assert terms[2].terms[0].path.path == "Task.identifier.value"
 
     path_, value_pack, modifier = context.normalize_param(
         "identifier:text", ["Performer"]
@@ -351,17 +351,17 @@ def test_create_quantity_term(engine):
     path_, value_pack, modifier = context.normalize_param(
         "quantity", ["5.4|http://unitsofmeasure.org|mg", "lt5.1||mg", "5.40e-3"]
     )[0]
-    term = fhir_search.create_quantity_term(path_, value_pack, modifier)
-    term.finalize(fhir_search.context.engine)
+    terms = fhir_search.create_quantity_term(path_, value_pack, modifier)
+    [t.finalize(fhir_search.context.engine) for t in terms]
 
-    assert IGroupTerm.providedBy(term.terms[0]) is True
-    quantity_group = term.terms[0]
+    assert IGroupTerm.providedBy(terms[0]) is True
+    quantity_group = terms[0]
     assert quantity_group.terms[0].path.path == "ChargeItem.quantity.value"
     assert quantity_group.terms[1].path.path == "ChargeItem.quantity.system"
     assert quantity_group.terms[2].path.path == "ChargeItem.quantity.code"
 
-    assert term.terms[1].terms[1].path.path == "ChargeItem.quantity.unit"
-    assert float(term.terms[2].value.value) == float("5.40e-3")
+    assert terms[1].terms[1].path.path == "ChargeItem.quantity.unit"
+    assert float(terms[2].value.value) == float("5.40e-3")
 
 
 def test_sa_term(engine):
@@ -436,7 +436,8 @@ def test_build_query_from_search_params(engine):
     builder.finalize()
     query = builder.get_query()
     assert len(query.get_element()) == 1
-    assert len(query.get_where()) == 3
+    # 4 + 1
+    assert len(query.get_where()) == 5
 
 
 def test_build_result(engine):
@@ -1612,3 +1613,14 @@ async def test_async_searchparam_summary_count(es_data, async_engine):
     result = await AsyncSearch(search_context, params=(("_summary", "count"),))()
     assert result.entry == []
     assert result.total == 1
+
+
+def test_search_patient_with_name(es_data, engine):
+    """Issue:28"""
+    # little bit complex
+    search_context = SearchContext(engine, "Patient")
+    params = (("name", "Jonson"), ("name", "Saint"))
+
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1

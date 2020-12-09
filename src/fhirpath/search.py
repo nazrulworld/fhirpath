@@ -772,8 +772,10 @@ class Search(object):
             term = term_factory(path_, param_value, modifier)
         else:
             term = self.create_term(path_, param_value, modifier)
-
-        terms_container.append(term)
+        if isinstance(term, list):
+            terms_container.extend(term)
+        else:
+            terms_container.append(term)
 
     def create_identifier_term(self, path_, param_value, modifier):
         """ """
@@ -782,7 +784,7 @@ class Search(object):
                 self.create_identifier_term(path_, value, modifier)
                 for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_identifier_term(path_, param_value, modifier)
@@ -855,7 +857,7 @@ class Search(object):
                 self.create_quantity_term(path_, value, modifier)
                 for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_quantity_term(path_, param_value, modifier)
@@ -934,7 +936,7 @@ class Search(object):
             terms = [
                 self.create_coding_term(path_, value, modifier) for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_coding_term(path_, param_value, modifier)
@@ -1010,7 +1012,7 @@ class Search(object):
                 self.create_codeableconcept_term(path_, value, modifier)
                 for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_codeableconcept_term(path_, param_value, modifier)
@@ -1056,7 +1058,7 @@ class Search(object):
             terms = [
                 self.create_address_term(path_, val, modifier) for val in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_address_term(path_, param_value, modifier)
@@ -1098,7 +1100,7 @@ class Search(object):
                 self.create_contactpoint_term(path_, val, modifier)
                 for val in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_contactpoint_term(path_, param_value, modifier)
@@ -1149,7 +1151,7 @@ class Search(object):
             terms = [
                 self.create_humanname_term(path_, val, modifier) for val in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_humanname_term(path_, param_value, modifier)
@@ -1192,7 +1194,7 @@ class Search(object):
                 self.create_reference_term(path_, value, modifier)
                 for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_reference_term(path_, param_value, modifier)
@@ -1248,7 +1250,7 @@ class Search(object):
             terms = [
                 self.create_money_term(path_, value, modifier) for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_money_term(path_, param_value, modifier)
@@ -1319,7 +1321,7 @@ class Search(object):
                 self.single_valued_period_term(path_, value, modifier)
                 for value in param_value
             ]
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+            return terms
 
         elif isinstance(param_value, tuple):
             return self.single_valued_period_term(path_, param_value, modifier)

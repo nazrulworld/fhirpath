@@ -8,6 +8,15 @@
                 "Patient"
             ],
             "family": "Saint"
+        },
+        {
+            "text": "Sir Jonson Herbar",
+            "use": "official",
+            "given": [
+                "Sir",
+                "Jonson"
+            ],
+            "family": "Herbar"
         }
     ],
     "contact": [
@@ -47,7 +56,7 @@
             "value": "demo1@example.com"
         }
     ],
-    "birthDate": "1995-12-25", 
+    "birthDate": "1995-12-25",
     "gender": "male",
     "resourceType": "Patient",
     "active": true,
