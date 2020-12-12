@@ -143,12 +143,13 @@ def load_organizations_data(es_conn, count=1):
 
     while count > added:
         organization_data = _make_index_item("Organization")
-        bulk_data = [
-            {"index": {"_id": organization_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-            organization_data,
-        ]
-        res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-        assert res["errors"] is False
+        res = conn.create(
+            index=ES_INDEX_NAME_REAL,
+            id=organization_data["uuid"],
+            doc_type=DOC_TYPE,
+            body=organization_data,
+        )
+        assert res["result"] == "created"
         added += 1
         if added % 100 == 0:
             time.sleep(1)
@@ -222,7 +223,9 @@ def _setup_es_index(es_conn):
     body["mappings"]["properties"]["task_resource"] = task_mapping
     body["mappings"]["properties"]["encounter_resource"] = encounter_mapping
     body["mappings"]["properties"]["careplan_resource"] = careplan_mapping
-    body["mappings"]["properties"]["documentreference_resource"] = documentreference_mapping
+    body["mappings"]["properties"][
+        "documentreference_resource"
+    ] = documentreference_mapping
 
     conn.indices.create(ES_INDEX_NAME_REAL, body=body)
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
@@ -264,89 +267,104 @@ def _load_es_data(es_conn):
     """ """
     conn = es_conn.raw_connection
     organization_data = _make_index_item("Organization")
-    bulk_data = [
-        {"index": {"_id": organization_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        organization_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.index(
+        index=ES_INDEX_NAME_REAL,
+        id=organization_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=organization_data,
+    )
+    assert res["result"] == "created"
 
     patient_data = _make_index_item("Patient")
-    bulk_data = [
-        {"index": {"_id": patient_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        patient_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=patient_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=patient_data,
+    )
+    assert res["result"] == "created"
 
     practitioner_data = _make_index_item("Practitioner")
-    bulk_data = [
-        {"index": {"_id": practitioner_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        practitioner_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=practitioner_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=practitioner_data,
+    )
+    assert res["result"] == "created"
 
     medicationrequest_data = _make_index_item("MedicationRequest")
-    bulk_data = [
-        {
-            "index": {
-                "_id": medicationrequest_data["uuid"],
-                "_index": ES_INDEX_NAME_REAL,
-            }
-        },
-        medicationrequest_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=medicationrequest_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=medicationrequest_data,
+    )
+    assert res["result"] == "created"
 
     chargeitem_data = _make_index_item("ChargeItem")
-    bulk_data = [
-        {"index": {"_id": chargeitem_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        chargeitem_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=chargeitem_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=chargeitem_data,
+    )
+    assert res["result"] == "created"
 
     observation_data = _make_index_item("Observation")
-    bulk_data = [
-        {"index": {"_id": observation_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        observation_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=observation_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=observation_data,
+    )
+    assert res["result"] == "created"
 
     task_data = _make_index_item("Task")
-    bulk_data = [
-        {"index": {"_id": task_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        task_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=task_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=task_data,
+    )
+    assert res["result"] == "created"
 
     encounter_data = _make_index_item("Encounter")
-    bulk_data = [
-        {"index": {"_id": encounter_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        encounter_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=encounter_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=encounter_data,
+    )
+    assert res["result"] == "created"
 
     careplan_data = _make_index_item("CarePlan")
-    bulk_data = [
-        {"index": {"_id": careplan_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        careplan_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=careplan_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=careplan_data,
+    )
+    assert res["result"] == "created"
 
     documentreference_data = _make_index_item("DocumentReference")
-    bulk_data = [
-        {"index": {"_id": documentreference_data["uuid"], "_index": ES_INDEX_NAME_REAL}},
-        documentreference_data,
-    ]
-    res = conn.bulk(index=ES_INDEX_NAME_REAL, doc_type=DOC_TYPE, body=bulk_data)
-    assert res["errors"] is False
+
+    res = conn.create(
+        index=ES_INDEX_NAME_REAL,
+        id=documentreference_data["uuid"],
+        doc_type=DOC_TYPE,
+        body=documentreference_data,
+    )
+    assert res["result"] == "created"
 
     conn.indices.refresh(index=ES_INDEX_NAME_REAL)
 
