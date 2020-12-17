@@ -171,7 +171,7 @@ class SearchContext(object):
         for sp in search_params_def:
             # Look out for any composite or combo type parameter
             if sp.type == "composite":
-                normalized_params.append(
+                normalized_params.extend(
                     self._normalize_composite_param(
                         raw_value, param_def=sp, modifier=modifier_
                     )
@@ -267,7 +267,9 @@ class SearchContext(object):
         path_.finalize(self.engine)
         return path_
 
-    def _normalize_composite_param(self, raw_value, param_def, modifier):
+    def _normalize_composite_param(
+        self, raw_value, param_def, modifier
+    ) -> List[Tuple[ElementPath, str, Optional[str]]]:
         """ """
         if len(raw_value) < 1:
             raise NotImplementedError(
@@ -280,12 +282,13 @@ class SearchContext(object):
                 f"values separated by a '$', got {len(value_parts)}."
             )
 
-        return [
+        results: List[Tuple[ElementPath, str, Optional[str]]] = [
             self.parse_composite_parameter_component(
                 component, value_part, param_def, modifier
             )
             for component, value_part in zip(param_def.component, value_parts)
         ]
+        return results
 
     def parse_composite_parameter_component(
         self, component, raw_value, param_def, modifier
@@ -1586,7 +1589,7 @@ class Search(object):
             return builder
 
         specs = [
-            lookup_fhir_resource_spec(r, True, FHIR_VERSION.R4)
+            lookup_fhir_resource_spec(r, True, self.context.engine.fhir_release)
             for r in self.context.resource_types
         ]
 

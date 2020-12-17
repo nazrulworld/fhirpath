@@ -19,6 +19,8 @@ Fixes
 
 - Issue#28 `Nested GroupTerm search returns no matches <https://github.com/nazrulworld/fhirpath/issues/28>`_
 
+- fixes ``SearchContext.normalize_param`` for composite search params [nazrulworld]
+
 0.10.4 (2020-11-19)
 -------------------
 

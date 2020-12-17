@@ -28,7 +28,11 @@ Introduction
    :target: https://pypi.python.org/pypi/fhirpath/
    :alt: License
 
-.. image:: https://fire.ly/wp-content/themes/fhir/images/fhir.svg
+.. image:: https://static.pepy.tech/personalized-badge/fhirpath?period=total&units=international_system&left_color=black&right_color=green&left_text=Downloads
+    :target: https://pepy.tech/project/fhirpath
+    :alt: Downloads
+
+.. image:: https://www.hl7.org/fhir/assets/images/fhir-logo-www.png
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
