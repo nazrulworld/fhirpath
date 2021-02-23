@@ -5,7 +5,7 @@ History
 0.10.6 (unreleased)
 -------------------
 
-- Nothing changed yet.
+- Switch to Apache Software License v2
 
 
 0.10.5 (2020-12-17)
