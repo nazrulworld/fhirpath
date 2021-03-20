@@ -85,7 +85,7 @@ docs_requirements = [
 ]
 
 development_requirements = [
-    "Jinja2==2.11.1",
+    "Jinja2==2.11.3",
     "MarkupSafe==1.1.1",
     "colorlog==2.10.0",
     "certifi",
