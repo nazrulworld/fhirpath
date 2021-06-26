@@ -133,3 +133,5 @@ def init_fhirbase_pg(fhirbase_pg):
     connection = create_connection(conn_str)
     _init_fhirbase_structure(connection)
     yield connection
+# https://github.com/PyO3/pyo3
+# https://github.com/Stranger6667/jsonschema-rs/tree/master/python

@@ -59,6 +59,8 @@ requirements = [
 setup_requirements = ["pytest-runner", "setuptools_scm[toml]", "wheel"]
 
 test_requirements = [
+    "lxml",
+    "pyyaml",
     "more-itertools",
     "pytest>=6.0.1",
     "pytest-cov",

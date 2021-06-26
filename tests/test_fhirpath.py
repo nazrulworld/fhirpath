@@ -82,3 +82,15 @@ def test_fhirpath_tuple_type_info():
     fpath = fhirpath.FHIRPath(obj)
     assert isinstance(fpath.contact[0].get_type(), fhirpath.TupleTypeInfo)
     assert len(fpath.contact[0].get_type().get_elements()) == 10
+
+
+def test_existence_5_1_1_empty():
+    """ """
+    obj = lookup_fhir_class("Patient", FHIR_VERSION.R4).parse_file(
+        FHIR_EXAMPLE_RESOURCES / "Patient.json"
+    )
+    f_path = fhirpath.FHIRPath(obj)
+    assert f_path.name.empty() is False
+    assert f_path.name.count() == 2
+    assert f_path.extension.empty() is True
+    assert f_path.extension.count() == 0

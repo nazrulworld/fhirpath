@@ -2,8 +2,8 @@
 Introduction
 ============
 
-.. image:: https://img.shields.io/travis/nazrulworld/fhirpath.svg
-        :target: https://travis-ci.org/nazrulworld/fhirpath
+.. image:: https://img.shields.io/travis/com/nazrulworld/fhirpath.svg
+        :target: https://travis-ci.com/nazrulworld/fhirpath
 
 .. image:: https://readthedocs.org/projects/fhirpath/badge/?version=latest
         :target: https://fhirpath.readthedocs.io/en/latest/?badge=latest
@@ -256,3 +256,4 @@ owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks
 
 **"FHIR® is the registered trademark of HL7 and is used with the permission of HL7.
 Use of the FHIR trademark does not constitute endorsement of this product by HL7"**
+https://github.com/beda-software/fhirpath-py
