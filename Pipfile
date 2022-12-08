@@ -12,7 +12,7 @@ sphinx-rtd-theme = {version = "==0.4.3"}
 sphinxcontrib-httpdomain = {version = "==1.7.0"}
 sphinxcontrib-httpexample = {version = "==0.10.3"}
 tox = {version = "==3.14.0"}
-certifi = {version = "==2019.9.11"}
+certifi = {version = "==2022.12.7"}
 zest-releaser = {extras = ["recommended"],version = "*"}
 fhirpath = {editable = true, extras = ["all"], path = "."}
 
