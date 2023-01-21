@@ -50,8 +50,9 @@ with open("HISTORY.rst") as history_file:
 requirements = [
     "zope.interface>=5.1.2",
     "multidict",
-    "fhirspec>=0.2.5",
+    "fhirspec>=0.4.0",
     "fhir.resources>=6.4.0,<7.0",
+    "antlr4-python3-runtime==4.9.3",
     "yarl",
     "isodate",
 ]
@@ -97,7 +98,7 @@ development_requirements = [
 
 setup(
     name="fhirpath",
-    version="0.10.6.dev0",
+    version="1.0.0.dev0",
     author="Md Nazrul Islam",
     author_email="email2nazrul@gmail.com",
     classifiers=[
@@ -113,6 +114,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Typing :: Typed",
     ],
     description="FHIRPath implementation in Python.",

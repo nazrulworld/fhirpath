@@ -223,6 +223,28 @@ Example Mapping (Reference Field)::
 ToDo
 ----
 
+
+3 (Path selection)
+5.1 (Existence)
+5.2 (Filtering and Projection) "ofType"
+5.3 (Subsetting)
+5.4 (Combining)
+5.5 (Conversion)
+5.6 (String Manipulation)
+5.7 (Tree Navigation)
+5.8 (Utility Functions)
+6.1 (Equality)
+6.2 (Comparison)
+6.3 (Types)
+6.4 (Collections)
+6.5 (Boolean logic)
+6.6 (Math)
+6.8 (Operator Precedence) - handled by ANTLR parser
+7 (Aggregates)
+8 (Lexical Elements) - handled by ANTLR parser
+9 (Environment Variables)
+
+
 1. `fhirbase`_ engine aka provider implementation.
 
 2. All methods/functions are defined in `FHIRPath`_ specification, would be completed.
@@ -256,4 +278,3 @@ owned by `Health Level Seven International <https://www.hl7.org/legal/trademarks
 
 **"FHIR® is the registered trademark of HL7 and is used with the permission of HL7.
 Use of the FHIR trademark does not constitute endorsement of this product by HL7"**
-https://github.com/beda-software/fhirpath-py
