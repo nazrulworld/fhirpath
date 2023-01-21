@@ -1,26 +1,14 @@
 # -*- coding: utf-8 -*-
 """Main module."""
-import inspect
 import typing
 from abc import ABC
-from functools import wraps
-from typing import TYPE_CHECKING, Any, DefaultDict, List, Optional, Type, Union, cast
-
-from pydantic.fields import ModelField
-from zope.interface import implementer
-
-from fhirpath.enums import FHIR_VERSION
-from fhirpath.interfaces import ITypeInfoWithElements
-from fhirpath.utils import lookup_fhir_class
-
-from .exceptions import MultipleResultsFound
-from .storage import MemoryStorage
-from .types import TypeSpecifier
+from .core.element import Element
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fhir.resources.fhirabstractmodel import FHIRAbstractModel  # noqa: F401
 
-__author__ = "Md Nazrul Islam <email2nazrul>"
+__author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 FHIR_PREFIX = "FHIR"
 FHIRPATH_DATA_TYPES = {
@@ -35,539 +23,15 @@ FHIRPATH_DATA_TYPES = {
 }
 
 
-def collection_type_required(func: typing.Callable):
-    """ """
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        if not isinstance(self.get_type(), ListTypeInfo):
-            raise ValueError(
-                f"You are allowed to use this method ´{func.__name__}´, "
-                "for collection(list) type value only"
-            )
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
-class SimpleTypeInfo:
-    """For primitive types such as String and Integer,
-    the result is a SimpleTypeInfo:"""
-
-    namespace: str
-    name: str
-    baseType: TypeSpecifier
-
-    @classmethod
-    def from_type_specifier(cls, specifier: TypeSpecifier) -> "SimpleTypeInfo":
-        """ """
-        ns, name = specifier.split(".")
-        self = cls()
-        self.namespace = ns
-        self.name = name
-        self.baseType = TypeSpecifier("{0}<Any>".format(ns))
-        return self
-
-
-class ClassInfoElement:
-    name: str
-    type: TypeSpecifier
-    isOneBased: typing.Optional[bool]
-    # ``_one_of_many_name`` represents one of many
-    _one_of_many_name: typing.Optional[str]
-    # property name in python class
-    _py_name: str
-    # FHIR Resource Class
-    _model_class: Optional[Type["FHIRAbstractModel"]]
-
-    def __init__(
-        self,
-        name: str,
-        *,
-        py_name: str,
-        type_: TypeSpecifier,
-        is_one_based: bool = None,
-        one_of_many_name: str = None,
-    ):
-        """ """
-        self.name = name
-        self._py_name = py_name
-        self.type = type_
-        self.isOneBased = is_one_based
-        self._one_of_many_name = one_of_many_name
-
-    @classmethod
-    def from_model_field(cls, field: ModelField) -> "ClassInfoElement":
-        """ """
-        assert field.field_info.extra.get("element_property", False) is True
-        visit_name: Optional[str] = None
-        if TYPE_CHECKING:
-            is_primitive: Optional[bool] = None
-            model_class: Optional[Type["FHIRAbstractModel"]] = None
-        name = field.alias
-        py_name = field.name
-        is_one_based = (str(field.outer_type_)[:12] == "typing.List[") is False
-
-        if getattr(field.type_, "is_primitive", None) is None:
-            if field.type_ == bool:
-                visit_name = "boolean"
-                is_primitive = True
-            else:
-                raise NotImplementedError
-        else:
-            is_primitive = field.type_.is_primitive()
-
-        if is_primitive is False:
-            # AbstractBaseType
-            tn = "{0}.{1}".format(FHIR_PREFIX, field.type_.__resource_type__)
-            model_class = lookup_fhir_class(
-                field.type_.__resource_type__,
-                FHIR_VERSION[field.type_.__fhir_release__],
-            )
-        else:
-            # Primitive
-            visit_name = getattr(field.type_, "__visit_name__", visit_name)
-            tn = "{0}.{1}".format(FHIR_PREFIX, visit_name)
-            model_class = None
-        if is_one_based is False:
-            tn = "List<{0}>".format(tn)
-        self = cls(
-            name,
-            py_name=py_name,
-            type_=TypeSpecifier(tn),
-            is_one_based=is_one_based,
-            one_of_many_name=field.field_info.extra.get("one_of_many", None),
-        )
-        # xxx: cache it
-        self._model_class = model_class
-        return self
-
-    def build_simple_type_info(self) -> SimpleTypeInfo:
-        """ """
-        inst = SimpleTypeInfo()
-        if self.isOneBased:
-            ns, name = self.type.split(".")
-        else:
-            ns, name = self.type[5:-1].split(".")
-        inst.namespace = ns
-        inst.name = name
-        inst.baseType = TypeSpecifier(ns + ".Primitive")
-        return inst
-
-
-@implementer(ITypeInfoWithElements)
-class ClassInfo:
-    """ """
-
-    name: str
-    namespace: str
-    baseType: TypeSpecifier
-    element: typing.List[ClassInfoElement]
-    _indexes: typing.List[str]
-
-    @classmethod
-    def from_model(cls, model_class: Type["FHIRAbstractModel"]) -> "ClassInfo":
-        """ """
-        self = cls()
-        klass_name = model_class.__name__
-        self.namespace = FHIR_PREFIX
-        self.name = klass_name
-        base_class = inspect.getmro(model_class)[1]
-        self.baseType = TypeSpecifier(
-            "{0}.{1}".format(FHIR_PREFIX, base_class.__name__)
-        )
-        self._indexes = list()
-        elements = ClassInfo.build_elements(model_class)
-        for el in elements:
-            self._indexes.append(el.name)
-        self.element = elements
-        # Ensure base in cache
-        base_bases = inspect.getmro(base_class)
-        if (
-            "FHIRAbstractModel" in str(base_bases)
-            and self.baseType not in FHIRPath.__storage__
-            and base_class.__name__ != "FHIRAbstractModel"
-        ):
-            base_self = ClassInfo.from_model(base_class)
-            FHIRPath.__storage__[self.baseType] = base_self
-
-        return self
-
-    def get_elements(self) -> List[ClassInfoElement]:
-        """ """
-        return self.element
-
-    @staticmethod
-    def build_elements(
-        model_class: Type["FHIRAbstractModel"],
-    ) -> List[ClassInfoElement]:
-        """ """
-        elements = list()
-        for field in model_class.element_properties():
-            el = ClassInfoElement.from_model_field(field)
-            elements.append(el)
-
-        return elements
-
-    def __repr__(self):
-        """ """
-        return (
-            f"<{self.__class__.__name__} name='{self.name}', "
-            f"namespace='{self.namespace}', baseType='{self.baseType}',"
-            f" element='{len(self.element)}'>"
-        )
-
-
-@implementer(ITypeInfoWithElements)
-class ListTypeInfo:
-    """For collection types, the result is a ListTypeInfo:
-    ``ListTypeInfo { elementType: TypeSpecifier }``
-
-    For example:
-    ``Patient.address.type()``
-
-    Results in:
-        ``{ListTypeInfo { elementType: 'FHIR.Address' }}``
-    """
-
-    elementType: TypeSpecifier
-
-    @classmethod
-    def from_specifier(cls, specifier) -> "ListTypeInfo":
-        """ """
-        assert "." in specifier, "Must contains with prefix!"
-        self = cls()
-        self.elementType = specifier
-        return self
-
-    def get_elements(
-        self,
-    ) -> Union[List["ClassInfoElement"], List["TupleTypeInfoElement"]]:
-        """ """
-        klass_info = FHIRPath.__storage__[self.elementType]
-        if not isinstance(klass_info, SimpleTypeInfo):
-            return klass_info.get_elements()
-        raise NotImplementedError
-
-
-class TupleTypeInfoElement(ClassInfoElement):
-    """ """
-
-
-@implementer(ITypeInfoWithElements)
-class TupleTypeInfo:
-    """Anonymous types are structured types that have no associated name,
-    only the elements of the structure. For example, in FHIR, the Patient.contact
-    element has multiple sub-elements, but is not explicitly named.
-    For types such as this, the result is a TupleTypeInfo:
-    @see http://hl7.org/fhirpath/N1/#anonymous-types"""
-
-    element: List[TupleTypeInfoElement]
-
-    @classmethod
-    def from_model(cls, model_class: Type["FHIRAbstractModel"]) -> "TupleTypeInfo":
-        """ """
-        self = cls()
-        elements = TupleTypeInfo.build_elements(model_class)
-        self.element = elements
-        return self
-
-    def get_elements(self) -> List[TupleTypeInfoElement]:
-        """ """
-        return self.element
-
-    @staticmethod
-    def build_elements(
-        model_class: Type["FHIRAbstractModel"],
-    ) -> List[TupleTypeInfoElement]:
-        """ """
-        elements = list()
-        for field in model_class.element_properties():
-            el = cast(
-                TupleTypeInfoElement, TupleTypeInfoElement.from_model_field(field)
-            )
-            elements.append(el)
-
-        return elements
-
-
-class FHIRPath(ABC):
+class FHIRPath(Element):
     """http://hl7.org/fhirpath/N1"""
 
-    # Global Cache
-    __storage__: DefaultDict[
-        TypeSpecifier, Union[ClassInfo, TupleTypeInfo, SimpleTypeInfo]
-    ] = MemoryStorage()
-
-    _obj: typing.Any
-    _predecessor: "FHIRPath"
-    _type_info: Union[TupleTypeInfo, ListTypeInfo, ClassInfo, SimpleTypeInfo]
-    _prop_name: str
-    _of_many: bool
-
-    __slots__ = ("_obj", "_predecessor", "_type_info", "_prop_name", "_of_many")
-
-    def __init__(self, _obj: Any, predecessor: "FHIRPath" = None):
-        """ """
-        if predecessor is None and "FHIRAbstractModel" not in str(
-            inspect.getmro(type(_obj))
-        ):
-            raise ValueError(
-                "root fhirpath cannot be initialized, "
-                "without a object (must be derived from "
-                "``fhir.resources::FHIRAbstractModel``)"
-            )
-
-        object.__setattr__(self, "_obj", _obj)
-        object.__setattr__(self, "_predecessor", predecessor)
-        object.__setattr__(self, "_type_info", None)
-        object.__setattr__(self, "_prop_name", None)
-        object.__setattr__(self, "_of_many", None)
-
-    def __getattr__(self, item):
-        """ """
-        if item in self.__slots__:
-            return object.__getattribute__(self, item)
-        if self._obj is None:
-            raise AttributeError(f"'NoneType' object/value has no attribute '{item}'")
-        try:
-            obj = getattr(self._obj, item)
-            # another instance of FHIRPath with predecessor's referenced
-            return self._create_successor(obj, item)
-        except AttributeError:
-            # special case for `value` name
-            valid = False
-            obj = None
-            for el in self.get_type().get_elements():
-                if el._one_of_many_name is not None and el._one_of_many_name == item:
-                    valid = True
-                    value = getattr(self._obj, el.name, None)
-                    if value is not None:
-                        obj = value
-                        break
-            if valid is True:
-                return self._create_successor(obj, item, of_many=True)
-            # Real Error
-            raise
-
-    def __setattr__(self, attr, value):
-        """ """
-        raise AttributeError("Readonly Object!")
-
-    def __call__(self):
-        """ """
-        return self._obj
-
-    @staticmethod
-    def element_from_predecessor(
-        predecessor: "FHIRPath", prop_name: str
-    ) -> Union[ClassInfoElement, TupleTypeInfoElement]:
-        """ """
-        if predecessor() is None:
-            raise NotImplementedError
-
-        predecessor_type = predecessor.get_type()
-        if not ITypeInfoWithElements.providedBy(predecessor_type):
-            raise NotImplementedError
-
-        for el in predecessor_type.get_elements():
-            if el.name == prop_name:
-                return el
-            elif el._one_of_many_name == prop_name:
-                # xxx: extra care required.
-                return el
-
-        raise NotImplementedError
-
-    @staticmethod
-    def convert_and_cache_elements(
-        elements: Union[List[ClassInfoElement], List[TupleTypeInfoElement]]
-    ) -> None:
-        """ """
-        for el in elements:
-            specifier = el.type
-            if specifier.startswith("List<"):
-                specifier = TypeSpecifier(specifier[5:-1])
-
-            if specifier not in FHIRPath.__storage__:
-                klass_info = FHIRPath.build_type_info_from_el(el)
-                if not isinstance(klass_info, ListTypeInfo):
-                    FHIRPath.__storage__[specifier] = klass_info
-
-    @staticmethod
-    def build_type_info_from_el(
-        element: Union[ClassInfoElement, TupleTypeInfoElement]
-    ) -> Union[ClassInfo, SimpleTypeInfo, ListTypeInfo, TupleTypeInfo]:
-        """ """
-        if element._model_class is None:
-            return element.build_simple_type_info()
-
-        klass_info: Union[ClassInfo, SimpleTypeInfo, ListTypeInfo, TupleTypeInfo]
-        bases = inspect.getmro(element._model_class)
-        if "FHIRAbstractModel" in str(bases):
-            # FHIR type!
-            klass_info = FHIRPath.build_fhir_abstract_type_info(klass=bases[0])
-        else:
-            specifier = element.type
-            if specifier.startswith("List<"):
-                specifier = TypeSpecifier(specifier[5:-1])
-            klass_info = SimpleTypeInfo.from_type_specifier(specifier)
-        return klass_info
-
-    @staticmethod
-    def build_fhir_abstract_type_info(
-        klass: Type["FHIRAbstractModel"], is_one_based: bool = True
-    ) -> Union[ClassInfo, ListTypeInfo, TupleTypeInfo]:
-        """ """
-        key = TypeSpecifier(".".join([FHIR_PREFIX, klass.__name__]))
-
-        if key not in FHIRPath.__storage__:
-            mod = inspect.getmodule(klass)
-            assert mod is not None
-            mod_base_name = mod.__name__.split(".")[-1]
-            klass_info: Union[TupleTypeInfo, ClassInfo]
-            if mod_base_name == klass.__name__.lower():
-                klass_info = ClassInfo.from_model(klass)
-            else:
-                # TupleType
-                klass_info = TupleTypeInfo.from_model(klass)
-
-            # cache it!
-            FHIRPath.__storage__[key] = klass_info
-            FHIRPath.convert_and_cache_elements(klass_info.element)
-
-        if is_one_based is False:
-            return ListTypeInfo.from_specifier(key)
-        else:
-            return FHIRPath.__storage__[key]  # type: ignore
-
-    def _assign_type_info(self) -> None:
-        """ """
-        type_info: Optional[
-            Union[ClassInfo, SimpleTypeInfo, ListTypeInfo, TupleTypeInfo]
-        ] = None
-        element: Optional[Union[ClassInfoElement, TupleTypeInfoElement]] = None
-        is_one_based = True
-        if self._prop_name and self._predecessor:
-            element = FHIRPath.element_from_predecessor(
-                self._predecessor, self._prop_name
-            )
-
-        if element is not None:
-            is_one_based = element.isOneBased is None or element.isOneBased
-
-        if self._obj is None:
-            if element is not None:
-                if element._model_class is None:
-                    object.__setattr__(
-                        self, "_type_info", element.build_simple_type_info()
-                    )
-                    return
-
-                bases = inspect.getmro(element._model_class)
-            else:
-                return
-
-        else:
-            bases = inspect.getmro(type(self._obj))
-            if element is None and isinstance(self._obj, list):
-                is_one_based = False
-
-        if "FHIRAbstractModel" in str(bases):
-            # FHIR type!
-            if self._obj is None:
-                klass = bases[0]
-            else:
-                klass = type(self._obj)
-            type_info = FHIRPath.build_fhir_abstract_type_info(klass, is_one_based)
-            object.__setattr__(self, "_type_info", type_info)
-
-        elif isinstance(self._obj, list) and self._prop_name and self._predecessor:
-            """Do special treatment"""
-            specifier = None
-            element = None
-            for el in self._predecessor.get_type().get_elements():
-                if el.name == self._prop_name:
-                    specifier = TypeSpecifier(el.type[5:-1])
-                    element = el
-                    break
-            if specifier is None:
-                raise NotImplementedError
-
-            if specifier not in FHIRPath.__storage__:
-                # cache it, important!
-                assert element is not None
-                type_info = FHIRPath.build_type_info_from_el(element)
-                if not isinstance(type_info, ListTypeInfo):
-                    FHIRPath.__storage__[specifier] = type_info
-                else:
-                    raise NotImplementedError
-
-            type_info = ListTypeInfo()
-            type_info.elementType = specifier
-
-            object.__setattr__(self, "_type_info", type_info)
-        else:
-            if self._predecessor:
-                predecessor_type = self._predecessor.get_type()
-                type_info = None
-                if isinstance(predecessor_type, ListTypeInfo):
-                    type_info = FHIRPath.__storage__[predecessor_type.elementType]
-                elif self._prop_name:
-                    for el in self._predecessor.get_type().get_elements():
-                        if el.name == self._prop_name:
-                            new_type = el.type
-                            if new_type.startswith("List<"):
-                                new_type = new_type[5:-1]
-                            # check in cache
-                            if new_type not in FHIRPath.__storage__:
-
-                                FHIRPath.__storage__[
-                                    new_type
-                                ] = SimpleTypeInfo.from_type_specifier(new_type)
-                            type_info = FHIRPath.__storage__[new_type]
-                            break
-                if type_info is None:
-                    raise NotImplementedError
-                object.__setattr__(self, "_type_info", type_info)
-            else:
-                specifier = TypeSpecifier(
-                    "System." + FHIRPATH_DATA_TYPES[bases[0].__name__]
-                )
-                if specifier not in FHIRPath.__storage__:
-                    type_info = SimpleTypeInfo.from_type_specifier(specifier)
-                    FHIRPath.__storage__[specifier] = type_info
-                object.__setattr__(self, "_type_info", FHIRPath.__storage__[specifier])
-
-    def _create_successor(
-        self, _obj: Any, prop_name: str = None, of_many: bool = None
-    ) -> "FHIRPath":
-        """ """
-        successor: FHIRPath = FHIRPath(_obj, predecessor=self)
-        object.__setattr__(successor, "_prop_name", prop_name)
-        object.__setattr__(successor, "_of_many", of_many)
-        return successor
-
-    def _clone(self, obj: Any = None) -> "FHIRPath":
-        """ """
-        if obj is None:
-            obj = self._obj
-        newone = FHIRPath(obj, predecessor=self._predecessor)
-        object.__setattr__(newone, "_prop_name", self._prop_name)
-        object.__setattr__(newone, "_of_many", self._of_many)
-        return newone
-
     #   5.1. Existence
-    @collection_type_required
     def empty(self) -> bool:
         """5.1.1. empty() : Boolean
         Returns true if the input collection is empty ({ }) and false otherwise.
         """
-        if self._obj is None:
-            return True
-        return len(self._obj) == 0
 
-    @collection_type_required
     def exists(self):
         """5.1.2. exists([criteria : expression]) : Boolean
         Returns true if the collection has any elements, and false otherwise.
@@ -677,7 +141,6 @@ class FHIRPath(ABC):
         """
         raise NotImplementedError
 
-    @collection_type_required
     def count(self) -> int:
         """5.1.10. count() : Integer
         Returns the integer count of the number of items in the input collection.
@@ -815,23 +278,7 @@ class FHIRPath(ABC):
         of the Patient with index 0:
         ``Patient.name[0]``
         """
-        if not isinstance(self.get_type(), ListTypeInfo):
-            raise NotImplementedError("Must be collection")
-        try:
-            if isinstance(key, slice):
-                print(key.start, key.stop)
-                obj = self._obj[key.start : key.stop]
-                if len(obj) == 0:
-                    return
-                return self._clone(obj)
-            else:
-                obj = self._obj[key]
-                return self._create_successor(obj)
 
-        except IndexError:
-            pass
-
-    @collection_type_required
     def single(self):
         """5.3.2. single() : collection
         Will return the single item in the input if there is just one item.
@@ -846,46 +293,30 @@ class FHIRPath(ABC):
         an error is signaled to the evaluation environment:
         ``Patient.name.single()``
         """
-        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
-            return None
-        if len(self._obj) == 1:
-            return self[0]
 
-        raise MultipleResultsFound
-
-    @collection_type_required
     def first(self):
         """5.3.3. first() : collection
         Returns a collection containing only the first item in the input collection.
         This function is equivalent to item[0], so it will return an empty collection
         if the input collection has no items.
         """
-        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
-            return None
-        return self[0]
 
-    @collection_type_required
+
     def last(self):
         """5.3.4. last() : collection
         Returns a collection containing only the last item in the input collection.
         Will return an empty collection if the input collection has no items.
         """
-        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) == 0):
-            return None
-        return self[-1]
 
-    @collection_type_required
+
     def tail(self):
         """5.3.5. tail() : collection
         Returns a collection containing all but the first item in the input collection.
         Will return an empty collection if the input collection has no items,
         or only one item.
         """
-        if self._obj is None or (isinstance(self._obj, list) and len(self._obj) < 2):
-            return None
-        return self[1:]
 
-    @collection_type_required
+
     def skip(self, num: int):
         """5.3.6. skip(num : Integer) : collection
         Returns a collection containing all but the first num items
@@ -897,7 +328,7 @@ class FHIRPath(ABC):
         """
         raise NotImplementedError
 
-    @collection_type_required
+
     def take(self, num: int):
         """5.3.7. take(num : Integer) : collection
         Returns a collection containing the first num items in the input collection,
@@ -1898,7 +1329,5 @@ class FHIRPath(ABC):
         The type() function returns the type information for each element of the
         input collection, using one of the following concrete subtypes of TypeInfo:
         """
-        if self._type_info is None:
-            self._assign_type_info()
 
-        return self._type_info
+

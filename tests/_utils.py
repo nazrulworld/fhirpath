@@ -11,11 +11,11 @@ import elasticsearch
 import yarl
 from pytest_docker_fixtures.containers._base import BaseImage
 
-from fhirpath.engine import dialect_factory
-from fhirpath.engine.es import ElasticsearchEngine
-from fhirpath.engine.es import AsyncElasticsearchEngine
+from fhirpath.search.engine import dialect_factory
+from fhirpath.search.engine.es import ElasticsearchEngine
+from fhirpath.search.engine.es import AsyncElasticsearchEngine
 from fhirpath.enums import FHIR_VERSION
-from fhirpath.storage import MemoryStorage
+from fhirpath.search.storage import MemoryStorage
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"

@@ -9,9 +9,10 @@ __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 class FHIR_VERSION(enum.Enum):
     """Release:str : Version:str """
 
-    DEFAULT: str = "R4"
+    DEFAULT: str = "R4B"
     STU3: str = "3.0.2"
     R4: str = "4.0.1"
+    R4B: str = "4.3.0"
     DSTU2: str = "1.0.2"
 
     @staticmethod

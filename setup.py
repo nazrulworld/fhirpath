@@ -51,7 +51,7 @@ requirements = [
     "zope.interface>=5.1.2",
     "multidict",
     "fhirspec>=0.2.5",
-    "fhir.resources>=6.0.0,<7.0",
+    "fhir.resources>=6.4.0,<7.0",
     "yarl",
     "isodate",
 ]

@@ -7,8 +7,8 @@ from fhirspec import Configuration
 from pytest_docker_fixtures import IS_TRAVIS
 from pytest_docker_fixtures import images
 
-from fhirpath.connectors import create_connection
-from fhirpath.fhirspec import settings
+from fhirpath.search.connectors import create_connection
+from fhirpath.search.fhirspec import settings
 
 from ._utils import TestElasticsearchEngine
 from ._utils import TestAsyncElasticsearchEngine
