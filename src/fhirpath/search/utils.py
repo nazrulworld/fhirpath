@@ -162,7 +162,7 @@ def lookup_all_fhir_domain_resource_classes(
     container: Dict[str, str] = {}
     fhir_release = FHIR_VERSION.normalize(fhir_release)
     pkg = "fhir.resources"
-    if fhir_release.name != FHIR_VERSION.DEFAULT.value:
+    if fhir_release.name not in (FHIR_VERSION.DEFAULT.value, "R4"):
         pkg += f".{fhir_release.name}"
 
     prime_module_type: ModuleType = import_module(pkg)
@@ -452,14 +452,6 @@ class PathInfoContext:
                     if type_name is None and field_type == bool:
                         type_name = "boolean"
                     if type_name is None:
-                        """
-                                        (Pdb) field.type_.__args__
-                        (<class 'fhir.resources.fhirtypes.Canonical'>, <class 'NoneType'>)
-                        (Pdb) field.type_.__args__
-                        'typing.Union[fhir.resources.fhirtypes.Canonical, NoneType]'
-
-                                        """
-                        breakpoint()
                         raise NotImplementedError
 
                 context = cls(
@@ -538,6 +530,13 @@ class PathInfoContext:
         if path not in self._children:
             self._children.append(path)
 
+    def get_real_type_class(self):
+        """ """
+        klass = self.type_class
+        if str(klass)[:13] == "typing.Union[":
+            return klass.__args__[0]
+        return klass
+
     def __repr__(self):
         """ """
         return "<{0}.{1}('{2}')>".format(
@@ -552,7 +551,11 @@ class PathInfoContext:
         """``pydantic`` way to validate value"""
         if self.type_class == bool:
             return bool_validator(value)
-        for validator in self.type_class.__get_validators__():
+        try:
+            validators = self.type_class.__get_validators__()
+        except AttributeError:
+            validators = ()
+        for validator in validators:
             sig = signature(validator)
             args = list(sig.parameters.keys())
             if len(args) == 1:

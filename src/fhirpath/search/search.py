@@ -738,11 +738,11 @@ class Search(object):
             term = self.create_exists_term(path_, param_value, modifier)
 
         elif (
-            hasattr(path_.context.type_class, "is_primitive")
-            and not path_.context.type_class.is_primitive()
+            hasattr(path_.context.get_real_type_class(), "is_primitive")
+            and not path_.context.get_real_type_class().is_primitive()
         ):
             # we need normalization
-            klass_name = path_.context.type_class.fhir_type_name()
+            klass_name = path_.context.get_real_type_class().fhir_type_name()
             if klass_name == "Reference":
                 if modifier == "identifier":
                     path_ = path_ / "identifier"
@@ -1418,9 +1418,9 @@ class Search(object):
 
     def create_term(self, path_, value, modifier):
         """ """
-        assert path_.context.type_class is bool or (
-            getattr(path_.context.type_class, "is_primitive", None)
-            and path_.context.type_class.is_primitive() is True
+        assert path_.context.get_real_type_class() is bool or (
+            getattr(path_.context.get_real_type_class(), "is_primitive", None)
+            and path_.context.get_real_type_class().is_primitive() is True
         )
 
         if isinstance(value, tuple):

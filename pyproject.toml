@@ -1,7 +1,8 @@
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [project]
 name = "fhirpath"
 authors = [
-    "Md Nazrul Islam <email2nazrul@gmail.com>"
+    {name = "Md Nazrul Islam", email = "email2nazrul@gmail.com"},
 ]
 keywords = ["fhirpath", "HL7", "FHIR", "healthcare", "IHE"]
 
