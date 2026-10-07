@@ -1,6 +1,8 @@
+# FHIR specification files are downloaded on demand (ensure_spec_jsons);
+# only the Python modules are versioned.
 *
-!.gitignore
-!./__init__.py
-!./downloader.py
-!./spec.py
-!./settings.py
+!/.gitignore
+!/__init__.py
+!/downloader.py
+!/spec.py
+!/settings.py
