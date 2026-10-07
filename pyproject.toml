@@ -1,18 +1,112 @@
 # https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [project]
 name = "fhirpath"
+version = "1.0.1"
+description = "FHIRPath implementation in Python."
 authors = [
     {name = "Md Nazrul Islam", email = "email2nazrul@gmail.com"},
 ]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
 keywords = ["fhirpath", "HL7", "FHIR", "healthcare", "IHE"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "zope.interface>=5.1.2",
+    "multidict",
+    "fhirspec>=0.4.0",
+    "fhir.resources>=8.3.0,<9.0",
+    "antlr4-python3-runtime==4.9.3",
+    "yarl",
+    "isodate",
+]
+# long_description is README.rst + HISTORY.rst
+dynamic = ["readme"]
+
+[project.optional-dependencies]
+test = [
+    "lxml",
+    "pyyaml",
+    "more-itertools",
+    "pytest>=6.0.1",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-asyncio",
+    "pytest-docker-fixtures",
+    "psycopg2-binary",
+    "elasticsearch[async]>7.8.0,<8.0.0",
+    "SQLAlchemy",
+    "pytz",
+    "mypy",
+    "requests==2.23.0",
+    "flake8==3.8.3",
+    "flake8-isort==3.0.0",
+    "flake8-bugbear==20.1.4",
+    "isort==4.3.21",
+    "black",
+    "pytest-runner",
+    "setuptools_scm[toml]",
+    "wheel",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinxcontrib-httpdomain",
+    "sphinxcontrib-httpexample",
+]
+dev = [
+    "Jinja2==2.11.1",
+    "MarkupSafe==1.1.1",
+    "colorlog==2.10.0",
+    "certifi",
+    "orjson",
+    "zest-releaser[recommended]",
+]
+all = ["fhirpath[test,docs,dev]"]
+
+[project.urls]
+Homepage = "https://nazrul.me/fhirpath/"
+"CI: Travis" = "https://travis-ci.org/nazrulworld/fhirpath"
+"Coverage: codecov" = "https://codecov.io/github/nazrulworld/fhirpath"
+"Docs: RTD" = "https://fhirpath.readthedocs.io/"
+"GitHub: issues" = "https://github.com/nazrulworld/fhirpath/issues"
+"GitHub: repo" = "https://github.com/nazrulworld/fhirpath"
+
+[project.scripts]
+fhirpath = "fhirpath.cli:main"
 
 [build-system]
 requires = [
-    "setuptools >= 45.2.0",
+    "setuptools >= 77.0.0",
     "setuptools_scm[toml]>=3.4.3",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["fhirpath*"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.rst", "HISTORY.rst"], content-type = "text/x-rst"}
 
 [tool.black]
 line-length = 88
