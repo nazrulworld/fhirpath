@@ -51,16 +51,19 @@ test = [
     "elasticsearch[async]>7.8.0,<8.0.0",
     "SQLAlchemy",
     "pytz",
-    "mypy",
     "requests>=2.31",
-    "flake8==3.8.3",
-    "flake8-isort==3.0.0",
-    "flake8-bugbear==20.1.4",
-    "isort==4.3.21",
-    "black",
+    # pytest-docker-fixtures needs docker-py >= 7.1 with requests >= 2.32
+    "docker>=7.1",
     "pytest-runner",
     "setuptools_scm[toml]",
     "wheel",
+]
+lint = [
+    "flake8>=7",
+    "flake8-bugbear",
+    "isort>=5",
+    "black",
+    "mypy",
 ]
 docs = [
     "sphinx",
@@ -76,7 +79,7 @@ dev = [
     "orjson",
     "zest-releaser[recommended]",
 ]
-all = ["fhirpath[test,docs,dev]"]
+all = ["fhirpath[test,lint,docs,dev]"]
 
 [project.urls]
 Homepage = "https://nazrul.me/fhirpath/"
@@ -110,7 +113,7 @@ readme = {file = ["README.rst", "HISTORY.rst"], content-type = "text/x-rst"}
 
 [tool.black]
 line-length = 88
-target_version = ['py37']
+target_version = ['py310']
 include = '\.pyi?$'
 exclude = '''
 

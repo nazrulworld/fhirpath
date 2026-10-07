@@ -1,55 +1,50 @@
-# Config file for automatic testing at travis-ci.org
+# Config file for automatic testing at travis-ci.com
 os: linux
-dist: xenial
+dist: jammy
 language: python
 
+# Elasticsearch (and PostgreSQL) for the search tests are started by
+# pytest-docker-fixtures, see tests/fixtures.py
 services:
-    - docker
+  - docker
 
-jobs:
-  include:
-    - name: Python 3.6
-      python: 3.6
-      env: python_version=3.6
+python:
+  - "3.10"
+  - "3.11"
+  - "3.12"
+  - "3.13"
+  - "3.14"
 
-    - name: Python 3.7
-      python: 3.7
-      env: python_version=3.7
-
-    - name: Python 3.8
-      python: 3.8
-      env: python_version=3.8
-
-    - name: Python 3.9
-      python: 3.9-dev
-      env: python_version=3.9-dev
-
-  allow_failures:
-    - python: 3.9-dev
-
-env:
-  global:
-    - ES_VERSION=7.3.1
-    - PGPORT=5433
-
-cache:
-  directories:
-    - eggs
+cache: pip
 
 install:
   - pip install -U pip
   - pip install -e .[test]
-  - pip install codecov
-  - sleep 1
 
 script:
-  - make clean
-  - make lint
-  - mypy src/fhirpath
-  - isort -c -rc src/fhirpath
-  - black --check --verbose src/fhirpath
-  - pytest -s --cov=tests -s --tb=native -v --cov-report term-missing --cov-append tests
+  - pytest --tb=native -v --cov=src/fhirpath --cov-report=term-missing --cov-report=xml tests
 
 after_success:
-  - codecov
+  # needs CODECOV_TOKEN in the Travis repository settings
+  - pip install codecov-cli
+  - codecovcli upload-process --file coverage.xml || true
 
+jobs:
+  include:
+    # Static checks run once, separately from the test matrix. They are allowed
+    # to fail until the existing code base has been cleaned up for them.
+    - name: Lint
+      python: "3.12"
+      services: []
+      install:
+        - pip install -U pip
+        - pip install -e .[lint]
+      script:
+        - flake8 src/fhirpath tests
+        - isort --check-only --diff src/fhirpath tests
+        - black --check src/fhirpath tests
+        - mypy src/fhirpath
+      after_success: skip
+  allow_failures:
+    - name: Lint
+  fast_finish: true
