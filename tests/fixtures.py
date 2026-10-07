@@ -3,6 +3,7 @@
 import os
 
 import pytest
+import pytest_asyncio
 from fhirspec import Configuration
 from pytest_docker_fixtures import IS_TRAVIS
 from pytest_docker_fixtures import images
@@ -25,7 +26,7 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 images.configure(
     "elasticsearch",
     "docker.elastic.co/elasticsearch/elasticsearch",
-    "7.3.1",
+    "7.17.29",
     env={
         "xpack.security.enabled": None,  # unset
         "discovery.type": "single-node",
@@ -87,7 +88,7 @@ def es_connection(es):
     yield conn
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_es_connection(es):
     """ """
     host, port = es
@@ -105,7 +106,7 @@ def engine(es_connection):
     yield engine
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_engine(async_es_connection):
     """ """
     engine = TestAsyncElasticsearchEngine(async_es_connection)

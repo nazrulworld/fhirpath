@@ -94,7 +94,8 @@ def test_fhir_search_spec():
         pytest.skip("Internet Connection is required")
 
     storage = SEARCH_PARAMETERS_STORAGE.get(release)
-
+    # searches in other tests may already have loaded the parameters
+    storage.clear()
     assert storage.empty()
 
     spec = FHIRSearchSpecFactory.from_release(release)

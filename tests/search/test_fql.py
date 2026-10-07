@@ -8,6 +8,7 @@ import pytz
 
 from fhirpath.enums import OPERATOR
 from fhirpath.enums import WhereConstraintType
+from fhirpath.search.exceptions import ValidationError
 from fhirpath.search.fql.expressions import G_
 from fhirpath.search.fql.expressions import T_
 from fhirpath.search.fql.expressions import V_
@@ -54,7 +55,8 @@ def test_term_normal(engine):
         pytest.fail("Code should not come here! as cache should be already created")
 
     assert context.multiple is True
-    assert context.type_class.__name__ == "AddressType"
+    assert context.type_class.fhir_type_name() == "Address"
+    assert context.type_class.is_primitive() is False
     assert context.prop_name == "address"
     assert context.optional is True
 
@@ -231,9 +233,14 @@ def test_type_path_element(engine):
     """ """
     path_ = ElementPath("Patient.name")
     path_.finalize(engine)
-    path_ = path_ / "firstname"
+    path_ = path_ / "given"
 
-    assert path_.path == "Patient.name.firstname"
+    assert path_.path == "Patient.name.given"
+    assert path_.context.type_name == "string"
+
+    # an element HumanName does not have is not a valid path
+    with pytest.raises(ValidationError):
+        ElementPath("Patient.name.firstname").finalize(engine)
 
 
 def test_type_path_constraint():

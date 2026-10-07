@@ -23,6 +23,7 @@ def test_es_connection_creation(es):
     assert conn.raw_connection.ping() is True
 
 
+@pytest.mark.asyncio
 async def test_async_es_connection_creation(es):
     """ """
     host, port = es

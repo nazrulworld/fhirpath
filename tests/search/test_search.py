@@ -14,10 +14,10 @@ from fhirpath.search.search import AsyncSearch
 from fhirpath.search.search import SearchContext
 from fhirpath.search.exceptions import ValidationError
 
-from fhir.resources.patient import Patient
-from fhir.resources.observation import Observation
-from fhir.resources.practitioner import Practitioner
-from fhir.resources.medicationrequest import MedicationRequest
+from fhir.resources.R4B.patient import Patient
+from fhir.resources.R4B.observation import Observation
+from fhir.resources.R4B.practitioner import Practitioner
+from fhir.resources.R4B.medicationrequest import MedicationRequest
 
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
@@ -569,7 +569,7 @@ def test_search_result_with_below_modifier(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
-    params = (("given:below", "Eel,Eve"),)
+    params = (("given:below", "Ele,Eve"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1

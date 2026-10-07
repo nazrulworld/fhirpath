@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # _*_ coding: utf-8 _*_
 """Tests for `fhirpath` package."""
+import pytest
 from fhirpath.search.search import Search
 from fhirpath.search.search import SearchContext
 
@@ -8,6 +9,7 @@ from fhirpath.search.search import SearchContext
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 
 
+@pytest.mark.asyncio
 async def test_raw_es_query_generation_from_search(engine, es_data):
     """Sample pytest test function with the pytest fixture as an argument."""
     context = SearchContext(engine, "Patient")
@@ -23,6 +25,7 @@ async def test_raw_es_query_generation_from_search(engine, es_data):
     )
 
 
+@pytest.mark.asyncio
 async def test_dialect_generated_raw_query(es_data, engine):
     """ """
     search_context = SearchContext(engine, "Organization")

@@ -1,4 +1,5 @@
 # _*_ coding: utf-8 _*_
+import pytest
 from elasticsearch import Elasticsearch
 
 from fhirpath.search.connectors import make_url
@@ -8,6 +9,7 @@ from fhirpath.search.connectors.factory import es as ES
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
 
+@pytest.mark.asyncio
 async def test_elasticsearch_conn_creation(es):
     """ """
     host, port = es
