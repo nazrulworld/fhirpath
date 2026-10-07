@@ -109,3 +109,5 @@ ENV/
 
 # files
 /src/fhirpath/version.py
+.claude/
+tests/conformance/
