@@ -108,6 +108,5 @@ ENV/
 *.sublime-*
 
 # files
-/src/fhirpath/version.py
 .claude/
 tests/conformance/

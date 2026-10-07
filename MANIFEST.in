@@ -17,5 +17,4 @@ recursive-exclude * *.py[co]
 
 exclude Makefile .editorconfig Pipfile* tox.ini buildout.cfg .gitmodules .readthedocs.yml .lgtm.yml
 exclude mypy.ini .flake8 .isort.cfg
-exclude  src/fhirpath/version.py
 
