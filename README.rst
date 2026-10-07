@@ -36,17 +36,189 @@ Introduction
         :target: https://www.hl7.org/fhir/fhirpath.html
         :alt: HL7® FHIR®
 
-FHIRPath_ Normative Release (v2.0.0) implementation in Python, along side it
-provides support for `FHIR Search <https://www.hl7.org/fhir/search.html>`_ API and
+FHIRPath_ (v3.0.0, including the FHIR®-specific extensions) implementation in Python,
+along side it provides support for `FHIR Search <https://www.hl7.org/fhir/search.html>`_ API and
 Query (we called it ``fql(FHIR Query Language)``)
 API to fetch FHIR resources from any data-source(database).
 This library is built in ORM_ like approach. Our goal is to make 100% (as much as possible)
-FHIRPath_ Normative Release (v2.0.0) specification compliance product.
+FHIRPath_ specification compliance product.
 
+* Evaluates FHIRPath expressions against FHIR® resources: passes 1061 of the 1064 runnable
+  cases of the official FHIRPath conformance test suite (see `Evaluating FHIRPath expressions`_).
 * Supports FHIR® ``STU3`` and ``R4``.
 * Supports multiple provider´s engine. Now Plone_ & guillotina_ framework powered providers `fhirpath-guillotina`_ and `collective.fhirpath`_ respectively are supported and more coming soon.
 * Supports multiple dialects, for example elasticsearch_, GraphQL_, PostgreSQL_. Although now elasticsearch_ has been supported.
 * Provide full support of `FHIR Search <https://www.hl7.org/fhir/search.html>`_ with easy to use API.
+
+
+Evaluating FHIRPath expressions
+-------------------------------
+
+The ``fhirpath.core`` package is a complete FHIRPath_ 3.0.0 engine. It needs no
+database: give it a resource and an expression.
+
+Resources can be ``fhir.resources`` model instances or plain JSON dicts (load JSON with
+``json.loads(text, parse_float=decimal.Decimal)`` to keep decimal precision)::
+
+    >>> patient = {
+    ...     "resourceType": "Patient",
+    ...     "id": "example",
+    ...     "active": True,
+    ...     "gender": "male",
+    ...     "birthDate": "1974-12-25",
+    ...     "name": [
+    ...         {"use": "official", "family": "Chalmers", "given": ["Peter", "James"]},
+    ...         {"use": "usual", "given": ["Jim"]},
+    ...     ],
+    ...     "telecom": [{"system": "phone", "value": "(03) 5555 6473", "use": "work"}],
+    ... }
+
+Evaluate an expression
+~~~~~~~~~~~~~~~~~~~~~~
+
+``evaluate(resource, expression)`` always returns a list (a FHIRPath collection)::
+
+    >>> from fhirpath.core import evaluate
+    >>> evaluate(patient, "name.where(use = 'official').given")
+    ['Peter', 'James']
+    >>> evaluate(patient, "name.given.count()")
+    [3]
+    >>> evaluate(patient, "Patient.name.select(given.first() + ' ' + family)")
+    ['Peter Chalmers']
+    >>> evaluate(patient, "birthDate < @2000-01-01")
+    [True]
+    >>> evaluate(patient, "name.exists(use = 'nickname')")
+    [False]
+    >>> evaluate(patient, "deceased")
+    []
+
+The same works with a model instance::
+
+    >>> from fhir.resources.patient import Patient
+    >>> evaluate(Patient.model_validate(patient), "name.given.first()")
+    ['Peter']
+
+Results are plain Python values:
+
+* FHIR primitives become FHIRPath System values: ``str``, ``bool``, ``int``, ``Decimal``,
+  ``fhirpath.core.Long``, ``FPDate``/``FPDateTime``/``FPTime`` (dates and times keep their
+  partial precision, ``str(value)`` gives the ISO text) and ``fhirpath.core.Quantity``.
+* Complex elements (``HumanName``, a contained resource, …) are returned as they appear in
+  the input: the model object, or the dict.
+
+Quantities and units (UCUM and calendar durations) are supported::
+
+    >>> evaluate(None, "1 'kg' = 1000 'g'")
+    [True]
+    >>> evaluate(None, "(4 days + 2 'wk').toString()")
+    ['18 days']
+
+Compile once, evaluate many times
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``compile()`` parses the expression once. ``test()`` evaluates it as a predicate
+(an invariant): a single Boolean is returned as is, otherwise "is the result non-empty"::
+
+    >>> from fhirpath.core import compile
+    >>> invariant = compile("name.where(use = 'official').exists() implies birthDate.exists()")
+    >>> invariant.test(patient)
+    True
+    >>> invariant.evaluate(patient)
+    [True]
+
+Variables, references and other options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass ``%variables`` as a dict. ``%resource``, ``%rootResource``, ``%context``, ``%ucum``,
+``%sct``, ``%loinc`` and :literal:`%\`vs-[id]\``/:literal:`%\`ext-[id]\`` are always available::
+
+    >>> evaluate(patient, "%minimum + 1", {"minimum": 5})
+    [6]
+    >>> evaluate(patient, "%resource.id")
+    ['example']
+
+``resolve()`` finds contained resources (``#id``) and Bundle entries by itself. Anything
+else (``Patient/123``, absolute URLs) goes to a ``resolver`` you provide::
+
+    >>> def resolver(reference, origin):
+    ...     # return a model instance or dict, or None when unknown
+    ...     return {"resourceType": "Organization", "id": "1", "name": "ACME"}
+    >>> evaluate(
+    ...     {"resourceType": "Patient", "managingOrganization": {"reference": "Organization/1"}},
+    ...     "managingOrganization.resolve().name",
+    ...     resolver=resolver,
+    ... )
+    ['ACME']
+
+Other keyword options of ``evaluate()``, ``CompiledExpression.evaluate()`` and ``FHIRPath()``:
+
+* ``terminology``: an object implementing ``fhirpath.core.Terminology``
+  (``member_of``/``subsumes``) for ``memberOf()``, ``subsumes()`` and ``subsumedBy()``.
+* ``tracer``: ``callable(name, values)`` receiving ``trace()`` output (default: the
+  ``fhirpath.trace`` logger at DEBUG level).
+* ``now``: an ``FPDateTime`` used by ``now()``/``today()``/``timeOfDay()`` (useful in tests).
+* ``nodes=True`` (``evaluate()`` only): return the engine's ``Node`` objects, which carry the
+  FHIR type, element path (``node.path()``) and parent, instead of plain values.
+
+Errors
+~~~~~~
+
+Every FHIRPath error raises ``fhirpath.core.EvaluationError``. Invalid syntax raises its
+subclass ``FHIRPathSyntaxError``::
+
+    >>> from fhirpath.core import EvaluationError
+    >>> try:
+    ...     evaluate(patient, "name.given + ' x'")  # '+' needs single items, given has 3
+    ... except EvaluationError as error:
+    ...     print(error.msg)
+    left operand of '+' must be a single item, got 3
+
+Fluent API
+~~~~~~~~~~
+
+``fhirpath.FHIRPath`` wraps the same engine in a chainable Python API. Attribute access
+navigates elements and calling an attribute invokes the FHIRPath function of that name::
+
+    >>> from fhirpath import FHIRPath
+    >>> fp = FHIRPath(patient)
+    >>> fp.name.where("use = 'official'").given.to_list()
+    ['Peter', 'James']
+    >>> fp.name.first().family.upper().to_list()
+    ['CHALMERS']
+    >>> fp.name[1].given.to_list()
+    ['Jim']
+    >>> bool(fp.active)
+    True
+
+* Arguments of ``where``, ``select``, ``exists``, ``all``, ``repeat``, ``sort``, ``iif``,
+  ``coalesce``, ``aggregate`` and the type argument of ``ofType``/``is_``/``as_`` are
+  FHIRPath expression strings. Any other argument is a value: a Python value becomes a
+  literal, a ``FHIRPath`` or list is passed as a collection, and ``Expr("…")`` marks an
+  expression explicitly::
+
+    >>> from fhirpath.fhirpath import Expr
+    >>> fp.name.given.combine(Expr("name.family")).to_list()
+    ['Peter', 'James', 'Jim', 'Chalmers']
+    >>> fp.gender.is_("code").to_list()
+    [True]
+
+* ``is_()``, ``as_()`` and ``not_()`` stand for the keyword-named functions; use
+  ``fp["class"]`` for element names that are Python keywords.
+* ``fp.evaluate("…")`` evaluates an expression with the current collection as input.
+* Results: ``to_list()``, iteration, ``len()``, ``bool()``; ``to_nodes()`` for ``Node`` objects.
+
+Specification notes
+~~~~~~~~~~~~~~~~~~~
+
+* Implements FHIRPath 3.0.0 (including the STU parts: ``Long``, ``sort()``, instance
+  selectors, ``defineVariable()``, ``lowBoundary()``/``highBoundary()``, ``duration()``,
+  aggregates, …) and the FHIR additions (``resolve()``, ``extension()``, ``hasValue()``,
+  ``getValue()``, ``htmlChecks()``, ``conformsTo()`` for core profiles, …).
+* ``elementDefinition()``, ``slice()`` and ``weight()`` need a validator or profile store
+  and raise an error.
+* Typed choice names (``Observation.valueQuantity``) are accepted next to the standard
+  ``Observation.value`` (lenient mode, as in fhirpath.js).
+* Unit conversion uses a built-in subset of UCUM (common clinical, SI and customary units).
 
 
 Usages
@@ -223,34 +395,10 @@ Example Mapping (Reference Field)::
 ToDo
 ----
 
-
-3 (Path selection)
-5.1 (Existence)
-5.2 (Filtering and Projection) "ofType"
-5.3 (Subsetting)
-5.4 (Combining)
-5.5 (Conversion)
-5.6 (String Manipulation)
-5.7 (Tree Navigation)
-5.8 (Utility Functions)
-6.1 (Equality)
-6.2 (Comparison)
-6.3 (Types)
-6.4 (Collections)
-6.5 (Boolean logic)
-6.6 (Math)
-6.8 (Operator Precedence) - handled by ANTLR parser
-7 (Aggregates)
-8 (Lexical Elements) - handled by ANTLR parser
-9 (Environment Variables)
-
-
 1. `fhirbase`_ engine aka provider implementation.
 
-2. All methods/functions are defined in `FHIRPath`_ specification, would be completed.
-
-3. Implement https://github.com/ijl/orjson
-4. https://developers.redhat.com/blog/2017/11/16/speed-python-using-rust/
+2. Implement https://github.com/ijl/orjson
+3. https://developers.redhat.com/blog/2017/11/16/speed-python-using-rust/
 
 Credits
 -------
@@ -259,7 +407,7 @@ This package skeleton was created with Cookiecutter_ and the `audreyr/cookiecutt
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
-.. _`FHIRPath`: http://hl7.org/fhirpath/N1/
+.. _`FHIRPath`: https://hl7.org/fhirpath/
 .. _`FHIR`: http://hl7.org/fhir/
 .. _`ORM`: https://en.wikipedia.org/wiki/Object-relational_mapping
 .. _`Plone`: https://plone.org
