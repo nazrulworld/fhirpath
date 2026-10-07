@@ -1,6 +1,8 @@
 import typing
+from decimal import Decimal
 
-from pydantic.json import pydantic_encoder
+from pydantic import BaseModel
+from pydantic_core import to_jsonable_python
 
 try:
     import orjson as json_mod
@@ -11,6 +13,22 @@ except ImportError:
         import json as json_mod  # type:ignore
 
 __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
+
+
+def json_default(value: typing.Any) -> typing.Any:
+    """``default`` hook for JSON encoders (replaces pydantic 1 ``pydantic_encoder``).
+
+    FHIR models are dumped as FHIR JSON (aliases, no empty elements), decimals as
+    JSON numbers, anything else pydantic knows (dates, UUIDs, enums, bytes, ...) via
+    ``pydantic_core.to_jsonable_python``.
+    """
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, Decimal):
+        if value == value.to_integral_value() and value.as_tuple().exponent >= 0:
+            return int(value)
+        return float(value)
+    return to_jsonable_python(value)
 
 
 def json_dumps(
@@ -25,11 +43,11 @@ def json_dumps(
     **kw,
 ) -> typing.Union[str, bytes]:
     """Practical json dumps helper function to serialize to json str
-    (all default converters included powered by pydantic).
+    (all default converters included, see ``json_default``).
     auto supports for ``orjson``, ``simplejson``"""
 
     if default is None:
-        default = pydantic_encoder
+        default = json_default
     dumps_params: typing.Any = {"default": default}
 
     if json_mod.__name__ == "orjson":
@@ -81,4 +99,4 @@ def json_loads(
     return json_mod.loads(value)
 
 
-__all__ = ["json_dumps", "json_loads"]
+__all__ = ["json_dumps", "json_loads", "json_default"]

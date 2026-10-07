@@ -1,15 +1,14 @@
 # _*_ coding: utf-8 _*_
 import datetime
-import inspect
 import math
 import os
-import pkgutil
 import re
 import sys
 import time
+import types
+import typing
 import uuid
 from importlib import import_module
-from inspect import signature
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -22,31 +21,29 @@ from typing import (
     Text,
     Type,
     Union,
-    cast,
 )
 
 import pkg_resources
-from pydantic.validators import bool_validator
+from pydantic import TypeAdapter
+from pydantic import ValidationError as PydanticValidationError
 from yarl import URL
 from zope.interface import implementer
 
 from fhirpath.thirdparty import Proxy
 
+from ..core.model import class_fields
 from ..enums import FHIR_VERSION
+from ..utils import (  # noqa: F401  (re-exported, historically defined here)
+    lookup_all_fhir_domain_resource_classes,
+    lookup_fhir_class,
+    lookup_fhir_class_path,
+)
 from .interfaces import IPathInfoContext
 from ..json import json_dumps, json_loads  # noqa: F401
-from .storage import FHIR_RESOURCE_CLASS_STORAGE, PATH_INFO_STORAGE
-from .types import PrimitiveDataTypes
+from .storage import PATH_INFO_STORAGE
 
 if TYPE_CHECKING:
-    from fhir.resources.core.fhirabstractmodel import FHIRAbstractModel
-    from fhir.resources.fhirtypes import (  # noqa: F401
-        AbstractBaseType,
-        AbstractType,
-        Primitive,
-    )
-    from pydantic.fields import ModelField  # noqa: F401
-    from pydantic.main import BaseConfig  # noqa: F401
+    from fhir_core.fhirabstractmodel import FHIRAbstractModel
 
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -155,119 +152,6 @@ def builder(func):
     return _copy
 
 
-def lookup_all_fhir_domain_resource_classes(
-    fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
-) -> Dict[str, str]:
-    """ """
-    container: Dict[str, str] = {}
-    fhir_release = FHIR_VERSION.normalize(fhir_release)
-    pkg = "fhir.resources"
-    if fhir_release.name not in (FHIR_VERSION.DEFAULT.value, "R4"):
-        pkg += f".{fhir_release.name}"
-
-    prime_module_type: ModuleType = import_module(pkg)
-
-    for _importer, module_name, ispkg in pkgutil.walk_packages(
-        prime_module_type.__path__,  # type: ignore
-        prime_module_type.__name__ + ".",
-        onerror=lambda x: None,
-    ):
-        if ispkg or (len(pkg.split(".")) + 1) < len(module_name.split(".")):
-            continue
-
-        module_type: ModuleType = import_module(module_name)
-
-        for klass_name, _klass in inspect.getmembers(module_type, inspect.isclass):
-            if inspect.getmro(_klass)[1].__name__ != "DomainResource":
-                continue
-
-            container[klass_name] = f"{_klass.__module__}.{klass_name}"
-    return container
-
-
-def lookup_fhir_class_path(
-    resource_type: Text,
-    cache: bool = True,
-    fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
-) -> Optional[Text]:  # noqa: E999
-    """This function finds FHIR resource model class (from fhir.resources) and
-    return dotted path string.
-
-    :arg resource_type: the resource type name (required). i.e Organization
-
-    :arg cache: (default True) the flag which indicates should query fresh or
-        serve from cache if available.
-
-    :arg fhir_release: FHIR Release (version) name.
-        i.e FHIR_VERSION.STU3, FHIR_VERSION.R4
-
-    :return dotted full string path. i.e fhir.resources.organization.Organization
-
-    Example::
-
-        >>> from fhirpath.utils import lookup_fhir_class_path
-        >>> from zope.interface import Invalid
-        >>> dotted_path = lookup_fhir_class_path('Patient')
-        >>> 'fhir.resources.patient.Patient' == dotted_path
-        True
-        >>> dotted_path = lookup_fhir_class_path('FakeResource')
-        >>> dotted_path is None
-        True
-    """
-    fhir_release = FHIR_VERSION.normalize(fhir_release)
-
-    storage = FHIR_RESOURCE_CLASS_STORAGE.get(fhir_release.name)
-
-    if storage.exists(resource_type) and cache:
-        return storage.get(resource_type)
-
-    # Trying to get from entire modules
-    prime_module: List[Text] = ["fhir", "resources"]
-    if fhir_release.name not in (FHIR_VERSION["DEFAULT"].value, "R4"):
-        prime_module.append(fhir_release.name)
-
-    prime_module_level = len(prime_module)
-    prime_module_path: Text = ".".join(prime_module)
-
-    prime_module_type: ModuleType = import_module(prime_module_path)
-
-    for _importer, module_name, ispkg in pkgutil.walk_packages(
-        prime_module_type.__path__,  # type: ignore
-        prime_module_type.__name__ + ".",
-        onerror=lambda x: None,
-    ):
-        if ispkg or (prime_module_level + 1) < len(module_name.split(".")):
-            continue
-
-        module_type: ModuleType = import_module(module_name)
-
-        for klass_name, _klass in inspect.getmembers(module_type, inspect.isclass):
-
-            if klass_name == resource_type:
-                storage.insert(resource_type, f"{module_name}.{resource_type}")
-                return storage.get(resource_type)
-    return None
-
-
-def lookup_fhir_class(
-    resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
-) -> Type["FHIRAbstractModel"]:  # noqa: E999
-    factory_paths: List[str] = ["fhir", "resources"]
-    if (
-        FHIR_VERSION["DEFAULT"].value not in (fhir_release.name, "R4")
-        and fhir_release not in (FHIR_VERSION.DEFAULT, FHIR_VERSION.R4)
-    ):
-        factory_paths.append(fhir_release.name)
-    factory_paths.append("get_fhir_model_class")
-
-    factory: type = import_string(".".join(factory_paths))
-    try:
-        klass = factory(resource_type)
-    except KeyError:
-        raise LookupError(f"{resource_type} is not a valid FHIR class")
-    return klass
-
-
 CONTAINS_PY_PACKAGE: Pattern = re.compile(
     r"^\${(?P<package_name>[0-9a-z._]+)}", re.IGNORECASE
 )
@@ -345,9 +229,122 @@ class EmptyPathInfoContext:
 EMPTY_PATH_INFO_CONTEXT = EmptyPathInfoContext()
 
 
+class FHIRTypeInfo:
+    """Type of an element path, derived from the ``fhir.resources`` (pydantic 2) models.
+
+    Keeps the protocol of the fhir.resources 6 ``fhirtypes`` classes the search code
+    relies on: ``is_primitive()``, ``fhir_type_name()``, ``__resource_type__`` and
+    ``__fhir_release__``. Values are validated with a pydantic ``TypeAdapter`` built
+    from the field annotation.
+    """
+
+    __slots__ = ("name", "model_class", "annotation", "fhir_release", "_adapter")
+
+    def __init__(
+        self,
+        name: str,
+        model_class: Optional[Type["FHIRAbstractModel"]],
+        annotation: Any,
+        fhir_release: FHIR_VERSION,
+    ):
+        self.name = name
+        self.model_class = model_class
+        self.annotation = annotation
+        self.fhir_release = fhir_release
+        self._adapter: Optional[TypeAdapter] = None
+
+    def is_primitive(self) -> bool:
+        return self.model_class is None
+
+    def fhir_type_name(self) -> str:
+        return self.name
+
+    @property
+    def __resource_type__(self) -> str:
+        return self.name
+
+    @property
+    def __fhir_release__(self) -> str:
+        return self.fhir_release.name
+
+    @property
+    def __visit_name__(self) -> str:
+        return self.name
+
+    def validate(self, value: Any) -> Any:
+        """Validate/convert ``value`` the way the model field would.
+
+        Date/time *search values* are parsed leniently into ``date``/``datetime``/
+        ``time`` objects: FHIR search allows ``2019-07-17T19:32:59`` without an
+        offset, which the strict resource datatypes reject.
+        """
+        if isinstance(value, str) and self.name in _TEMPORAL_ADAPTERS:
+            parsed = _parse_search_temporal(self.name, value)
+            if parsed is not None:
+                return parsed
+        if self._adapter is None:
+            self._adapter = TypeAdapter(self.annotation)
+        return self._adapter.validate_python(value)
+
+    def __eq__(self, other):
+        if isinstance(other, FHIRTypeInfo):
+            return (self.name, self.fhir_release) == (other.name, other.fhir_release)
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.name, self.fhir_release))
+
+    def __repr__(self):
+        return "<FHIRTypeInfo %s (%s)>" % (self.name, self.fhir_release.name)
+
+
+_TEMPORAL_ADAPTERS = {
+    "date": TypeAdapter(datetime.date),
+    "dateTime": TypeAdapter(datetime.datetime),
+    "instant": TypeAdapter(datetime.datetime),
+    "time": TypeAdapter(datetime.time),
+}
+_FULL_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _parse_search_temporal(type_name: str, value: str) -> Any:
+    """Full date / date-time / time search value -> Python object, else ``None``.
+
+    Partial dates (``2010``, ``2010-05``) return ``None`` and go through the
+    regular (model) validation, which keeps them as strings.
+    """
+    try:
+        if type_name == "time":
+            return _TEMPORAL_ADAPTERS["time"].validate_python(value)
+        if "T" in value:
+            return _TEMPORAL_ADAPTERS["dateTime"].validate_python(value)
+        if _FULL_DATE.match(value):
+            return _TEMPORAL_ADAPTERS["date"].validate_python(value)
+    except PydanticValidationError:
+        return None
+    return None
+
+
+def _field_annotation(model_class: Type["FHIRAbstractModel"], attr: str) -> Any:
+    """Item annotation of a model field (Optional[...] and List[...] removed)."""
+    annotation = model_class.model_fields[attr].annotation
+    while True:
+        origin = typing.get_origin(annotation)
+        if origin is Union or origin is types.UnionType:
+            args = [a for a in typing.get_args(annotation) if a is not type(None)]
+            annotation = args[0] if len(args) == 1 else Union[tuple(args)]
+            if len(args) != 1:
+                return annotation
+            continue
+        if origin in (list, List):
+            annotation = typing.get_args(annotation)[0]
+            continue
+        return annotation
+
+
 @implementer(IPathInfoContext)
 class PathInfoContext:
-    """ """
+    """Type information of a FHIR element path, e.g. ``Patient.name.given``."""
 
     def __init__(
         self,
@@ -356,9 +353,7 @@ class PathInfoContext:
         prop_name: str,
         prop_original: str,
         type_name: str,
-        type_class: Union[bool, "AbstractBaseType", "AbstractType", "Primitive"],
-        type_field: "ModelField",
-        type_model_config: Type["BaseConfig"],
+        type_class: FHIRTypeInfo,
         optional: bool,
         multiple: bool,
         type_is_primitive: bool,
@@ -373,11 +368,7 @@ class PathInfoContext:
         self.prop_name: str = prop_name
         self.prop_original: str = prop_original
         self.type_name: str = type_name
-        self.type_class: Union[
-            bool, "AbstractBaseType", "AbstractType", "Primitive"
-        ] = type_class
-        self.type_field: "ModelField" = type_field
-        self.type_model_config: Type["BaseConfig"] = type_model_config
+        self.type_class: FHIRTypeInfo = type_class
         self.optional: bool = optional
         self.multiple: bool = multiple
         self.type_is_primitive: bool = type_is_primitive
@@ -386,8 +377,8 @@ class PathInfoContext:
     @classmethod
     def context_from_path(
         cls, pathname: Text, fhir_release: FHIR_VERSION
-    ) -> Union["PathInfoContext", "EmptyPathInfoContext"]:
-        """ """
+    ) -> Optional[Union["PathInfoContext", "EmptyPathInfoContext"]]:
+        """Context of ``pathname`` (``None`` when the path is not valid)."""
         if pathname == "*":
             return EMPTY_PATH_INFO_CONTEXT
 
@@ -401,91 +392,63 @@ class PathInfoContext:
 
         parts = pathname.split(".")
         resource_type = parts[0]
-        model_path = lookup_fhir_class_path(resource_type, fhir_release=fhir_release)
-        model_class: Type["FHIRAbstractModel"] = cast(
-            Type["FHIRAbstractModel"], import_string(cast(Text, model_path))
-        )
+        try:
+            model_class: Optional[Type["FHIRAbstractModel"]] = lookup_fhir_class(
+                resource_type, fhir_release
+            )
+        except LookupError:
+            return None
         new_path: Text = parts[0]
         context: Optional["PathInfoContext"] = None
 
         for index, part in enumerate(parts[1:], 1):
-
             new_path = "{0}.{1}".format(new_path, part)
+            if model_class is None:
+                # a primitive cannot have children
+                raise ValueError("Invalid path {0}".format(pathname))
+
             if storage.exists(new_path):
                 context = storage.get(new_path)
-                if TYPE_CHECKING:
-                    assert context
-                if context.type_name in PrimitiveDataTypes:
-                    if (index + 1) < len(parts):
-                        raise ValueError("Invalid path {0}".format(pathname))
-                    break
-                else:
-                    klass = context.type_class
-                    model_class = lookup_fhir_class(
-                        klass.__resource_type__,  # type: ignore
-                        FHIR_VERSION[klass.__fhir_release__],  # type: ignore
-                    )
-                    continue
+                model_class = context.type_class.model_class
+                continue
 
-            for field in model_class.element_properties():
+            meta = class_fields(model_class)[0].get(part)
+            if meta is None:
+                # important! not a valid path (part)
+                return None
 
-                if part != field.alias:
-                    continue
-                type_model_config = model_class.__config__
-                multiple = str(field.outer_type_)[:12] == "typing.List["
-                union_type = str(field.type_)[:13] == "typing.Union["
-                field_type = field.type_
-                if union_type:
-                    field_type = field_type.__args__[0]
-                if getattr(field_type, "__resource_type__", None):
-                    # AbstractModelType
-                    model_class = lookup_fhir_class(
-                        field_type.__resource_type__,
-                        FHIR_VERSION[field_type.__fhir_release__],
-                    )
-                    type_name = field_type.__resource_type__
-                    is_primitive = False
-                else:
-                    is_primitive = True
-                    # Primitive
-                    type_name = getattr(field_type, "__visit_name__", None)
-                    if type_name is None and field_type == bool:
-                        type_name = "boolean"
-                    if type_name is None:
-                        raise NotImplementedError
+            type_name = meta.type_name or "Resource"
+            child_class = meta.klass
+            if child_class is None and meta.type_name is None:
+                child_class = lookup_fhir_class("Resource", fhir_release)
+            is_primitive = child_class is None
+            info = model_class.model_fields[meta.attr]
+            context = cls(
+                new_path,
+                fhir_release=fhir_release,
+                prop_name=meta.attr,
+                prop_original=meta.json_name,
+                type_name=type_name,
+                type_class=FHIRTypeInfo(
+                    type_name,
+                    child_class,
+                    _field_annotation(model_class, meta.attr),
+                    fhir_release,
+                ),
+                optional=not info.is_required(),
+                multiple=meta.is_list,
+                type_is_primitive=is_primitive,
+                resource_type=resource_type,
+            )
+            if index > 1:
+                context.parent = ".".join(new_path.split(".")[:-1])
+                # Get Property: should return parent Context obj instead
+                # of just string
+                parent_context = context.parent
+                parent_context.add_child(new_path)  # type: ignore
 
-                context = cls(
-                    new_path,
-                    fhir_release=fhir_release,
-                    prop_name=field.name,
-                    prop_original=field.alias,
-                    type_name=type_name,
-                    type_class=field.type_,
-                    type_field=field,
-                    type_model_config=type_model_config,
-                    optional=(not field.required),
-                    multiple=multiple,
-                    type_is_primitive=is_primitive,
-                    resource_type=resource_type,
-                )
-                if index > 1:
-                    context.parent = ".".join(new_path.split(".")[:-1])
-                    # Get Property: should return parent Context obj instead
-                    # of just string
-                    parent_context = context.parent
-                    parent_context.add_child(new_path)  # type: ignore
-
-                storage.insert(new_path, context)
-
-                if is_primitive:
-                    if (index + 1) < len(parts):
-                        raise ValueError("Invalid path {0}".format(pathname))
-                    break
-            # important! even context is None, that means not valid path (part)
-            if context is None:
-                break
-        if TYPE_CHECKING:
-            assert context
+            storage.insert(new_path, context)
+            model_class = child_class
         return context
 
     def __proxy__(self):
@@ -530,12 +493,9 @@ class PathInfoContext:
         if path not in self._children:
             self._children.append(path)
 
-    def get_real_type_class(self):
+    def get_real_type_class(self) -> FHIRTypeInfo:
         """ """
-        klass = self.type_class
-        if str(klass)[:13] == "typing.Union[":
-            return klass.__args__[0]
-        return klass
+        return self.type_class
 
     def __repr__(self):
         """ """
@@ -548,25 +508,15 @@ class PathInfoContext:
         return str(self._path)
 
     def validate_value(self, value):
-        """``pydantic`` way to validate value"""
-        if self.type_class == bool:
-            return bool_validator(value)
+        """Validate a search value against the element type (pydantic 2)."""
         try:
-            validators = self.type_class.__get_validators__()
-        except AttributeError:
-            validators = ()
-        for validator in validators:
-            sig = signature(validator)
-            args = list(sig.parameters.keys())
-            if len(args) == 1:
-                value = validator(value)
-            elif len(args) == 2:
-                value = validator(value, self.type_field)
-            elif len(args) == 3:
-                value = validator(value, self.type_field, self.type_model_config)
-            else:
-                raise NotImplementedError
-        return value
+            return self.type_class.validate(value)
+        except PydanticValidationError as exc:
+            raise ValueError(
+                "Invalid value {0!r} for {1} ({2}): {3}".format(
+                    value, self._path, self.type_name, exc.errors()[0].get("msg")
+                )
+            ) from exc
 
 
 class PathInfoContextProxy(Proxy):
@@ -621,15 +571,11 @@ class BundleWrapper:
     def fhir_rest_server_path_pattern(cls):
         """ """
         if cls.FHIR_REST_SERVER_PATH_PATTERN is None:
-            all_resource_domain_types = set(
-                list(lookup_all_fhir_domain_resource_classes(FHIR_VERSION.R4).keys())
-                + list(
-                    lookup_all_fhir_domain_resource_classes(FHIR_VERSION.STU3).keys()
+            all_resource_domain_types = set()
+            for release in (FHIR_VERSION.R5, FHIR_VERSION.R4B, FHIR_VERSION.STU3):
+                all_resource_domain_types.update(
+                    lookup_all_fhir_domain_resource_classes(release).keys()
                 )
-                + list(
-                    lookup_all_fhir_domain_resource_classes(FHIR_VERSION.DSTU2).keys()
-                )
-            )
             all_resources = "|".join(all_resource_domain_types)
 
             pattern = re.compile(
@@ -776,7 +722,7 @@ class BundleWrapper:
             # important!
             self.data["resourceType"] = self.bundle_model.get_resource_type()
             return self.data
-        return self.bundle_model.parse_obj(self.data)
+        return self.bundle_model.model_validate(self.data)
 
     def resolve_absolute_uri(self, relative_path: str) -> URL:
         """ """
@@ -791,7 +737,7 @@ class BundleWrapper:
 
     def json(self):
         """ """
-        return self.__call__().json()
+        return self.__call__().model_dump_json()
 
 
 def get_local_timezone() -> datetime.timezone:

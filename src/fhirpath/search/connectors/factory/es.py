@@ -3,11 +3,10 @@ import inspect
 import logging
 
 from elasticsearch.exceptions import SerializationError
-from pydantic.json import pydantic_encoder
 from zope.interface import Invalid
 
 from fhirpath.enums import EngineQueryType
-from fhirpath.json import json_dumps, json_loads
+from fhirpath.json import json_default, json_dumps, json_loads
 from fhirpath.utils import import_string
 
 from ..connection import Connection
@@ -26,7 +25,7 @@ class ElasticsearchJSONSerializer:
     mimetype = "application/json"
 
     def default(self, data):
-        return pydantic_encoder(data)
+        return json_default(data)
 
     def loads(self, s):
         try:

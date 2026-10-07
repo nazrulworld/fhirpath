@@ -12,7 +12,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
-    List,
     Match,
     Optional,
     Pattern,
@@ -27,7 +26,7 @@ from .enums import FHIR_VERSION
 from .json import json_dumps, json_loads  # noqa: F401
 
 if TYPE_CHECKING:
-    from fhir.resources.core.fhirabstractmodel import FHIRAbstractModel
+    from fhir_core.fhirabstractmodel import FHIRAbstractModel
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
@@ -111,13 +110,9 @@ def import_string(dotted_path: Text) -> type:
 def lookup_all_fhir_domain_resource_classes(
     fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
 ) -> Dict[str, str]:
-    """ """
+    """Resource type name -> dotted class path of every DomainResource of a release."""
     container: Dict[str, str] = {}
-    fhir_release = FHIR_VERSION.normalize(fhir_release)
-    pkg = "fhir.resources"
-    if fhir_release.name != FHIR_VERSION.DEFAULT.value:
-        pkg += f".{fhir_release.name}"
-
+    pkg = FHIR_VERSION.normalize(fhir_release).models_package()
     prime_module_type: ModuleType = import_module(pkg)
 
     for _importer, module_name, ispkg in pkgutil.walk_packages(
@@ -141,20 +136,38 @@ def lookup_all_fhir_domain_resource_classes(
 def lookup_fhir_class(
     resource_type: Text, fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT
 ) -> Type["FHIRAbstractModel"]:  # noqa: E999
-    factory_paths: List[str] = ["fhir", "resources"]
-    if (
-        FHIR_VERSION["DEFAULT"].value != fhir_release.name
-        and fhir_release != FHIR_VERSION.DEFAULT
-    ):
-        factory_paths.append(fhir_release.name)
-    factory_paths.append("get_fhir_model_class")
-
-    factory: type = import_string(".".join(factory_paths))
+    """``fhir.resources`` model class of ``resource_type`` for a FHIR release."""
+    package = FHIR_VERSION.normalize(fhir_release).models_package()
+    factory = import_string(package + ".get_fhir_model_class")
     try:
-        klass = factory(resource_type)
-    except KeyError:
+        return factory(resource_type)
+    except (KeyError, ValueError):
         raise LookupError(f"{resource_type} is not a valid FHIR class")
-    return klass
+
+
+def lookup_fhir_class_path(
+    resource_type: Text,
+    cache: bool = True,
+    fhir_release: FHIR_VERSION = FHIR_VERSION.DEFAULT,
+) -> Optional[Text]:  # noqa: E999
+    """Dotted path of the ``fhir.resources`` model class, ``None`` if unknown.
+
+    Example::
+
+        >>> from fhirpath.utils import lookup_fhir_class_path
+        >>> from fhirpath.enums import FHIR_VERSION
+        >>> lookup_fhir_class_path('Patient', fhir_release=FHIR_VERSION.R4)
+        'fhir.resources.R4B.patient.Patient'
+        >>> lookup_fhir_class_path('FakeResource') is None
+        True
+
+    ``cache`` is kept for backwards compatibility; the model registry is cached.
+    """
+    try:
+        klass = lookup_fhir_class(resource_type, fhir_release)
+    except LookupError:
+        return None
+    return f"{klass.__module__}.{klass.__name__}"
 
 
 CONTAINS_PY_PACKAGE: Pattern = re.compile(

@@ -14,6 +14,7 @@ class FHIR_VERSION(enum.Enum):
     R4: str = "4.0.1"
     R4B: str = "4.3.0"
     DSTU2: str = "1.0.2"
+    R5: str = "5.0.0"
 
     @staticmethod
     def normalize(item):
@@ -21,6 +22,23 @@ class FHIR_VERSION(enum.Enum):
         if item == FHIR_VERSION.DEFAULT:
             item = getattr(FHIR_VERSION, item.value)
         return item
+
+    def models_package(self) -> str:
+        """``fhir.resources`` (8.x) package holding this release's models.
+
+        fhir.resources 8 ships R5 (the package root), R4B and STU3. R4 resources are
+        served by the R4B models (R4B only adds a few elements); DSTU2 is unsupported.
+        """
+        release = FHIR_VERSION.normalize(self)
+        if release == FHIR_VERSION.R5:
+            return "fhir.resources"
+        if release in (FHIR_VERSION.R4, FHIR_VERSION.R4B):
+            return "fhir.resources.R4B"
+        if release == FHIR_VERSION.STU3:
+            return "fhir.resources.STU3"
+        raise LookupError(
+            f"FHIR release {release.name} is not supported by fhir.resources"
+        )
 
 
 @enum.unique
