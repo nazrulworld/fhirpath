@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
 """Top-level package for fhirpath."""
-from .fhirpath import FHIRPath  # noqa: F401  lgtm[py/unused-import]
-from .search.query import Q_  # noqa: F401  lgtm[py/unused-import]
+
+
+def __getattr__(name):
+    """Lazy re-exports, so ``fhirpath.core`` can be used without the search stack."""
+    if name == "FHIRPath":
+        from .fhirpath import FHIRPath
+
+        return FHIRPath
+    if name == "Q_":
+        from .search.query import Q_
+
+        return Q_
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))
+
 
 def get_version():
     """ """

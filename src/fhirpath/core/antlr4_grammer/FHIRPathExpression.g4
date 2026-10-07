@@ -1,9 +1,15 @@
 grammar FHIRPathExpression;
+// FHIRPath 3.0.0 (continuous build) grammar: https://build.fhir.org/ig/HL7/FHIRPath/en/grammar.html
+// Only the grammar name differs from the specification's fhirpath.g4.
 // Grammar rules
 // [FHIRPath](http://hl7.org/fhirpath/N1) Normative Release
 
 //prog: line (line)*;
 //line: ID ( '(' expr ')') ':' expr '\r'? '\n';
+
+entireExpression
+        : expression EOF
+        ;
 
 expression
         : term                                                      #termExpression
@@ -28,13 +34,15 @@ term
         | literal                                               #literalTerm
         | externalConstant                                      #externalConstantTerm
         | '(' expression ')'                                    #parenthesizedTerm
+        | instanceSelector                                      #instanceSelectorTerm
         ;
 
 literal
         : '{' '}'                                               #nullLiteral
         | ('true' | 'false')                                    #booleanLiteral
         | STRING                                                #stringLiteral
-        | NUMBER                                                #numberLiteral
+        | (INTEGER | DECIMAL)                                   #numberLiteral
+        | LONGNUMBER                                            #longNumberLiteral
         | DATE                                                  #dateLiteral
         | DATETIME                                              #dateTimeLiteral
         | TIME                                                  #timeLiteral
@@ -54,15 +62,29 @@ invocation                          // Terms that can be used after the function
         ;
 
 function
-        : identifier '(' paramList? ')'
+        : 'sort' '(' (sortArgument (',' sortArgument)*)? ')'
+        | identifier '(' paramList? ')'
+        ;
+
+sortArgument
+        : expression ('asc' | 'desc')?                          #sortDirectionArgument
         ;
 
 paramList
         : expression (',' expression)*
         ;
 
+// Instance selector (FHIRPath object construction syntax - same as in CQL)
+instanceSelector
+        : qualifiedIdentifier '{' (':' | (instanceElementSelector (',' instanceElementSelector)*)) '}'
+        ;
+
+instanceElementSelector
+        : identifier ':' expression
+        ;
+
 quantity
-        : NUMBER unit?
+        : (INTEGER | DECIMAL) unit?
         ;
 
 unit
@@ -94,8 +116,10 @@ identifier
         | 'contains'
         | 'in'
         | 'is'
+        | 'asc'
+        | 'desc'
+        | 'sort'
         ;
-
 
 /****************************************************************
     Lexical rules
@@ -144,8 +168,16 @@ STRING
         ;
 
 // Also allows leading zeroes now (just like CQL and XSD)
-NUMBER
-        : [0-9]+('.' [0-9]+)?
+INTEGER
+        : [0-9]+
+        ;
+
+DECIMAL
+        : [0-9]+ '.' [0-9]+
+        ;
+
+LONGNUMBER
+        : [0-9]+ 'L'
         ;
 
 // Pipe whitespace to the HIDDEN channel to support retrieving source text through the parser.
@@ -162,7 +194,7 @@ LINE_COMMENT
         ;
 
 fragment ESC
-        : '\\' ([`'\\/fnrt] | UNICODE)    // allow \`, \', \\, \/, \f, etc. and \uXXX
+        : '\\' ([`"'\\/fnrt] | UNICODE)    // allow \`, \", \', \\, \/, \f, etc. and \uXXX
         ;
 
 fragment UNICODE
@@ -172,4 +204,4 @@ fragment UNICODE
 fragment HEX
         : [0-9a-fA-F]
         ;
-// Credit: copied from https://raw.githubusercontent.com/HL7/FHIRPath/master/spec/fhirpath.g4
+

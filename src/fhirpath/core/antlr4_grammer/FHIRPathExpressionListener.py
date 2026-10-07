@@ -1,4 +1,4 @@
-# # Generated from FHIRPathExpression.g4 by ANTLR 4.9.3
+# Generated from FHIRPathExpression.g4 by ANTLR 4.9.3
 from antlr4 import *
 
 if __name__ is not None and "." in __name__:
@@ -6,8 +6,21 @@ if __name__ is not None and "." in __name__:
 else:
     from FHIRPathExpressionParser import FHIRPathExpressionParser
 
+
 # This class defines a complete listener for a parse tree produced by FHIRPathExpressionParser.
 class FHIRPathExpressionListener(ParseTreeListener):
+
+    # Enter a parse tree produced by FHIRPathExpressionParser#entireExpression.
+    def enterEntireExpression(
+        self, ctx: FHIRPathExpressionParser.EntireExpressionContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#entireExpression.
+    def exitEntireExpression(
+        self, ctx: FHIRPathExpressionParser.EntireExpressionContext
+    ):
+        pass
 
     # Enter a parse tree produced by FHIRPathExpressionParser#indexerExpression.
     def enterIndexerExpression(
@@ -199,6 +212,18 @@ class FHIRPathExpressionListener(ParseTreeListener):
     ):
         pass
 
+    # Enter a parse tree produced by FHIRPathExpressionParser#instanceSelectorTerm.
+    def enterInstanceSelectorTerm(
+        self, ctx: FHIRPathExpressionParser.InstanceSelectorTermContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#instanceSelectorTerm.
+    def exitInstanceSelectorTerm(
+        self, ctx: FHIRPathExpressionParser.InstanceSelectorTermContext
+    ):
+        pass
+
     # Enter a parse tree produced by FHIRPathExpressionParser#nullLiteral.
     def enterNullLiteral(self, ctx: FHIRPathExpressionParser.NullLiteralContext):
         pass
@@ -229,6 +254,18 @@ class FHIRPathExpressionListener(ParseTreeListener):
 
     # Exit a parse tree produced by FHIRPathExpressionParser#numberLiteral.
     def exitNumberLiteral(self, ctx: FHIRPathExpressionParser.NumberLiteralContext):
+        pass
+
+    # Enter a parse tree produced by FHIRPathExpressionParser#longNumberLiteral.
+    def enterLongNumberLiteral(
+        self, ctx: FHIRPathExpressionParser.LongNumberLiteralContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#longNumberLiteral.
+    def exitLongNumberLiteral(
+        self, ctx: FHIRPathExpressionParser.LongNumberLiteralContext
+    ):
         pass
 
     # Enter a parse tree produced by FHIRPathExpressionParser#dateLiteral.
@@ -339,12 +376,48 @@ class FHIRPathExpressionListener(ParseTreeListener):
     def exitFunction(self, ctx: FHIRPathExpressionParser.FunctionContext):
         pass
 
+    # Enter a parse tree produced by FHIRPathExpressionParser#sortDirectionArgument.
+    def enterSortDirectionArgument(
+        self, ctx: FHIRPathExpressionParser.SortDirectionArgumentContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#sortDirectionArgument.
+    def exitSortDirectionArgument(
+        self, ctx: FHIRPathExpressionParser.SortDirectionArgumentContext
+    ):
+        pass
+
     # Enter a parse tree produced by FHIRPathExpressionParser#paramList.
     def enterParamList(self, ctx: FHIRPathExpressionParser.ParamListContext):
         pass
 
     # Exit a parse tree produced by FHIRPathExpressionParser#paramList.
     def exitParamList(self, ctx: FHIRPathExpressionParser.ParamListContext):
+        pass
+
+    # Enter a parse tree produced by FHIRPathExpressionParser#instanceSelector.
+    def enterInstanceSelector(
+        self, ctx: FHIRPathExpressionParser.InstanceSelectorContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#instanceSelector.
+    def exitInstanceSelector(
+        self, ctx: FHIRPathExpressionParser.InstanceSelectorContext
+    ):
+        pass
+
+    # Enter a parse tree produced by FHIRPathExpressionParser#instanceElementSelector.
+    def enterInstanceElementSelector(
+        self, ctx: FHIRPathExpressionParser.InstanceElementSelectorContext
+    ):
+        pass
+
+    # Exit a parse tree produced by FHIRPathExpressionParser#instanceElementSelector.
+    def exitInstanceElementSelector(
+        self, ctx: FHIRPathExpressionParser.InstanceElementSelectorContext
+    ):
         pass
 
     # Enter a parse tree produced by FHIRPathExpressionParser#quantity.
