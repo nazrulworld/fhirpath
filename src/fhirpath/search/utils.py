@@ -1,7 +1,6 @@
 # _*_ coding: utf-8 _*_
 import datetime
 import math
-import os
 import re
 import sys
 import time
@@ -15,7 +14,6 @@ from typing import (
     Any,
     Dict,
     List,
-    Match,
     Optional,
     Pattern,
     Text,
@@ -23,7 +21,6 @@ from typing import (
     Union,
 )
 
-import pkg_resources
 from pydantic import TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 from yarl import URL
@@ -34,6 +31,8 @@ from fhirpath.thirdparty import Proxy
 from ..core.model import class_fields
 from ..enums import FHIR_VERSION
 from ..utils import (  # noqa: F401  (re-exported, historically defined here)
+    CONTAINS_PY_PACKAGE,
+    expand_path,
     lookup_all_fhir_domain_resource_classes,
     lookup_fhir_class,
     lookup_fhir_class_path,
@@ -150,44 +149,6 @@ def builder(func):
         return result
 
     return _copy
-
-
-CONTAINS_PY_PACKAGE: Pattern = re.compile(
-    r"^\${(?P<package_name>[0-9a-z._]+)}", re.IGNORECASE
-)
-
-
-def expand_path(path_: Text) -> Text:
-    """Path normalizer
-    Supports:
-    1. Home Path expander
-    2. Package path discovery"""
-
-    pkg_matched: Optional[Match[Text]] = CONTAINS_PY_PACKAGE.match(path_)
-    if path_.startswith("~"):
-        real_path = os.path.expanduser(path_)
-
-    elif pkg_matched is not None:
-        replacement = pkg_matched.group(0)
-        package_name = pkg_matched.group("package_name")
-
-        try:
-            real_path = path_.replace(
-                replacement, pkg_resources.get_distribution(package_name).location
-            )
-        except pkg_resources.DistributionNotFound:
-            msg = "Invalid package `{0}`! as provided in {1}".format(
-                package_name, path_
-            )
-            return reraise(LookupError, msg)
-
-    else:
-        real_path = path_
-
-    if real_path.endswith(os.sep):
-        real_path = real_path[: -len(os.sep)]
-
-    return real_path
 
 
 def proxy(obj):

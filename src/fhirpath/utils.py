@@ -7,6 +7,7 @@ import re
 import sys
 import time
 from importlib import import_module
+from importlib import metadata
 from types import ModuleType
 from typing import (
     TYPE_CHECKING,
@@ -18,8 +19,6 @@ from typing import (
     Text,
     Type,
 )
-
-import pkg_resources
 
 from fhirpath.thirdparty import Proxy
 from .enums import FHIR_VERSION
@@ -190,10 +189,10 @@ def expand_path(path_: Text) -> Text:
         package_name = pkg_matched.group("package_name")
 
         try:
-            real_path = path_.replace(
-                replacement, pkg_resources.get_distribution(package_name).location
-            )
-        except pkg_resources.DistributionNotFound:
+            # the directory the distribution is installed in (site-packages)
+            location = str(metadata.distribution(package_name).locate_file(""))
+            real_path = path_.replace(replacement, location)
+        except metadata.PackageNotFoundError:
             msg = "Invalid package `{0}`! as provided in {1}".format(
                 package_name, path_
             )
