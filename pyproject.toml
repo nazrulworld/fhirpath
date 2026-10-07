@@ -90,7 +90,7 @@ Homepage = "https://nazrul.me/fhirpath/"
 "GitHub: repo" = "https://github.com/nazrulworld/fhirpath"
 
 [project.scripts]
-fhirpath = "fhirpath.cli:main"
+fhirpath = "fhirpath.__main__:main"
 
 [build-system]
 requires = [
