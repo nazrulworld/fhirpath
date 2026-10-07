@@ -16,18 +16,14 @@ def __getattr__(name):
 
 
 def get_version():
-    """ """
-    import os
+    """Version of the installed distribution (``project.version`` in pyproject.toml)."""
+    from importlib.metadata import PackageNotFoundError, version
 
-    with open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "version.py"), "r"
-    ) as fp:
-        for line in fp:
-            ln = line.strip()
-            if not ln:
-                continue
-            if ln.startswith("__version__"):
-                return eval(ln.split("=")[1].strip())
+    try:
+        return version("fhirpath")
+    except PackageNotFoundError:
+        # running from a source tree that is not installed
+        return "0.0.0.dev0"
 
 
 __author__ = """Md Nazrul Islam"""
