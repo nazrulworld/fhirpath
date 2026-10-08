@@ -708,6 +708,10 @@ class GroupTerm(object):
         self.match_operator = None
         # COUPLED|DECOUPLED
         self.type = None
+        # OR group of alternative paths (one search parameter, several elements):
+        # a path whose type rejects the value cannot match, so it is dropped when
+        # finalizing instead of failing the query
+        self.skip_invalid = False
 
         self.terms = list()
 
@@ -744,8 +748,20 @@ class GroupTerm(object):
         if self.path is not None and (not self.path.is_finalized()):
             self.path.finalize(context)
 
-        for term in self.terms:
-            term.finalize(context)
+        if self.skip_invalid:
+            valid, errors = [], []
+            for term in self.terms:
+                try:
+                    term.finalize(context)
+                    valid.append(term)
+                except ValueError as exc:
+                    errors.append(exc)
+            if not valid:
+                raise errors[0]
+            self.terms = valid
+        else:
+            for term in self.terms:
+                term.finalize(context)
 
         if self.type is None:
             self.type = GroupType.COUPLED

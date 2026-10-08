@@ -34,6 +34,10 @@ from fhirpath.enums import (
     WhereConstraintType,
 )
 from fhirpath.search.exceptions import ValidationError
+from fhirpath.search.fhirspec.expression import (
+    UnsupportedExpression,
+    component_paths,
+)
 from fhirpath.search.fhirspec import (
     FHIRSearchSpecFactory,
     ResourceSearchParameterDefinition,
@@ -58,6 +62,7 @@ from fhirpath.search.fql.types import ElementPath
 from fhirpath.search.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.search.query import Q_, QueryResult
 from fhirpath.search.storage import SEARCH_PARAMETERS_STORAGE
+from fhirpath.search.utils import PathInfoContext, lookup_fhir_class
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
@@ -71,6 +76,16 @@ parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 DEFAULT_RESULT_COUNT = 100
+# Quantity and its profiles (searched like a Quantity)
+QUANTITY_TYPES = (
+    "Quantity",
+    "Age",
+    "Count",
+    "Distance",
+    "Duration",
+    "MoneyQuantity",
+    "SimpleQuantity",
+)
 
 
 def has_escape_comma(val):
@@ -207,10 +222,23 @@ class SearchContext(object):
             sp for sp in self.definitions[0] if all(sp in d for d in self.definitions)
         ]
 
-    def resolve_path_context(self, search_param: SearchParameter):
-        """ """
+    def resolve_path_context(self, search_param: SearchParameter) -> ElementPath:
+        """First element path of the parameter (e.g. for sorting)."""
+        return self.resolve_path_contexts(search_param)[0]
+
+    def resolve_path_contexts(self, search_param: SearchParameter) -> List[ElementPath]:
+        """Element paths the parameter searches on, one per expression branch
+        (``Observation.value.ofType(Quantity) | Observation.value.ofType(SampledData)``
+        -> ``Observation.valueQuantity``, ``Observation.valueSampledData``)."""
         if search_param.expression is None:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"search parameter ``{search_param.code}`` has no expression"
+            )
+        if search_param.processing_mode == "other":
+            # R5: the description defines the matching (e.g. ``_in``, ``near``)
+            raise NotImplementedError(
+                f"search parameter ``{search_param.code}`` needs special processing"
+            )
 
         # Some Safeguards
         if search_param.type == "composite":
@@ -221,12 +249,71 @@ class SearchContext(object):
         ):
             raise NotImplementedError
 
-        dotted_path = search_param.expression
+        try:
+            dotted_paths = search_param.element_paths()
+        except UnsupportedExpression as exc:
+            raise NotImplementedError(str(exc))
+        paths = self.dotted_paths_to_path_contexts(dotted_paths)
+        return [self._search_param_type_path(path, search_param) for path in paths]
 
-        if parentheses_wrapped.match(dotted_path):
-            dotted_path = dotted_path[1:-1]
+    def dotted_paths_to_path_contexts(
+        self, dotted_paths: List[str]
+    ) -> List[ElementPath]:
+        """Element paths of ``dotted_paths``; a choice element without its type
+        (``Observation.effective``) stands for all its typed elements. Invalid
+        paths are skipped as long as one path is valid."""
+        paths: List[ElementPath] = []
+        errors: List[Exception] = []
+        for dotted_path in dotted_paths:
+            try:
+                paths.append(self._dotted_path_to_path_context(dotted_path))
+                continue
+            except ValidationError as exc:
+                errors.append(exc)
+            for typed_path in self._choice_paths(dotted_path):
+                paths.append(self._dotted_path_to_path_context(typed_path))
+        if not paths:
+            raise errors[0]
+        return paths
 
-        return self._dotted_path_to_path_context(dotted_path)
+    def _choice_paths(self, dotted_path: str) -> List[str]:
+        """Typed elements of a choice element: ``Observation.effective`` ->
+        ``Observation.effectiveDateTime``, ``Observation.effectivePeriod``, ..."""
+        if "(" in dotted_path or "[" in dotted_path or "." not in dotted_path:
+            return []
+        parent_path, name = dotted_path.rsplit(".", 1)
+        release = self.engine.fhir_release
+        if "." in parent_path:
+            context = PathInfoContext.context_from_path(parent_path, release)
+            if context is None:
+                return []
+            model_class = context.type_class.model_class
+        else:
+            try:
+                model_class = lookup_fhir_class(parent_path, release)
+            except LookupError:
+                return []
+        if model_class is None:
+            return []
+        return [
+            f"{parent_path}.{field_name}"
+            for field_name, field in model_class.model_fields.items()
+            if (field.json_schema_extra or {}).get("one_of_many") == name
+        ]
+
+    @staticmethod
+    def _search_param_type_path(path: ElementPath, search_param: SearchParameter):
+        """``CodeableReference`` (R4B+) is searched on ``.concept`` by token and on
+        ``.reference`` by reference parameters."""
+        type_info = path.context.get_real_type_class()
+        if getattr(type_info, "fhir_type_name", None) and (
+            type_info.fhir_type_name() == "CodeableReference"
+        ):
+            if search_param.type == "token":
+                return path / "concept"
+            if search_param.type == "reference":
+                return path / "reference"
+        return path
 
     def normalize_param(
         self, param_name, raw_value
@@ -268,8 +355,14 @@ class SearchContext(object):
                 param_value_ = values
 
             Search.validate_normalized_value(param_name_, param_value_, modifier_)
-            _path = self.resolve_path_context(sp)
-            normalized_params.append((_path, param_value_, modifier_))
+            paths = self.resolve_path_contexts(sp)
+            if len(paths) == 1:
+                normalized_params.append((paths[0], param_value_, modifier_))
+            else:
+                # the parameter matches when any of its paths matches
+                normalized_params.append(
+                    AnyOf([(path, param_value_, modifier_) for path in paths])
+                )
         return normalized_params
 
     def normalize_param_value(
@@ -367,25 +460,35 @@ class SearchContext(object):
     def parse_composite_parameter_component(
         self, component, raw_value, param_def, modifier
     ):
-        result = []
-        for expr in component["expression"].split("|"):
-            component_dotted_path = ".".join([param_def.expression, expr.strip()])
+        try:
+            dotted_paths = [
+                path
+                for base_path in param_def.element_paths()
+                for path in component_paths(base_path, component["expression"])
+            ]
+        except UnsupportedExpression as exc:
+            raise NotImplementedError(str(exc))
 
-            component_param_value = self.normalize_param_value(raw_value, param_def)
-            if len(component_param_value) == 1:
-                component_param_value = component_param_value[0]
+        # parse the value with the component's own type (prefixes for number,
+        # date and quantity components)
+        component_param = param_def.clone()
+        component_param.type = component.get("_type") or param_def.type
+        component_param_value = self.normalize_param_value(raw_value, component_param)
+        if len(component_param_value) == 1:
+            component_param_value = component_param_value[0]
 
-            result.append(
-                (
-                    self._dotted_path_to_path_context(component_dotted_path),
-                    component_param_value,
-                    modifier,
-                )
-            )
-
+        result = [
+            (path, component_param_value, modifier)
+            for path in self.dotted_paths_to_path_contexts(dotted_paths)
+        ]
         if len(result) == 1:
             return result[0]
-        return result
+        return AnyOf(result)
+
+
+class AnyOf(list):
+    """Normalized ``(path, value, modifier)`` entries of which any must match:
+    a search parameter with several paths."""
 
 
 @implementer(ISearch)
@@ -1000,6 +1103,29 @@ class Search(object):
 
     def add_term(self, normalized_data, terms_container):
         """ """
+        if isinstance(normalized_data, AnyOf):
+            # paths of an unsupported type (e.g. Range or Timing next to Quantity
+            # or dateTime), or whose type rejects the value (a boolean path for a
+            # code), cannot match: they are left out as long as one path remains
+            terms: List = []
+            unsupported: List[Exception] = []
+            for nd in normalized_data:
+                try:
+                    self.add_term(nd, terms)
+                except (NotImplementedError, ValueError) as exc:
+                    unsupported.append(exc)
+            if not terms:
+                raise unsupported[0]
+            if len(terms) == 1:
+                terms_container.append(terms[0])
+                return terms[0]
+            group_term = G_(
+                *terms, path=normalized_data[0][0], type_=GroupType.DECOUPLED
+            )
+            group_term.skip_invalid = True
+            terms_container.append(group_term)
+            return group_term
+
         if isinstance(normalized_data, list):
             if len(normalized_data) > 1:
                 terms = list()
@@ -1043,7 +1169,7 @@ class Search(object):
                     term_factory = self.create_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
-            elif klass_name in ("Quantity", "Duration"):
+            elif klass_name in QUANTITY_TYPES:
                 term_factory = self.create_quantity_term
             elif klass_name == "CodeableConcept":
                 term_factory = self.create_codeableconcept_term
@@ -1572,6 +1698,11 @@ class Search(object):
         if has_pipe:
             terms = list()
             parts = original_value.split("|")
+            if len(parts) == 3:
+                # quantity syntax [number]|[system]|[code]: the code is the currency
+                # (system urn:iso:std:iso:4217, the only one Money.currency uses)
+                parts = [parts[0], parts[2]]
+                original_value = "|".join(parts)
 
             if original_value.startswith("|"):
                 new_value = (operator_eq, original_value[1:])

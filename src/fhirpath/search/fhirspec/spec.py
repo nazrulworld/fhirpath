@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, List, Set
 
 from fhirpath.enums import FHIR_VERSION
 from ..interfaces import IStorage
+from .expression import UnsupportedExpression, element_paths, split_by_base
 from ..storage import MemoryStorage
 from fhirpath.utils import reraise
 
@@ -63,6 +64,21 @@ class FHIRSearchSpec(object):
             self.parameters_def.append(
                 SearchParameterDefinition.from_dict(self, entry["resource"])
             )
+
+        # composite components refer to other definitions; remember their type,
+        # which decides how the component value is parsed. STU3 references the
+        # definition with a Reference ({"reference": url}), later releases with
+        # a canonical
+        types = {
+            entry["resource"].get("url"): entry["resource"]["type"]
+            for entry in spec_dict["entry"]
+        }
+        for param_def in self.parameters_def:
+            for component in param_def.component or []:
+                definition = component.get("definition")
+                if isinstance(definition, dict):
+                    definition = definition.get("reference")
+                component["_type"] = types.get(definition)
 
     def write(self):
         """ """
@@ -118,6 +134,7 @@ class SearchParameterDefinition(object):
         multiple_or: None
         multiple_and: None
         component: None
+        processing_mode: None
 
     __slots__ = (
         "spec",
@@ -132,6 +149,7 @@ class SearchParameterDefinition(object):
         "multiple_or",
         "multiple_and",
         "component",
+        "processing_mode",
     )
 
     @classmethod
@@ -151,28 +169,19 @@ class SearchParameterDefinition(object):
         self.multiple_or = dict_value.get("multipleOr", None)
         self.multiple_and = dict_value.get("multipleAnd", None)
         self.component = dict_value.get("component", None)
+        # R5 processingMode (R4 xpathUsage): normal | phonetic | other
+        self.processing_mode = dict_value.get(
+            "processingMode", dict_value.get("xpathUsage", None)
+        )
 
-        # Make expression map combined with base and expression
-        self.expression_map = dict()
-        if dict_value.get("expression", None) is None:
-            for base in dict_value["base"]:
-                self.expression_map[base] = None
-
-            return self
-        elif len(dict_value["base"]) == 1:
-            self.expression_map[dict_value["base"][0]] = dict_value["expression"]
-
-            return self
-
-        for expression in dict_value["expression"].split("|"):
-            exp = expression.strip()
-            if exp.startswith("("):
-                base = exp[1:].split(".")[0]
-            else:
-                base = exp.split(".")[0]
-
-            assert base in dict_value["base"]
-            self.expression_map[base] = exp
+        # Make expression map combined with base and expression: each base gets
+        # its own branches of a shared expression (bases without any are None)
+        self.expression_map = {base: None for base in dict_value["base"]}
+        expression = dict_value.get("expression", None)
+        if expression:
+            self.expression_map.update(
+                split_by_base(expression.replace("\u200b", ""), dict_value["base"])
+            )
 
         return self
 
@@ -192,6 +201,7 @@ class SearchParameter(object):
         multiple_or: None
         multiple_and: None
         component: None
+        processing_mode: None
 
     __slots__ = (
         "name",
@@ -205,6 +215,7 @@ class SearchParameter(object):
         "multiple_or",
         "multiple_and",
         "component",
+        "processing_mode",
     )
 
     @classmethod
@@ -221,24 +232,24 @@ class SearchParameter(object):
         self.multiple_or = definition.multiple_or
         self.multiple_and = definition.multiple_and
         self.component = definition.component
+        self.processing_mode = definition.processing_mode
         self.expression = self.get_expression(resource_type, definition)
 
         return self
 
     def get_expression(self, resource_type, definition):
-        """ """
-        exp = definition.expression_map[resource_type]
-        if not exp:
-            return exp
-        # try cleanup Zero Width Space
-        if "\u200b" in exp:
-            exp = exp.replace("\u200b", "")
-        if "|" in exp:
-            # some case for example name: "Organization.name | Organization.alias"
-            # we take first one!
-            exp = exp.split("|")[0]
+        """The FHIRPath expression of this parameter for ``resource_type``
+        (every branch, normalized by the FHIRPath parser)."""
+        return definition.expression_map[resource_type]
 
-        return exp.strip()
+    def element_paths(self) -> List[str]:
+        """Dotted element paths the expression selects (one per union branch);
+        raises :class:`UnsupportedExpression` when there is none."""
+        if not self.expression:
+            raise UnsupportedExpression(
+                f"search parameter {self.code} has no expression"
+            )
+        return element_paths(self.expression)
 
     def clone(self):
         """ """
@@ -259,6 +270,8 @@ class SearchParameter(object):
         newone.target = copy(self.target)
         newone.multiple_or = copy(self.multiple_or)
         newone.multiple_and = copy(self.multiple_and)
+        newone.component = copy(self.component)
+        newone.processing_mode = copy(self.processing_mode)
         newone.expression = copy(self.expression)
 
         return newone

@@ -28,7 +28,12 @@ def test_params_definition(engine):
     definition = SearchContext(
         engine=engine, resource_type="Organization"
     ).get_parameters_definition(FHIR_VERSION.R4)
-    assert definition[0].name.expression == "Organization.name"
+    # every branch of the expression is kept: name matches name or alias
+    assert definition[0].name.expression == "Organization.name | Organization.alias"
+    assert definition[0].name.element_paths() == [
+        "Organization.name",
+        "Organization.alias",
+    ]
 
 
 def test_parse_query_string():

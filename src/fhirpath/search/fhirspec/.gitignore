@@ -4,5 +4,6 @@
 !/.gitignore
 !/__init__.py
 !/downloader.py
+!/expression.py
 !/spec.py
 !/settings.py
