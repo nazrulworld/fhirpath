@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Generator,
     List,
     Optional,
     Pattern,
@@ -71,6 +72,31 @@ DEFAULT_RESULT_COUNT = 100
 
 def has_escape_comma(val):
     return "\\," in val
+
+
+# A chain resolver yields the sub-queries it needs and receives their results,
+# so that ``Search`` and ``AsyncSearch`` can share the same resolution logic.
+ChainResolver = Generator[QueryResult, EngineResult, List[str]]
+
+
+def run_chain_resolver(resolver: ChainResolver) -> List[str]:
+    """Drive a chain resolver with blocking queries."""
+    try:
+        query = next(resolver)
+        while True:
+            query = resolver.send(query.fetchall())
+    except StopIteration as stop:
+        return stop.value
+
+
+async def run_chain_resolver_async(resolver: ChainResolver) -> List[str]:
+    """Drive a chain resolver with awaitable queries."""
+    try:
+        query = next(resolver)
+        while True:
+            query = resolver.send(await query.fetchall())
+    except StopIteration as stop:
+        return stop.value
 
 
 @implementer(ISearchContext)
@@ -340,6 +366,10 @@ class Search(object):
         self.search_params = None
 
         self.reverse_chaining_results: Optional[Dict[str, Set[str]]] = None
+        # chained parameters ("subject:Patient.name=peter"), as (name, value) pairs
+        self.chain_params: List[Tuple[str, str]] = []
+        # resolved chains: (reference search param, matching "Type/id" references)
+        self.chained_references: List[Tuple[str, List[str]]] = []
         self.main_query = None
         self.include_queries = None
 
@@ -470,6 +500,12 @@ class Search(object):
         if _containedType:
             self.result_params["_containedType"] = _containedType
 
+        # chained parameters: every remaining name containing a "." -
+        # empty values are ignored, like for any other search parameter
+        chained = [(k, v) for k, v in all_params.items() if "." in k]
+        self.chain_params = [(k, v) for k, v in chained if v]
+        [all_params.popall(k, None) for k, _ in chained]
+
         self.search_params = MultiDictProxy(all_params)
 
     def build(self) -> QueryResult:
@@ -491,6 +527,15 @@ class Search(object):
                 normalized_data = search_context.normalize_param("_id", ",".join(ids))
                 self.add_term(normalized_data, terms)
 
+            builder = builder.where(*terms)
+
+        # chained parameters: the reference must point to one of the resolved targets
+        for ref_name, references in self.chained_references:
+            terms = []
+            for normalized_data in self.context.normalize_param(
+                ref_name, [",".join(references)]
+            ):
+                self.add_term(normalized_data, terms)
             builder = builder.where(*terms)
 
         result: QueryResult = builder(unrestricted=self.context.unrestricted)
@@ -562,6 +607,117 @@ class Search(object):
             has_queries.append((ref_param, result))
 
         return has_queries
+
+    @staticmethod
+    def parse_chain_link(link: str) -> Tuple[str, Optional[str]]:
+        """Split one link of a chain (``subject`` or ``subject:Patient``)
+        into the reference search parameter name and the optional target type."""
+        parts = link.split(":")
+        if len(parts) > 2 or not all(parts):
+            raise ValidationError(f"bad chained search parameter link '{link}'")
+        return parts[0], parts[1] if len(parts) == 2 else None
+
+    def chain(self, param_name: str, value: str) -> ChainResolver:
+        """Resolve a chained parameter, e.g. ``subject:Patient.name=peter``.
+
+        Returns the "Type/id" references that the first reference search parameter
+        (``subject``) must point to; each chain is resolved independently (FHIR R5
+        search §3.2.1.6.5), the main query then ORs over these references.
+        """
+        references = yield from self._resolve_chain_link(
+            self.context, param_name.split("."), value
+        )
+        return references
+
+    def _resolve_chain_link(
+        self, context: SearchContext, links: List[str], value: str
+    ) -> ChainResolver:
+        """Resolve ``links[0]`` (a reference search parameter of ``context``) against
+        the rest of the chain, returning the matching target references."""
+        ref_name, target_type = self.parse_chain_link(links[0])
+        next_link = links[1]
+        next_name = next_link.split(":")[0]
+        if not next_name:
+            raise ValidationError(f"bad chained search parameter '{'.'.join(links)}'")
+        if next_name == "_has":
+            raise NotImplementedError(
+                "reverse chaining (_has) inside a chained parameter is not supported"
+            )
+        context_name = ",".join(context.resource_types) or "Resource"
+
+        targets: List[str] = []
+        for ref_param in context._get_search_param_definitions(ref_name):
+            if ref_param.type != "reference":
+                raise ValidationError(
+                    f"chained search parameter {context_name}.{ref_name} "
+                    f"must be of type 'reference', got {ref_param.type}"
+                )
+            targets.extend(t for t in ref_param.target or [] if t not in targets)
+
+        if target_type is not None:
+            if target_type not in targets:
+                raise ValidationError(
+                    f"the search param {context_name}.{ref_name} may refer"
+                    f" to {', '.join(targets)}, not to {target_type}"
+                )
+            targets = [target_type]
+        else:
+            # without an explicit type, follow every target type that defines
+            # the next search parameter
+            targets = [t for t in targets if self._defines_search_param(t, next_name)]
+            if not targets:
+                raise ValidationError(
+                    "No search definition is available for search parameter "
+                    f"``{next_name}`` on any target of ``{context_name}.{ref_name}``."
+                )
+
+        references: List[str] = []
+        for resource_type in targets:
+            target_context = SearchContext(
+                context.engine, resource_type, unrestricted=context.unrestricted
+            )
+            if len(links) > 2:
+                # multi-level chain: resolve the deeper links first
+                sub_references = yield from self._resolve_chain_link(
+                    target_context, links[1:], value
+                )
+                if not sub_references:
+                    continue
+                normalized_params = target_context.normalize_param(
+                    next_name, [",".join(sub_references)]
+                )
+            else:
+                normalized_params = target_context.normalize_param(next_link, [value])
+
+            terms: List = []
+            for normalized_data in normalized_params:
+                self.add_term(normalized_data, terms)
+            if not terms:
+                continue
+
+            builder = Q_(resource_type, context.engine).where(*terms)
+            result = yield builder(unrestricted=context.unrestricted)
+            references.extend(
+                f"{resource_type}/{id_}"
+                for id_ in result.extract_ids().get(resource_type, [])
+            )
+        return references
+
+    def _defines_search_param(self, resource_type: str, param_name: str) -> bool:
+        try:
+            context = SearchContext(self.context.engine, resource_type)
+        except Exception:  # unknown resource type in the definitions storage
+            return False
+        return param_name in context.definitions[0]
+
+    def chain_reference_name(self, param_name: str) -> str:
+        """``subject:Patient.name`` -> ``subject``"""
+        return self.parse_chain_link(param_name.split(".")[0])[0]
+
+    def empty_response(self, as_json):
+        return self.response(
+            EngineResult(EngineResultHeader(total=0), EngineResultBody()), [], as_json
+        )
 
     # FIXME: sorting, paginating and large results are not handled yet.
     def include(self, main_query_result: EngineResult) -> List[QueryResult]:
@@ -1658,8 +1814,6 @@ class Search(object):
     def __call__(self, as_json=False):
         """ """
 
-        # TODO: chaining
-
         # reverse chaining (_has)
         if self.result_params.get("_has"):
             has_queries = self.has()
@@ -1680,11 +1834,18 @@ class Search(object):
             # FIXME: we use the result of the last _has query to build the empty bundle,
             # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
-                return self.response(
-                    EngineResult(EngineResultHeader(total=0), EngineResultBody()),
-                    [],
-                    as_json,
-                )
+                return self.empty_response(as_json)
+
+        # chaining
+        self.chained_references = []
+        for param_name, value in self.chain_params:
+            references = run_chain_resolver(self.chain(param_name, value))
+            # no target satisfies the chain, so nothing can match
+            if not references:
+                return self.empty_response(as_json)
+            self.chained_references.append(
+                (self.chain_reference_name(param_name), references)
+            )
 
         # MAIN QUERY
         self.main_query = self.build()
@@ -1717,8 +1878,6 @@ class AsyncSearch(Search):
 
     async def __call__(self, as_json=False):
         """ """
-        # TODO: chaining
-
         # reverse chaining (_has)
         if self.result_params.get("_has"):
             has_queries = self.has()
@@ -1740,6 +1899,17 @@ class AsyncSearch(Search):
             # but we should be more explicit about the query context.
             if not self.reverse_chaining_results:
                 return self.response(res, [], as_json)
+
+        # chaining
+        self.chained_references = []
+        for param_name, value in self.chain_params:
+            references = await run_chain_resolver_async(self.chain(param_name, value))
+            # no target satisfies the chain, so nothing can match
+            if not references:
+                return self.empty_response(as_json)
+            self.chained_references.append(
+                (self.chain_reference_name(param_name), references)
+            )
 
         # MAIN QUERY
         self.main_query = self.build()

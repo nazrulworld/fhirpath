@@ -940,6 +940,77 @@ def test_search_has(es_data, engine):
         fhir_search()
 
 
+def test_search_chaining(es_data, engine):
+    def search(resource_type, *params):
+        return Search(SearchContext(engine, resource_type), params=params)()
+
+    # typed chain: Observation f005 -> Patient (family "Saint")
+    bundle = search("Observation", ("subject:Patient.family", "Saint"))
+    assert bundle.total == 1
+    assert isinstance(bundle.entry[0].resource, Observation)
+
+    # untyped chain, and a reference param limited to one target type
+    assert search("Observation", ("subject.family", "Saint")).total == 1
+    assert search("Observation", ("patient.gender", "male")).total == 1
+
+    # chained token search on the target
+    bundle = search(
+        "Observation",
+        ("performer:Practitioner.identifier", "http://www.acme.org/practitioners|23"),
+    )
+    assert bundle.total == 1
+
+    # chains are ANDed with the other parameters and with each other
+    assert (
+        search(
+            "Observation",
+            ("patient.gender", "male"),
+            ("performer:Practitioner.family", "Careful"),
+        ).total
+        == 1
+    )
+    assert (
+        search(
+            "Observation",
+            ("patient.gender", "male"),
+            ("performer:Practitioner.family", "Nobody"),
+        ).total
+        == 0
+    )
+
+    # no matching target
+    assert search("Observation", ("subject:Patient.family", "Nobody")).total == 0
+
+    # multi-level: the fixture Patient has no managing organization
+    assert (
+        search("Observation", ("subject:Patient.organization.name", "Burgers")).total
+        == 0
+    )
+
+    # the chained parameter must be a reference
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "chained search parameter Observation.code "
+            "must be of type 'reference', got token"
+        ),
+    ):
+        search("Observation", ("code.name", "x"))
+
+
+@pytest.mark.asyncio
+async def test_async_search_chaining(es_data, async_engine):
+    search_context = SearchContext(async_engine, "Observation")
+    params = (("subject:Patient.family", "Saint"),)
+    bundle = await AsyncSearch(search_context, params=params)()
+    assert bundle.total == 1
+
+    search_context = SearchContext(async_engine, "Observation")
+    params = (("subject:Patient.family", "Nobody"),)
+    bundle = await AsyncSearch(search_context, params=params)()
+    assert bundle.total == 0
+
+
 def test_search_revinclude(es_data, engine):
     # untyped
     search_context = SearchContext(engine, "Patient")
