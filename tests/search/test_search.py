@@ -987,6 +987,12 @@ def test_search_chaining(es_data, engine):
         == 0
     )
 
+    # reverse chain inside a chain: observations of patients that have
+    # an observation with code 718-7
+    param = "subject:Patient._has:Observation:patient:code"
+    assert search("Observation", (param, "718-7")).total == 1
+    assert search("Observation", (param, "XXX-YYY")).total == 0
+
     # the chained parameter must be a reference
     with raises(
         ValidationError,

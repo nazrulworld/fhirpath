@@ -22,6 +22,9 @@ from warnings import warn
 from multidict import MultiDict, MultiDictProxy
 from zope.interface import implementer
 
+from fhirpath.core import ast as fhirpath_ast
+from fhirpath.core.parser import FHIRPathSyntaxError
+from fhirpath.core.parser import parse as fhirpath_parse
 from fhirpath.search.engine import EngineResult, EngineResultBody, EngineResultHeader
 from fhirpath.enums import (
     FHIR_VERSION,
@@ -87,6 +90,51 @@ def run_chain_resolver(resolver: ChainResolver) -> List[str]:
             query = resolver.send(query.fetchall())
     except StopIteration as stop:
         return stop.value
+
+
+def _resolve_is_types(node: fhirpath_ast.Node) -> Optional[Set[str]]:
+    """Types ``X`` that ``….where(resolve() is X)`` restricts every union branch
+    of a FHIRPath expression to; ``None`` if any branch is unrestricted."""
+    if isinstance(node, fhirpath_ast.Binary) and node.op == "|":
+        left = _resolve_is_types(node.left)
+        right = _resolve_is_types(node.right)
+        if left is None or right is None:
+            return None
+        return left | right
+    if isinstance(node, fhirpath_ast.Invocation):
+        where = node.right
+        if (
+            isinstance(where, fhirpath_ast.Function)
+            and where.name == "where"
+            and len(where.args) == 1
+        ):
+            test = where.args[0]
+            if (
+                isinstance(test, fhirpath_ast.TypeOperation)
+                and test.op == "is"
+                and isinstance(test.left, fhirpath_ast.Function)
+                and test.left.name == "resolve"
+                and not test.left.args
+            ):
+                return {test.type_specifier.name}
+    return None
+
+
+def reference_targets(search_param: SearchParameter) -> List[str]:
+    """``SearchParameter.target``, narrowed by the parameter's expression: shared
+    definitions list every target of every base (``clinical-patient`` targets
+    Patient and Group) while the expression for one base may only allow some
+    (``Encounter.subject.where(resolve() is Patient)``)."""
+    targets = list(search_param.target or [])
+    if not search_param.expression:
+        return targets
+    try:
+        restricted = _resolve_is_types(fhirpath_parse(search_param.expression))
+    except FHIRPathSyntaxError:
+        return targets
+    if restricted is None:
+        return targets
+    return [t for t in targets if t in restricted]
 
 
 async def run_chain_resolver_async(resolver: ChainResolver) -> List[str]:
@@ -639,10 +687,6 @@ class Search(object):
         next_name = next_link.split(":")[0]
         if not next_name:
             raise ValidationError(f"bad chained search parameter '{'.'.join(links)}'")
-        if next_name == "_has":
-            raise NotImplementedError(
-                "reverse chaining (_has) inside a chained parameter is not supported"
-            )
         context_name = ",".join(context.resource_types) or "Resource"
 
         targets: List[str] = []
@@ -652,7 +696,7 @@ class Search(object):
                     f"chained search parameter {context_name}.{ref_name} "
                     f"must be of type 'reference', got {ref_param.type}"
                 )
-            targets.extend(t for t in ref_param.target or [] if t not in targets)
+            targets.extend(t for t in reference_targets(ref_param) if t not in targets)
 
         if target_type is not None:
             if target_type not in targets:
@@ -661,6 +705,15 @@ class Search(object):
                     f" to {', '.join(targets)}, not to {target_type}"
                 )
             targets = [target_type]
+        elif next_name == "_has":
+            # follow every target type that the reverse chain can point back to
+            candidates = targets
+            targets = [t for t in targets if self._has_link_targets(next_link, t)]
+            if not targets:
+                raise ValidationError(
+                    f"reverse chain '{next_link}' cannot refer to any target "
+                    f"of ``{context_name}.{ref_name}`` ({', '.join(candidates)})"
+                )
         else:
             # without an explicit type, follow every target type that defines
             # the next search parameter
@@ -676,22 +729,7 @@ class Search(object):
             target_context = SearchContext(
                 context.engine, resource_type, unrestricted=context.unrestricted
             )
-            if len(links) > 2:
-                # multi-level chain: resolve the deeper links first
-                sub_references = yield from self._resolve_chain_link(
-                    target_context, links[1:], value
-                )
-                if not sub_references:
-                    continue
-                normalized_params = target_context.normalize_param(
-                    next_name, [",".join(sub_references)]
-                )
-            else:
-                normalized_params = target_context.normalize_param(next_link, [value])
-
-            terms: List = []
-            for normalized_data in normalized_params:
-                self.add_term(normalized_data, terms)
+            terms = yield from self._param_terms(target_context, links[1:], value)
             if not terms:
                 continue
 
@@ -702,6 +740,103 @@ class Search(object):
                 for id_ in result.extract_ids().get(resource_type, [])
             )
         return references
+
+    def _param_terms(
+        self, context: SearchContext, links: List[str], value: str
+    ) -> Generator[QueryResult, EngineResult, Optional[List]]:
+        """Terms selecting the resources of ``context`` that match the parameter
+        path ``links`` (a plain parameter, a chain or a reverse chain) with
+        ``value``. ``None`` means that no resource can match."""
+        first_link = links[0]
+        if first_link.startswith("_has:"):
+            references = yield from self._resolve_has_link(context, links, value)
+            if not references:
+                return None
+            param_name, raw_value = "_id", ",".join(
+                reference.split("/", 1)[1] for reference in references
+            )
+        elif len(links) > 1:
+            references = yield from self._resolve_chain_link(context, links, value)
+            if not references:
+                return None
+            param_name = self.parse_chain_link(first_link)[0]
+            raw_value = ",".join(references)
+        else:
+            param_name, raw_value = first_link, value
+
+        terms: List = []
+        for normalized_data in context.normalize_param(param_name, [raw_value]):
+            self.add_term(normalized_data, terms)
+        return terms
+
+    @staticmethod
+    def parse_has_link(link: str) -> Tuple[str, str, str]:
+        """``_has:Observation:patient:code`` -> ("Observation", "patient", "code").
+
+        The last part keeps any modifier or nested reverse chain
+        (``_has:Observation:patient:_has:AuditEvent:entity:agent``)."""
+        parts = link.split(":")
+        if len(parts) < 4 or parts[0] != "_has" or not all(parts[1:4]):
+            raise ValidationError(
+                f"bad _has param '{link}', "
+                "should be _has:Resource:ref_search_param:value_search_param=value"
+            )
+        return parts[1], parts[2], ":".join(parts[3:])
+
+    def _has_reference_param(
+        self, source_context: SearchContext, ref_name: str, resource_type: str
+    ) -> SearchParameter:
+        """The reference parameter of a reverse chain, which must be able to point
+        to ``resource_type``."""
+        source_type = source_context.resource_types[0]
+        ref_param = source_context._get_search_param_definitions(ref_name)[0]
+        if ref_param.type != "reference":
+            raise ValidationError(
+                f"search parameter {source_type}.{ref_name} "
+                f"must be of type 'reference', got {ref_param.type}"
+            )
+        targets = reference_targets(ref_param)
+        if resource_type not in targets:
+            raise ValidationError(
+                f"invalid reference {source_type}.{ref_name} "
+                f"({','.join(targets)}) in the current search context "
+                f"({resource_type})"
+            )
+        return ref_param
+
+    def _has_link_targets(self, link: str, resource_type: str) -> bool:
+        """Whether the reverse chain ``link`` can refer to ``resource_type``."""
+        source_type, ref_name, _ = self.parse_has_link(link)
+        try:
+            source_context = SearchContext(self.context.engine, source_type)
+            self._has_reference_param(source_context, ref_name, resource_type)
+        except (ValidationError, KeyError, AttributeError):
+            return False
+        return True
+
+    def _resolve_has_link(
+        self, context: SearchContext, links: List[str], value: str
+    ) -> ChainResolver:
+        """Resolve a reverse chain on ``context`` (e.g. ``_has:Group:member:_id``,
+        possibly followed by more chain links), returning the "Type/id" references
+        of the ``context`` resources that are referred to by matching sources."""
+        (resource_type,) = context.resource_types
+        source_type, ref_name, value_link = self.parse_has_link(links[0])
+        source_context = SearchContext(
+            context.engine, source_type, unrestricted=context.unrestricted
+        )
+        ref_param = self._has_reference_param(source_context, ref_name, resource_type)
+
+        terms = yield from self._param_terms(
+            source_context, [value_link, *links[1:]], value
+        )
+        if not terms:
+            return []
+
+        builder = Q_(source_type, context.engine).where(*terms)
+        result = yield builder(unrestricted=context.unrestricted)
+        ids = result.extract_references(ref_param).get(resource_type, [])
+        return [f"{resource_type}/{id_}" for id_ in dict.fromkeys(ids)]
 
     def _defines_search_param(self, resource_type: str, param_name: str) -> bool:
         try:

@@ -1,15 +1,16 @@
 # _*_ coding: utf-8 _*_
+import re
 import time
 from abc import ABC
 from collections import defaultdict, deque
-from typing import Dict, List
+from typing import Any, Dict, List, Optional, Pattern, Tuple
 
 from zope.interface import implementer
 
-from fhirpath.enums import FHIR_VERSION, WhereConstraintType
+from fhirpath.core import compile as fhirpath_compile
+from fhirpath.enums import FHIR_VERSION
 from ..exceptions import ValidationError
 from ..fhirspec import SearchParameter
-from ..fql.types import ElementPath
 from ..interfaces import IEngine
 from ..interfaces.engine import (
     IEngineResult,
@@ -19,6 +20,37 @@ from ..interfaces.engine import (
 )
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
+
+# "Patient/123", "Patient/123/_history/2" or "http://example.org/fhir/Patient/123"
+LITERAL_REFERENCE: Pattern = re.compile(
+    r"(?:^|/)(?P<type>[A-Z][A-Za-z]+)/(?P<id>[A-Za-z0-9\-.]{1,64})"
+    r"(?:/_history/[^/]+)?$"
+)
+
+
+def parse_literal_reference(reference: Any) -> Optional[Tuple[str, str]]:
+    """``(resource type, id)`` of a literal reference (a ``Reference`` element,
+    as a dict or model, or its ``reference`` string); ``None`` otherwise
+    (contained ``#id`` references, logical references, canonicals...)."""
+    if not isinstance(reference, str):
+        if isinstance(reference, dict):
+            reference = reference.get("reference")
+        else:
+            reference = getattr(reference, "reference", None)
+    if not isinstance(reference, str):
+        return None
+    match = LITERAL_REFERENCE.search(reference)
+    if match is None:
+        return None
+    return match.group("type"), match.group("id")
+
+
+def resolve_literal_reference(reference: str, origin: Any = None) -> Optional[Dict]:
+    """FHIRPath ``resolve()`` hook: a stub resource carrying the referenced type."""
+    parsed = parse_literal_reference(reference)
+    if parsed is None:
+        return None
+    return {"resourceType": parsed[0], "id": parsed[1]}
 
 
 @implementer(IEngine)
@@ -144,51 +176,16 @@ class EngineResult(object):
 
         ids: Dict = defaultdict(list)
 
-        # use ElementPath to parse fhirpath expressions like .where()
-        path_element = ElementPath(search_param.expression)
-
-        def browse(node, path):
-            parts = path.split(".", 1)
-
-            if len(parts) == 0:
-                return node
-            elif parts[0] not in node:
-                return None
-            elif len(parts) == 1:
-                return node[parts[0]]
-            else:
-                return browse(node[parts[0]], parts[1])
-
-        def append_ref(ref_attr):
-            # if the searchparam expression contains .where() statement, skip references
-            # that do not match the required resource type
-            if (
-                path_element._where
-                and path_element._where.type == WhereConstraintType.T2
-            ):
-                ref_target_type = ref_attr["reference"].split("/")[0]
-                if path_element._where.value != ref_target_type:
-                    return
-
-            if "reference" not in ref_attr:
-                return
-
-            # FIXME: this does not work with references using absolute URLs
-            referenced_resource, _id = ref_attr["reference"].split("/")
-            ids[referenced_resource].append(_id)
-
-        # remove the resource type from the path
-        _, path = path_element._path.split(".", 1)
+        # evaluate the search parameter's FHIRPath expression with the core engine;
+        # ``resolve()`` (e.g. ``subject.where(resolve() is Patient)``) only needs the
+        # target type, which literal references carry
+        expression = fhirpath_compile(search_param.expression)
         for row in self.body:
-            resource = row[0]
-            ref_attribute = browse(resource, path)
-
-            if ref_attribute is None:
-                continue
-            elif isinstance(ref_attribute, list):
-                for r in ref_attribute:
-                    append_ref(r)
-            else:
-                append_ref(ref_attribute)
+            for reference in expression.evaluate(
+                row[0], resolver=resolve_literal_reference
+            ):
+                parsed = parse_literal_reference(reference)
+                if parsed is not None:
+                    ids[parsed[0]].append(parsed[1])
 
         return ids
