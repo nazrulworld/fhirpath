@@ -13,8 +13,10 @@ from fhirpath.search.engine import (
 )
 from fhirpath.search.exceptions import ValidationError
 from fhirpath.search.search import (
+    HANDLING_STRICT,
     Search,
     SearchContext,
+    handling_from_prefer,
     split_escaped,
     unescape_value,
     validate_escapes,
@@ -190,3 +192,65 @@ def test_self_link_shows_applied_params(offline_engine):
     assert "family=Doe" in self_url and "_count=10" in self_url
     # empty values are ignored, so they are not reported as applied
     assert "given" not in self_url
+
+
+# ----------------------------------------------------------- unknown parameters
+
+
+def test_unknown_param_is_ignored_by_default(offline_engine):
+    context = SearchContext(offline_engine, "Patient")
+    search = Search(context, query_string="family=Doe&unknown=1&unknown:exact=2")
+    assert list(search.search_params.keys()) == ["family"]
+    assert search.ignored_params == ["unknown", "unknown:exact"]
+    search.build()  # no error
+
+    self_url = links(search.empty_response(as_json=True))["self"]
+    assert "family=Doe" in self_url and "unknown" not in self_url
+
+
+def test_unknown_param_is_rejected_when_strict(offline_engine):
+    context = SearchContext(offline_engine, "Patient")
+    search = Search(
+        context, query_string="family=Doe&unknown=1", handling=HANDLING_STRICT
+    )
+    assert search.ignored_params == []
+    with raises(ValidationError, match="No search definition .* ``unknown``"):
+        search.build()
+
+
+def test_param_unknown_for_one_of_the_types_is_an_error(offline_engine):
+    # ``family`` is known for Patient, not for Observation
+    context = SearchContext(offline_engine, None)
+    search = Search(context, query_string="_type=Patient,Observation&family=Doe")
+    assert search.ignored_params == []
+    with raises(ValidationError, match="on Resource ``Observation``"):
+        search.build()
+
+
+def test_unsupported_modifier_is_rejected_even_when_lenient(offline_engine):
+    context = SearchContext(offline_engine, "Observation")
+    search = Search(context, query_string="code:in=http://x.org/vs")
+    with raises(ValidationError, match="is not supported"):
+        search.build()
+
+
+def test_bad_handling_value(offline_engine):
+    context = SearchContext(offline_engine, "Patient")
+    with raises(ValidationError, match="handling must be"):
+        Search(context, query_string="family=Doe", handling="loose")
+
+
+@pytest.mark.parametrize(
+    "prefer,handling",
+    [
+        (None, "lenient"),
+        ("", "lenient"),
+        ("handling=strict", "strict"),
+        ("return=minimal, handling=strict", "strict"),
+        ("respond-async; handling=lenient", "lenient"),
+        ('HANDLING="Strict"', "strict"),
+        ("handling=unknown", "lenient"),
+    ],
+)
+def test_handling_from_prefer(prefer, handling):
+    assert handling_from_prefer(prefer) == handling

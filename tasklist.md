@@ -66,7 +66,9 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 
 ## F. Errors / HTTP layer
 
-- [ ] Unknown params: ignore by default (drop from self link); raise only with `Prefer: handling=strict`
+- [x] Unknown params: ignore by default (drop from self link); raise only with `Prefer: handling=strict`
+      (`Search(..., handling="strict")` / `fhir_search(..., handling=…)`, `handling_from_prefer(header)`;
+      ignored names in `Search.ignored_params` for a future OperationOutcome)
 - [ ] `OperationOutcome` entries (`search.mode=outcome`) for warnings
 - [ ] CapabilityStatement search capability output
 - [ ] `POST _search` (form body)

@@ -73,6 +73,9 @@ parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 DEFAULT_RESULT_COUNT = 100
+# how unknown search parameters are treated (``Prefer: handling=…``)
+HANDLING_LENIENT = "lenient"
+HANDLING_STRICT = "strict"
 # Quantity and its profiles (searched like a Quantity)
 QUANTITY_TYPES = (
     "Quantity",
@@ -183,6 +186,18 @@ def split_escaped(value: str, separator: str) -> List[str]:
         index += 1
     parts.append("".join(current))
     return parts
+
+
+def handling_from_prefer(prefer: Optional[str]) -> str:
+    """``handling`` of a ``Prefer`` HTTP header (``return=minimal,
+    handling=strict`` -> ``strict``); lenient when absent or unrecognised."""
+    for part in re.split(r"[,;]", prefer or ""):
+        name, _, value = part.partition("=")
+        if name.strip().lower() == "handling":
+            value = value.strip().strip('"').lower()
+            if value in (HANDLING_LENIENT, HANDLING_STRICT):
+                return value
+    return HANDLING_LENIENT
 
 
 def has_unescaped(value: str, separator: str) -> bool:
@@ -680,10 +695,24 @@ class AnyOf(list):
 class Search(object):
     """ """
 
-    def __init__(self, context: SearchContext, query_string=None, params=None):
-        """ """
+    def __init__(
+        self,
+        context: SearchContext,
+        query_string=None,
+        params=None,
+        handling: str = HANDLING_LENIENT,
+    ):
+        """``handling``: ``lenient`` (default) ignores unknown search parameters,
+        ``strict`` rejects them (``Prefer: handling=strict``, see
+        ``handling_from_prefer``)."""
         # validate first
         Search.validate_params(context, query_string, params)
+        if handling not in (HANDLING_LENIENT, HANDLING_STRICT):
+            raise ValidationError(
+                f"handling must be ``{HANDLING_LENIENT}`` or ``{HANDLING_STRICT}``, "
+                f"got ``{handling}``."
+            )
+        self.handling = handling
 
         self.context = ISearchContext(context)
         all_params = None
@@ -710,15 +739,45 @@ class Search(object):
         self.include_queries = None
 
         # what the self link reports: every parameter with a value (empty
-        # values are ignored); unknown parameters are rejected later
+        # values are ignored), minus the unknown parameters that are ignored
         self.applied_params = MultiDict(
             (k, v) for k, v in (all_params or {}).items() if v
         )
+        # unknown search parameters left out of the search (lenient handling)
+        self.ignored_params: List[str] = []
         self.prepare_params(all_params)
 
         additional_resource_types = self.result_params.get("_type")
         if additional_resource_types:
             self.context.augment_with_types(additional_resource_types)
+
+        if self.handling == HANDLING_LENIENT:
+            self.drop_unknown_params()
+
+    def drop_unknown_params(self):
+        """Unknown search parameters SHOULD be ignored unless strict handling is
+        asked for: they are left out of the search and of the ``self`` link. A
+        parameter defined for only some of the searched types is still an error.
+        """
+        known = MultiDict()
+        for name, value in self.search_params.items():
+            code = name.split(":")[0]
+            if code in ("_format", "_pretty") or any(
+                getattr(definition, code, None) is not None
+                for definition in self.context.definitions
+            ):
+                known.add(name, value)
+            elif name not in self.ignored_params:
+                logger.info(f"unknown search parameter ``{name}`` is ignored")
+                self.ignored_params.append(name)
+        if not self.ignored_params:
+            return
+        self.search_params = MultiDictProxy(known)
+        self.applied_params = MultiDict(
+            (k, v)
+            for k, v in self.applied_params.items()
+            if k not in self.ignored_params
+        )
 
     @staticmethod
     def validate_params(context, query_string, params):
@@ -2367,13 +2426,18 @@ def fhir_search(
     query_string: str = None,
     params: Union[Dict[str, str], Tuple[Tuple[str, str]]] = None,
     response_as_dict: bool = False,
+    handling: str = HANDLING_LENIENT,
 ):
-    """ """
+    """``handling``: ``strict`` rejects unknown search parameters, ``lenient``
+    (default) ignores them; ``handling_from_prefer`` reads it from the
+    ``Prefer`` header."""
     if TYPE_CHECKING:
         klass: Union[Type[AsyncSearch], Type[Search]]
     if context.engine.__class__.is_async():
         klass = AsyncSearch
     else:
         klass = Search
-    factory = klass(context, query_string=query_string, params=params)
+    factory = klass(
+        context, query_string=query_string, params=params, handling=handling
+    )
     return factory(as_json=response_as_dict)
