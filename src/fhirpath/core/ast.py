@@ -138,7 +138,8 @@ def unescape(text: str) -> str:
     """Process FHIRPath escapes in the body of a string or delimited identifier.
 
     ``\\uXXXX`` sequences are UTF-16 code units; surrogate pairs are combined.
-    Unknown escapes drop the backslash (``'\\p'`` is ``'p'``).
+    A ``\\u`` not followed by four hexadecimal digits is an error. Other unknown
+    escapes drop the backslash (``'\\p'`` is ``'p'``).
     """
     units = []
     pos = 0
@@ -154,7 +155,13 @@ def unescape(text: str) -> str:
         if nxt in _SIMPLE_ESCAPES:
             units.append(_SIMPLE_ESCAPES[nxt])
             pos += 2
-        elif nxt == "u" and _is_hex(text[pos + 2 : pos + 6]):
+        elif nxt == "u":
+            if not _is_hex(text[pos + 2 : pos + 6]):
+                raise EvaluationError(
+                    "invalid unicode escape %r: \\u needs four hexadecimal digits"
+                    % text[pos : pos + 6],
+                    "",
+                )
             units.append(int(text[pos + 2 : pos + 6], 16))
             pos += 6
         else:

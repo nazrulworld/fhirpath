@@ -160,5 +160,12 @@ def test_unescape(raw, expected):
     assert unescape(raw) == expected
 
 
+@pytest.mark.parametrize("expression", [r"'\u+041'", r"'\u12'", r"'a\u00G1'", r"`\u4`"])
+def test_invalid_unicode_escape(expression):
+    # \u must be followed by exactly four hexadecimal digits
+    with pytest.raises(FHIRPathSyntaxError, match="invalid unicode escape"):
+        parse(expression)
+
+
 def test_parse_is_cached():
     assert parse("name.given") is parse("name.given")

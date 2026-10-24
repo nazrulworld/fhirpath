@@ -122,7 +122,10 @@ def _decimal_boundary(
         digits = 8
     if digits < 0 or digits > 28:
         return None
-    places = decimal_places(value)
+    # digits after the point as written; negative for a positive exponent (a FHIR
+    # decimal 9.5e2 is precise to the tens: 950 +/- 5)
+    exponent = value.as_tuple().exponent
+    places = -exponent if isinstance(exponent, int) else decimal_places(value)
     quantum = Decimal(1).scaleb(-digits)
     if digits < places:
         # coarser than the input: widen by half a unit of the target precision, truncate

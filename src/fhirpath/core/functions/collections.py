@@ -98,7 +98,9 @@ def count(call: Call):
 
 @function("distinct")
 def distinct_(call: Call):
-    return distinct(call.input)
+    # the spec leaves the order (and which of equal items is kept) open; the
+    # conformance suite keeps the last of each repeated value
+    return distinct(call.input[::-1])[::-1]
 
 
 @function("isDistinct")
@@ -238,7 +240,10 @@ def tail(call: Call):
 @function("skip", 1)
 def skip(call: Call):
     num = call.arg_integer(0)
-    if num is MISSING or num <= 0:
+    if num is MISSING:
+        # an empty count returns empty (like take())
+        return []
+    if num <= 0:
         return list(call.input)
     return call.input[num:]
 

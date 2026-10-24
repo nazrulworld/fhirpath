@@ -54,6 +54,9 @@ def ev(expression, resource=None, **options):
         ("{}.count()", [0]),
         ("(1 | 2 | 2).count()", [2]),
         ("1.combine(1).distinct().count()", [1]),
+        # the last of each repeated value is kept (conformance suite)
+        ("'a'.combine('b').combine('a').distinct()", ["b", "a"]),
+        ("1.combine(2).combine(1).combine(3).distinct()", [2, 1, 3]),
         ("1 'm'.combine(100 'cm').isDistinct()", F),
         ("(1 'm' | 100 'cm').count()", [1]),
         # filtering & projection
@@ -80,6 +83,8 @@ def ev(expression, resource=None, **options):
         ("1.tail()", E),
         ("(1|2|3).skip(1)", [2, 3]),
         ("(1|2|3).skip(-1)", [1, 2, 3]),
+        ("(1|2|3).skip({})", []),
+        ("(1|2|3).take({})", []),
         ("(1|2|3).take(2)", [1, 2]),
         ("(1|2|3).take(0)", E),
         ("(1|2|3).intersect(2|4)", [2]),
@@ -385,6 +390,28 @@ def test_aggregate_type_errors():
 )
 def test_date_time_utility(expression, expected):
     assert ev(expression) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expression,expected",
+    [
+        # a FHIR decimal with an exponent is precise to the mantissa's last digit
+        ("9.5e2", "lowBoundary(0)", Decimal("945")),
+        ("9.5e2", "highBoundary(0)", Decimal("955")),
+        ("9.5e2", "highBoundary()", Decimal("955.00000000")),
+        ("-9.5e2", "lowBoundary(0)", Decimal("-955")),
+        ("1.5E2", "lowBoundary(1)", Decimal("145.0")),
+        ("1.5e-3", "lowBoundary()", Decimal("0.00145000")),
+    ],
+)
+def test_decimal_boundary_with_exponent(value, expression, expected):
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [{"name": "p", "valueDecimal": Decimal(value)}],
+    }
+    result = ev("Parameters.parameter.value." + expression, parameters)
+    assert result == [expected]
+    assert str(result[0]) == str(expected)
 
 
 def test_now_today_are_deterministic():
