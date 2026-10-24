@@ -616,47 +616,44 @@ class BundleWrapper:
             self.data["entry"].append(entry)
 
     def attach_links(self, url, entries_count):
-        """ """
+        """``self`` plus ``first``/``previous``/``next``/``last`` paging links.
+
+        Paging links use the ``_count`` and ``page`` (1-based) parameters that
+        ``Search.prepare_params`` understands, so they can be followed as is.
+        """
         container = list()
 
         _max_count = int(url.query.get("_count", 100))
         _total_results = self.data["total"]
-        _current_offset = int(url.query.get("search-offset", 0))
-        url_params = {}
+        _current_page = max(int(url.query.get("page", 1)), 1)
 
         container.append(self.make_link("self", url))
 
         # let's pagination here
-        if _total_results > _max_count:
-            # Yes pagination is required!
-            url_params["_count"] = _max_count
-            url_params["search-id"] = self.data["id"]
+        if _max_count > 0 and _total_results > _max_count:
+            last_page = int(math.ceil(_total_results / _max_count))
+            url_params = {"_count": _max_count}
 
-            # first page
-            if _current_offset != 0:
-                url_params["search-offset"] = 0
-                container.append(self.make_link("first", url, url_params))
-            # Previous Page
-            if _current_offset > 0:
-                url_params["search-offset"] = int(_current_offset - _max_count)
-                container.append(self.make_link("previous", url, url_params))
-
-            # Next Page
-            if _current_offset < int(
-                math.floor(_total_results / _max_count) * _max_count
-            ):
-                url_params["search-offset"] = int(_current_offset + _max_count)
-                container.append(self.make_link("next", url, url_params))
-
-            # last page
-            last_offset = int(math.floor(_total_results / _max_count) * _max_count)
-            if (_total_results % last_offset) == 0:
-                last_offset -= _max_count
-
-            if _current_offset < last_offset and last_offset > 0:
-
-                url_params["search-offset"] = last_offset
-                container.append(self.make_link("last", url, url_params))
+            if _current_page > 1:
+                container.append(
+                    self.make_link("first", url, {**url_params, "page": 1})
+                )
+                container.append(
+                    self.make_link(
+                        "previous",
+                        url,
+                        {**url_params, "page": min(_current_page, last_page + 1) - 1},
+                    )
+                )
+            if _current_page < last_page:
+                container.append(
+                    self.make_link(
+                        "next", url, {**url_params, "page": _current_page + 1}
+                    )
+                )
+                container.append(
+                    self.make_link("last", url, {**url_params, "page": last_page})
+                )
 
         self.data["link"] = container
 

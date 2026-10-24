@@ -91,9 +91,14 @@ class ElasticsearchEngineBase(Engine):
         return yarl.URL"""
         raise NotImplementedError
 
-    def wrapped_with_bundle(self, result, includes=None, as_json=False):
-        """ """
+    def wrapped_with_bundle(
+        self, result, includes=None, as_json=False, applied_params=None
+    ):
+        """``applied_params``: the search parameters the search actually used;
+        the ``self`` (and paging) links show those instead of the request's."""
         url = self.current_url()
+        if applied_params is not None:
+            url = url.with_query(applied_params)
         if includes is None:
             includes = list()
         init_data = self.initial_bundle_data()

@@ -10,7 +10,6 @@ from typing import (
     Optional,
     Pattern,
     Set,
-    Text,
     Tuple,
     Type,
     Union,
@@ -65,7 +64,6 @@ from fhirpath.search.utils import PathInfoContext, lookup_fhir_class
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
 
-escape_comma_replacer: Text = "_ESCAPE_COMMA_"
 uri_scheme: Pattern = re.compile(r"^https?://", re.I)
 value_prefixes: Set[str] = {"eq", "ne", "gt", "lt", "ge", "le", "sa", "eb", "ap"}
 has_dot_as: Pattern = re.compile(r"\.as\([a-z]+\)$", re.I ^ re.U)
@@ -85,10 +83,130 @@ QUANTITY_TYPES = (
     "MoneyQuantity",
     "SimpleQuantity",
 )
+# modifiers this implementation handles, per parameter type ("exists" is
+# non-standard: the inverse of "missing"); any other modifier is rejected
+_STRING_LIKE_MODIFIERS = {
+    "missing",
+    "exists",
+    "not",
+    "exact",
+    "contains",
+    "text",
+    "below",
+    "above",
+}
+SUPPORTED_MODIFIERS: Dict[str, Set[str]] = {
+    "string": _STRING_LIKE_MODIFIERS,
+    "token": _STRING_LIKE_MODIFIERS,
+    "uri": _STRING_LIKE_MODIFIERS,
+    "reference": _STRING_LIKE_MODIFIERS | {"identifier"},
+    "number": {"missing", "exists", "not"},
+    "date": {"missing", "exists", "not"},
+    "quantity": {"missing", "exists", "not"},
+    "special": {"missing", "exists"},
+}
 
 
-def has_escape_comma(val):
-    return "\\," in val
+def map_normalized_values(values, func):
+    """Replace every ``(prefix, value)`` leaf of a normalized parameter value
+    (leaves, OR tuples ``(None, [...])``, AND lists) by ``func(leaf)``."""
+    if isinstance(values, list):
+        return [map_normalized_values(v, func) for v in values]
+    operator_, value = values
+    if isinstance(value, list):
+        return (operator_, [map_normalized_values(v, func) for v in value])
+    return func(values)
+
+
+def plain_reference_id(value: str) -> bool:
+    """``123`` (as opposed to ``Patient/123``, an absolute URL or ``url|version``)."""
+    return "/" not in value and ":" not in value and not has_unescaped(value, "|")
+
+
+def typed_reference_leaf(types: List[str], leaf):
+    """A plain id stands for a reference to any of ``types``: ``123`` ->
+    ``Patient/123`` (or ``Patient/123,Group/123``)."""
+    operator_, value = leaf
+    if not types or not plain_reference_id(value):
+        return leaf
+    if len(types) == 1:
+        return (operator_, f"{types[0]}/{value}")
+    return (None, [(operator_, f"{t}/{value}") for t in types])
+
+
+def typed_reference_value(resource_type: str, value: str) -> str:
+    """Value of a ``[type]`` modified reference parameter as ``Type/id``."""
+    if value.startswith(f"{resource_type}/"):
+        return value
+    if "/" in value:
+        raise ValidationError(
+            f"``:{resource_type}`` modifier expects a resource id, got ``{value}``."
+        )
+    return f"{resource_type}/{value}"
+
+
+# characters a backslash may escape in a search value (after URL decoding)
+ESCAPABLE_CHARS = frozenset(",$|\\")
+
+
+def validate_escapes(value: str):
+    """A ``\\`` must escape one of ``, $ | \\``; anything else is illegal."""
+    index = 0
+    while index < len(value):
+        if value[index] == "\\":
+            if index + 1 >= len(value) or value[index + 1] not in ESCAPABLE_CHARS:
+                raise ValidationError(
+                    f"Illegal escape sequence in search value ``{value}``: "
+                    "a backslash may only escape ``,``, ``$``, ``|`` or ``\\``."
+                )
+            index += 2
+        else:
+            index += 1
+
+
+def split_escaped(value: str, separator: str) -> List[str]:
+    """Split on ``separator`` unless escaped; the parts keep their escapes."""
+    parts: List[str] = []
+    current: List[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char == "\\" and index + 1 < len(value):
+            current.append(value[index : index + 2])
+            index += 2
+            continue
+        if char == separator:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+        index += 1
+    parts.append("".join(current))
+    return parts
+
+
+def has_unescaped(value: str, separator: str) -> bool:
+    return len(split_escaped(value, separator)) > 1
+
+
+def unescape_value(value):
+    """``a\\,b`` -> ``a,b`` (only ``, $ | \\`` are escapable)."""
+    if not isinstance(value, str) or "\\" not in value:
+        return value
+    result: List[str] = []
+    index = 0
+    while index < len(value):
+        if (
+            value[index] == "\\"
+            and index + 1 < len(value)
+            and value[index + 1] in ESCAPABLE_CHARS
+        ):
+            result.append(value[index + 1])
+            index += 2
+        else:
+            result.append(value[index])
+            index += 1
+    return "".join(result)
 
 
 # A chain resolver yields the sub-queries it needs and receives their results,
@@ -329,6 +447,9 @@ class SearchContext(object):
         search_params_def = self._get_search_param_definitions(param_name_)
 
         for sp in search_params_def:
+            if modifier_ is not None:
+                self.validate_modifier(sp, modifier_)
+
             # Look out for any composite or combo type parameter
             if sp.type == "composite":
                 normalized_params.extend(
@@ -344,6 +465,16 @@ class SearchContext(object):
                 raw_value = raw_value[0]
 
             values: List = self.normalize_param_value(raw_value, sp)
+            if modifier_ and self.is_type_modifier(sp, modifier_):
+                # ``subject:Patient=23`` ≡ ``subject=Patient/23``
+                values = map_normalized_values(
+                    values,
+                    lambda leaf, t=modifier_: (
+                        leaf[0],
+                        typed_reference_value(t, leaf[1]),
+                    ),
+                )
+                modifier_ = None
 
             if len(values) == 0:
                 # empty parameters are not considered an error, they should be ignored
@@ -355,14 +486,77 @@ class SearchContext(object):
 
             Search.validate_normalized_value(param_name_, param_value_, modifier_)
             paths = self.resolve_path_contexts(sp)
-            if len(paths) == 1:
-                normalized_params.append((paths[0], param_value_, modifier_))
+            entries = [
+                (
+                    path,
+                    self.path_param_value(sp, path, param_value_, modifier_),
+                    modifier_,
+                )
+                for path in paths
+            ]
+            if len(entries) == 1:
+                normalized_params.append(entries[0])
             else:
                 # the parameter matches when any of its paths matches
-                normalized_params.append(
-                    AnyOf([(path, param_value_, modifier_) for path in paths])
-                )
+                normalized_params.append(AnyOf(entries))
         return normalized_params
+
+    @staticmethod
+    def path_param_value(
+        search_param: SearchParameter, path: ElementPath, value, modifier
+    ):
+        """The value as searched on ``path``: for a reference parameter a plain id
+        becomes ``Type/id`` for each type the path may point to
+        (``where(resolve() is X)`` restricts it to ``X``)."""
+        if search_param.type != "reference" or modifier is not None:
+            return value
+        if path._where is not None and path._where.type == WhereConstraintType.T2:
+            types = [path._where.value]
+        else:
+            types = [t for t in reference_targets(search_param) if t != "Resource"]
+        return map_normalized_values(
+            value, lambda leaf: typed_reference_leaf(types, leaf)
+        )
+
+    @staticmethod
+    def is_type_modifier(search_param: SearchParameter, modifier: str) -> bool:
+        """``[type]`` modifier of a reference parameter (``subject:Patient``)."""
+        if search_param.type != "reference" or not modifier[:1].isupper():
+            return False
+        targets = search_param.target or []
+        return not targets or "Resource" in targets or modifier in targets
+
+    def validate_modifier(self, search_param: SearchParameter, modifier: str):
+        """Unsupported modifiers SHALL be rejected (unlike unknown parameters),
+        because a modifier changes the meaning of the test."""
+        code = search_param.code
+        if search_param.type == "composite":
+            raise ValidationError(
+                f"Composite search parameter ``{code}`` does not take modifiers "
+                f"(got ``:{modifier}``)."
+            )
+        if self.is_type_modifier(search_param, modifier):
+            return
+        if search_param.type == "reference" and modifier[:1].isupper():
+            raise ValidationError(
+                f"``{modifier}`` is not a target type of reference search "
+                f"parameter ``{code}`` (targets: {', '.join(search_param.target)})."
+            )
+        supported = SUPPORTED_MODIFIERS.get(search_param.type, set())
+        if modifier not in supported:
+            raise ValidationError(
+                f"Modifier ``:{modifier}`` is not supported for search parameter "
+                f"``{code}`` of type ``{search_param.type}``."
+            )
+        # a definition that lists its modifiers allows only those
+        allowed = set(search_param.modifier or [])
+        if allowed and "missing" in allowed:
+            allowed.add("exists")
+        if allowed and modifier not in allowed:
+            raise ValidationError(
+                f"Modifier ``:{modifier}`` is not allowed by the definition of "
+                f"search parameter ``{code}``."
+            )
 
     def normalize_param_value(
         self, raw_value: Union[List, str], search_param: SearchParameter
@@ -381,21 +575,13 @@ class SearchContext(object):
                 normalized_values.append(bucket)
 
         else:
-            escape_ = has_escape_comma(raw_value)
-            if escape_:
-                param_value = raw_value.replace("\\,", escape_comma_replacer)
-            else:
-                param_value = raw_value
-
-            value_parts = param_value.split(",")
+            validate_escapes(raw_value)
+            # the values keep their escapes until the leaf terms are built
+            # (``create_term``), so that ``|`` and ``$`` can still be split on
+            value_parts = split_escaped(raw_value, ",")
             bucket_ = list()
-            for val in value_parts:
+            for val_ in value_parts:
                 comparison_operator = "eq"
-                if escape_:
-                    val_ = val.replace(escape_comma_replacer, "\\,")
-                else:
-                    val_ = val
-
                 for prefix in search_param_prefixes:
                     if val_.startswith(prefix) and search_param.support_prefix():
                         comparison_operator = prefix
@@ -441,7 +627,7 @@ class SearchContext(object):
             raise NotImplementedError(
                 "Currently duplicate composite type params are not allowed or supported"
             )
-        value_parts = raw_value[0].split("$")
+        value_parts = split_escaped(raw_value[0], "$")
         if len(value_parts) != len(param_def.component):
             raise ValueError(
                 f"Composite search param {param_def.name} expects {len(param_def.component)} "
@@ -523,6 +709,11 @@ class Search(object):
         self.main_query = None
         self.include_queries = None
 
+        # what the self link reports: every parameter with a value (empty
+        # values are ignored); unknown parameters are rejected later
+        self.applied_params = MultiDict(
+            (k, v) for k, v in (all_params or {}).items() if v
+        )
         self.prepare_params(all_params)
 
         additional_resource_types = self.result_params.get("_type")
@@ -1221,7 +1412,7 @@ class Search(object):
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
-        has_pipe = "|" in original_value
+        has_pipe = has_unescaped(original_value, "|")
         terms = list()
 
         if modifier == "text" and not has_pipe:
@@ -1240,7 +1431,7 @@ class Search(object):
                 term = self.create_term(path_1, new_value, modifier)
                 terms.append(term)
 
-            elif original_value.endswith("|"):
+            elif split_escaped(original_value, "|")[-1] == "":
                 path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
 
@@ -1248,7 +1439,7 @@ class Search(object):
                 terms.append(term)
 
             else:
-                parts = original_value.split("|")
+                parts = split_escaped(original_value, "|")
                 try:
                     path_1 = path_ / "system"
                     new_value = (operator_, parts[0])
@@ -1296,11 +1487,11 @@ class Search(object):
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
         operator_eq = "eq"
-        has_pipe = "|" in original_value
+        has_pipe = has_unescaped(original_value, "|")
         # modifier = text, no impact
         if has_pipe:
             terms = list()
-            parts = original_value.split("|")
+            parts = split_escaped(original_value, "|")
 
             if len(parts) == 3:
                 if parts[0]:
@@ -1374,7 +1565,7 @@ class Search(object):
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
-        has_pipe = "|" in original_value
+        has_pipe = has_unescaped(original_value, "|")
         terms = list()
         subpredicate_modifier = None if modifier == "not" else modifier
 
@@ -1394,14 +1585,14 @@ class Search(object):
                 term = self.create_term(path_1, new_value, subpredicate_modifier)
                 terms.append(term)
 
-            elif original_value.endswith("|"):
+            elif split_escaped(original_value, "|")[-1] == "":
                 path_1 = path_ / "system"
                 new_value = (value[0], original_value[:-1])
 
                 terms.append(self.create_term(path_1, new_value, subpredicate_modifier))
 
             else:
-                parts = original_value.split("|")
+                parts = split_escaped(original_value, "|")
                 terms = list()
                 try:
                     path_1 = path_ / "system"
@@ -1458,7 +1649,7 @@ class Search(object):
                 group.match_operator = MatchType.NONE
             return group
 
-        has_pipe = "|" in original_value
+        has_pipe = has_unescaped(original_value, "|")
 
         if modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
@@ -1633,15 +1824,8 @@ class Search(object):
         if path_._where:
             if path_._where.type != WhereConstraintType.T2:
                 raise NotImplementedError
-            assert path_._where.value is not None
-
-            logger.info(
-                "an honest confession: we know that referenced resource type "
-                "must be ´{path_._where.value}´"
-                "but don`t have any restriction implementation yet! "
-                "It`s now user end who has to make sure that he is "
-                "provided search value that represent appropriate resource type"
-            )
+            # ``where(resolve() is X)``: plain ids were already narrowed to ``X/id``
+            # (``SearchContext.path_param_value``)
 
         new_path = path_ / "reference"
 
@@ -1693,11 +1877,11 @@ class Search(object):
             return self._single_valued_money_term_stu3(path_, value, modifier)
 
         operator_eq = "eq"
-        has_pipe = "|" in original_value
+        has_pipe = has_unescaped(original_value, "|")
         # modifier = text, no impact
         if has_pipe:
             terms = list()
-            parts = original_value.split("|")
+            parts = split_escaped(original_value, "|")
             if len(parts) == 3:
                 # quantity syntax [number]|[system]|[code]: the code is the currency
                 # (system urn:iso:std:iso:4217, the only one Money.currency uses)
@@ -1873,7 +2057,7 @@ class Search(object):
                 operator_ = "eb"
             elif modifier == "exact":
                 term = exact_(term)
-            val = V_(original_value)
+            val = V_(unescape_value(original_value))
 
             if operator_ == "eq":
                 if modifier == "contains":
@@ -2074,7 +2258,10 @@ class Search(object):
     def response(self, result, includes, as_json):
         """ """
         return self.context.engine.wrapped_with_bundle(
-            result, includes=includes, as_json=as_json
+            result,
+            includes=includes,
+            as_json=as_json,
+            applied_params=self.applied_params,
         )
 
     def __call__(self, as_json=False):

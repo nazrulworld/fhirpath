@@ -206,7 +206,8 @@ def test_parameter_normalization_prefix(engine):
 
     # reference
     _, value_pack, _ = context.normalize_param("organization", ["necker"])[0]
-    assert value_pack == ("eq", "necker")
+    # a plain id is searched as a reference to the target type
+    assert value_pack == ("eq", "Organization/necker")
 
 
 def test_create_term(engine):
@@ -1298,6 +1299,17 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 1
+
+    # search by ID restricted to a type (``[type]`` modifier)
+    params = (("subject:Patient", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 1
+
+    params = (("subject:Device", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    fhir_search = Search(search_context, params=params)
+    bundle = fhir_search()
+    assert bundle.total == 0
 
     # search by (wrong) ID
     params = (("subject", "29c5245f-89a8-49f8-b244-666b32adb92e"),)
