@@ -504,8 +504,10 @@ class BundleWrapper:
         *,
         base_url: URL = None,
         init_data: Dict[str, Any] = None,
+        outcome_issues: List[Dict[str, Any]] = None,
     ):
-        """ """
+        """``outcome_issues``: ``OperationOutcome.issue`` items (warnings about
+        the search, e.g. ignored parameters) for an ``outcome`` entry."""
         self.fhir_version = engine.fhir_release
         self.bundle_model = lookup_fhir_class("Bundle", fhir_release=self.fhir_version)
         self.base_url: URL = base_url or BundleWrapper.calculate_fhir_base_url(url)
@@ -525,6 +527,9 @@ class BundleWrapper:
         # attach included results
         for _include in includes:
             self.attach_entry(_include, "include")
+
+        if outcome_issues:
+            self.attach_outcome(outcome_issues)
 
         self.attach_links(url, len(result.body))
 
@@ -614,6 +619,20 @@ class BundleWrapper:
             entry["search"] = search
 
             self.data["entry"].append(entry)
+
+    def attach_outcome(self, issues: List[Dict[str, Any]]):
+        """An ``OperationOutcome`` entry (``search.mode = outcome``) with
+        ``issues``; it does not count towards ``Bundle.total``."""
+        if "entry" not in self.data:
+            self.data["entry"] = list()
+        outcome = {"resourceType": "OperationOutcome", "issue": list(issues)}
+        self.data["entry"].append(
+            {
+                "fullUrl": f"urn:uuid:{uuid.uuid4()}",
+                "resource": outcome,
+                "search": {"mode": "outcome"},
+            }
+        )
 
     def attach_links(self, url, entries_count):
         """``self`` plus ``first``/``previous``/``next``/``last`` paging links.

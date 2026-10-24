@@ -3,8 +3,13 @@
 search backend: escaping, modifier validation, reference values and the
 searchset Bundle links."""
 
+import types
+
 import pytest
 from pytest import raises
+from yarl import URL
+
+from fhirpath.enums import FHIR_VERSION
 
 from fhirpath.search.engine import (
     EngineResult,
@@ -21,6 +26,7 @@ from fhirpath.search.search import (
     unescape_value,
     validate_escapes,
 )
+from fhirpath.search.utils import BundleWrapper
 from tests._utils import TestElasticsearchEngine
 
 
@@ -254,3 +260,42 @@ def test_bad_handling_value(offline_engine):
 )
 def test_handling_from_prefer(prefer, handling):
     assert handling_from_prefer(prefer) == handling
+
+
+# ------------------------------------------------------------- outcome entries
+
+
+def test_ignored_params_are_reported_in_an_outcome_entry(offline_engine):
+    context = SearchContext(offline_engine, "Patient")
+    search = Search(context, query_string="family=Doe&unknown=1")
+    bundle = search.empty_response(as_json=False)
+
+    assert bundle.total == 0  # the outcome entry is not a match
+    (entry,) = bundle.entry
+    assert entry.search.mode == "outcome"
+    assert entry.fullUrl.startswith("urn:uuid:")
+    (issue,) = entry.resource.issue
+    assert (issue.severity, issue.code) == ("warning", "not-supported")
+    assert "``unknown``" in issue.diagnostics
+
+
+def test_no_outcome_entry_without_warnings(offline_engine):
+    context = SearchContext(offline_engine, "Patient")
+    search = Search(context, query_string="family=Doe")
+    assert search.empty_response(as_json=True)["entry"] == []
+
+
+@pytest.mark.parametrize("release", ["STU3", "R4", "R4B", "R5"])
+def test_outcome_entry_is_valid_in_every_release(release):
+    engine = types.SimpleNamespace(fhir_release=FHIR_VERSION[release])
+    bundle = BundleWrapper(
+        engine,
+        make_result(0),
+        [],
+        URL("http://nohost/fhir/Patient?unknown=1"),
+        outcome_issues=[
+            {"severity": "warning", "code": "not-supported", "diagnostics": "x"}
+        ],
+    )()
+    assert bundle.entry[0].search.mode == "outcome"
+    assert bundle.entry[0].resource.get_resource_type() == "OperationOutcome"

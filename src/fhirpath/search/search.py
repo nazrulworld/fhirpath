@@ -2321,7 +2321,20 @@ class Search(object):
             includes=includes,
             as_json=as_json,
             applied_params=self.applied_params,
+            outcome_issues=self.outcome_issues(),
         )
+
+    def outcome_issues(self) -> List[Dict[str, Any]]:
+        """Warnings for the Bundle's ``outcome`` entry: the ignored unknown
+        search parameters."""
+        return [
+            {
+                "severity": "warning",
+                "code": "not-supported",
+                "diagnostics": f"Unknown search parameter ``{name}`` was ignored.",
+            }
+            for name in self.ignored_params
+        ]
 
     def __call__(self, as_json=False):
         """ """

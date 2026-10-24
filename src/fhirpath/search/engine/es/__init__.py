@@ -92,10 +92,17 @@ class ElasticsearchEngineBase(Engine):
         raise NotImplementedError
 
     def wrapped_with_bundle(
-        self, result, includes=None, as_json=False, applied_params=None
+        self,
+        result,
+        includes=None,
+        as_json=False,
+        applied_params=None,
+        outcome_issues=None,
     ):
         """``applied_params``: the search parameters the search actually used;
-        the ``self`` (and paging) links show those instead of the request's."""
+        the ``self`` (and paging) links show those instead of the request's.
+        ``outcome_issues``: ``OperationOutcome.issue`` items for an ``outcome``
+        entry (warnings about the search)."""
         url = self.current_url()
         if applied_params is not None:
             url = url.with_query(applied_params)
@@ -103,7 +110,13 @@ class ElasticsearchEngineBase(Engine):
             includes = list()
         init_data = self.initial_bundle_data()
         wrapper = BundleWrapper(
-            self, result, includes, url, "searchset", init_data=init_data
+            self,
+            result,
+            includes,
+            url,
+            "searchset",
+            init_data=init_data,
+            outcome_issues=outcome_issues,
         )
         return wrapper(as_json=as_json)
 
