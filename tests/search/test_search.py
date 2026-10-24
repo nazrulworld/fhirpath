@@ -892,6 +892,22 @@ def test_search_has(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
 
+    # chained parameter inside the reverse chain: patients with an observation
+    # performed by practitioner "Careful"
+    search_context = SearchContext(engine, "Patient")
+    params = (("_has:Observation:patient:performer:Practitioner.family", "Careful"),)
+    bundle = Search(search_context, params=params)()
+    assert bundle.total == 1
+    assert isinstance(bundle.entry[0].resource, Patient)
+
+    # several _has parameters are ANDed
+    search_context = SearchContext(engine, "Patient")
+    params = (
+        ("_has:Observation:patient:code", "718-7"),
+        ("_has:Observation:patient:performer:Practitioner.family", "Nobody"),
+    )
+    assert Search(search_context, params=params)().total == 0
+
     # bad syntax
     search_context = SearchContext(engine, "Patient")
     params = (("_has:Observation:patient", "718-7"),)

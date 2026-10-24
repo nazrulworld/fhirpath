@@ -14,7 +14,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
 )
 from urllib.parse import unquote_plus
 from warnings import warn
@@ -631,9 +630,10 @@ class Search(object):
             self.result_params["_include"] = _include
 
         _has = [(k, v) for k, v in all_params.items() if k.startswith("_has:")]
-        if _has:
-            self.result_params["_has"] = _has
-        [all_params.pop(k) for k, _ in _has]
+        # empty values are ignored, like for any other search parameter
+        if any(v for _, v in _has):
+            self.result_params["_has"] = [(k, v) for k, v in _has if v]
+        [all_params.popall(k, None) for k, _ in _has]
 
         _revinclude = all_params.popall("_revinclude", None)
         if _revinclude:
@@ -671,12 +671,17 @@ class Search(object):
 
         # handle _has predicates
         if self.reverse_chaining_results:
-            # filter results on IDs
+            # filter results on IDs; with several resource types a resource matches
+            # the ids of its own type
             terms: List = []
             for resource_type, ids in self.reverse_chaining_results.items():
                 search_context = SearchContext(self.context.engine, resource_type)
-                normalized_data = search_context.normalize_param("_id", ",".join(ids))
-                self.add_term(normalized_data, terms)
+                for normalized_data in search_context.normalize_param(
+                    "_id", [",".join(sorted(ids))]
+                ):
+                    self.add_term(normalized_data, terms)
+            if len(terms) > 1:
+                terms = [G_(*terms, path=terms[0].path, type_=GroupType.DECOUPLED)]
 
             builder = builder.where(*terms)
 
@@ -693,71 +698,66 @@ class Search(object):
 
         return result
 
-    # FIXME: sorting, paginating and large results are not handled yet.
-    def has(self) -> List[Tuple[SearchParameter, QueryResult]]:
+    def reverse_chain(self, param_name: str, value: str) -> ChainResolver:
+        """Resolve a top-level reverse chain, e.g. ``_has:Observation:patient:code``,
+        nested (``_has:Observation:patient:_has:AuditEvent:entity:agent``) or
+        followed by a chain (``_has:Observation:subject:performer.name``).
+
+        Returns the "Type/id" references of the resources of the search context
+        that are referred to by matching sources. With several resource types in
+        the context, the types the reverse chain cannot refer to are skipped.
         """
-        This function handles the _has keyword.
-        """
-        has_queries: List[Tuple[SearchParameter, QueryResult]] = []
-        _has_predicates: List[Tuple[str, str]] = cast(
-            List[Tuple[str, str]], self.result_params.get("_has", [])
-        )
-        for _has, value in _has_predicates:
-            # Parse the _has input parameter
-            parts = _has.split(":")
-            if len(parts) != 4:
-                raise ValidationError(
-                    f"bad _has param '{_has}', should be "
-                    "_has:Resource:ref_search_param:value_search_param=value"
-                )
+        if not self.context.resource_types:
+            raise ValidationError(
+                f"'{param_name}' needs a resource type: search on a type or use _type"
+            )
+        links = param_name.split(".")
+        applicable = [
+            resource_type
+            for resource_type in self.context.resource_types
+            if self._has_link_targets(links[0], resource_type)
+        ]
+        if not applicable:
+            # resolving against the first type raises the reason
+            # (unknown or non-reference parameter, invalid target...)
+            applicable = self.context.resource_types[:1]
 
-            from_resource_type: str = parts[1]
-            ref_param_raw: str = parts[2]
-            value_param_raw: str = parts[3]
+        references: List[str] = []
+        for resource_type in applicable:
+            context = SearchContext(
+                self.context.engine,
+                resource_type,
+                unrestricted=self.context.unrestricted,
+            )
+            references.extend(
+                (yield from self._resolve_has_link(context, links, value))
+            )
+        return references
 
-            from_context = SearchContext(self.context.engine, from_resource_type)
-
-            # Get the reference search parameter definition
-            # we use the first definition returned since we
-            # only have one resource in the context
-            ref_param = from_context._get_search_param_definitions(ref_param_raw)[0]
-            if not ref_param:
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
-                )
-            if ref_param.type != "reference":
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} "
-                    f"must be of type 'reference', got {ref_param.type}"
-                )
-            # ensure that the reference search param targets the correct type
-            assert isinstance(ref_param.target, list)
-            if not any(r in ref_param.target for r in self.context.resource_types):
-                raise ValidationError(
-                    f"invalid reference {from_resource_type}.{ref_param_raw} "
-                    f"({','.join(ref_param.target)}) in the current search context "
-                    f"({','.join(self.context.resource_types)})"
-                )
-
-            # Get the value search parameter definition
-            value_param = from_context._get_search_param_definitions(value_param_raw)[0]
-            if not value_param:
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
-                )
-            # Build a Q_ (query) object to join the resource based on reference ids.
-            builder = Q_(from_resource_type, from_context.engine)
-            normalized_data = from_context.normalize_param(value_param_raw, value)
-            terms_container: List = []
-            self.add_term(normalized_data, terms_container)
-
-            builder = builder.where(*terms_container)
-            self.attach_limit_terms(builder)
-
-            result: QueryResult = builder(unrestricted=self.context.unrestricted)
-            has_queries.append((ref_param, result))
-
-        return has_queries
+    def reverse_chains(
+        self,
+    ) -> Generator[QueryResult, EngineResult, Dict[str, Set[str]]]:
+        """Resolve every top-level ``_has`` parameter; they are ANDed: the result
+        maps each resource type to the ids that satisfy all of them (empty when
+        none can match)."""
+        results: Optional[Dict[str, Set[str]]] = None
+        for param_name, value in self.result_params.get("_has", []):
+            references = yield from self.reverse_chain(param_name, value)
+            found: Dict[str, Set[str]] = {}
+            for reference in references:
+                resource_type, id_ = reference.split("/", 1)
+                found.setdefault(resource_type, set()).add(id_)
+            if results is None:
+                results = found
+            else:
+                results = {
+                    resource_type: ids & found[resource_type]
+                    for resource_type, ids in results.items()
+                    if ids & found.get(resource_type, set())
+                }
+            if not results:
+                return {}
+        return results or {}
 
     @staticmethod
     def parse_chain_link(link: str) -> Tuple[str, Optional[str]]:
@@ -2082,23 +2082,8 @@ class Search(object):
 
         # reverse chaining (_has)
         if self.result_params.get("_has"):
-            has_queries = self.has()
-            # compute the intersection of referenced resources' ID
-            # from the result of _has queries.
-            self.reverse_chaining_results = {}
-            for ref_param, q in has_queries:
-                res = q.fetchall()
-                self.reverse_chaining_results = {
-                    r_type: set(ids).intersection(self.reverse_chaining_results[r_type])
-                    if self.reverse_chaining_results.get(r_type)
-                    else set(ids)
-                    for r_type, ids in res.extract_references(ref_param).items()
-                    if r_type in self.context.resource_types
-                }
-
-            # if the _has predicates did not match any documents, return an empty result
-            # FIXME: we use the result of the last _has query to build the empty bundle,
-            # but we should be more explicit about the query context.
+            self.reverse_chaining_results = run_chain_resolver(self.reverse_chains())
+            # no resource satisfies the _has parameters, so nothing can match
             if not self.reverse_chaining_results:
                 return self.empty_response(as_json)
 
@@ -2146,25 +2131,12 @@ class AsyncSearch(Search):
         """ """
         # reverse chaining (_has)
         if self.result_params.get("_has"):
-            has_queries = self.has()
-            # compute the intersection of referenced resources' ID
-            # from the result of _has queries.
-            self.reverse_chaining_results = {}
-            for ref_param, q in has_queries:
-                res = await q.fetchall()
-                self.reverse_chaining_results = {
-                    r_type: set(ids).intersection(self.reverse_chaining_results[r_type])
-                    if self.reverse_chaining_results.get(r_type)
-                    else set(ids)
-                    for r_type, ids in res.extract_references(ref_param).items()
-                    if r_type in self.context.resource_types
-                }
-
-            # if the _has predicates did not match any documents, return an empty result
-            # FIXME: we use the result of the last _has query to build the empty bundle,
-            # but we should be more explicit about the query context.
+            self.reverse_chaining_results = await run_chain_resolver_async(
+                self.reverse_chains()
+            )
+            # no resource satisfies the _has parameters, so nothing can match
             if not self.reverse_chaining_results:
-                return self.response(res, [], as_json)
+                return self.empty_response(as_json)
 
         # chaining
         self.chained_references = []

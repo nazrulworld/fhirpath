@@ -500,3 +500,231 @@ def test_extract_references(offline_engine):
     )
     # ``where(resolve() is Patient)`` keeps only Patient references
     assert observations.extract_references(patient) == {"Patient": ["p9"]}
+
+
+# ---------------------------------------------------------- top-level _has
+
+
+def has_search(engine, resource_type, *params):
+    return Search(SearchContext(engine, resource_type), params=params)
+
+
+AUDITED_OBSERVATION = {
+    "AuditEvent": [
+        {
+            "resourceType": "AuditEvent",
+            "id": "a1",
+            "entity": [{"what": {"reference": "Observation/o1"}}],
+        }
+    ],
+    "Observation": [
+        {
+            "resourceType": "Observation",
+            "id": "o1",
+            "subject": {"reference": "Patient/p1"},
+        }
+    ],
+}
+
+
+def test_reverse_chain(offline_engine):
+    search = has_search(
+        offline_engine, "Patient", ("_has:Observation:patient:code", "1234-5")
+    )
+    results, asked = drive(search.reverse_chains(), AUDITED_OBSERVATION)
+    assert asked == ["Observation"]
+    assert results == {"Patient": {"p1"}}
+
+
+def test_nested_reverse_chain(offline_engine):
+    # FHIR R5 search example: patients with an observation audited by a user
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_has:Observation:patient:_has:AuditEvent:entity:agent", "Practitioner/me"),
+    )
+    results, asked = drive(search.reverse_chains(), AUDITED_OBSERVATION)
+    # innermost first: the audit events, then the observations they refer to
+    assert asked == ["AuditEvent", "Observation"]
+    assert results == {"Patient": {"p1"}}
+
+
+def test_chain_after_reverse_chain(offline_engine):
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_has:Observation:subject:performer:Practitioner.name", "Careful"),
+    )
+    results, asked = drive(
+        search.reverse_chains(),
+        {
+            "Practitioner": [{"resourceType": "Practitioner", "id": "d1"}],
+            **AUDITED_OBSERVATION,
+        },
+    )
+    assert asked == ["Practitioner", "Observation"]
+    assert results == {"Patient": {"p1"}}
+
+
+def test_reverse_chains_are_anded(offline_engine):
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_has:Observation:patient:code", "1234-5"),  # p1
+        ("_has:Group:member:_id", "102"),  # p1, p2
+    )
+    results, _ = drive(
+        search.reverse_chains(), {**AUDITED_OBSERVATION, "Group": [GROUP_102]}
+    )
+    assert results == {"Patient": {"p1"}}
+
+
+def test_reverse_chains_without_common_match(offline_engine):
+    # an empty intersection stays empty, whatever comes next
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_has:Observation:patient:code", "1234-5"),  # p1
+        ("_has:Group:member:_id", "102"),  # p1, p2
+        ("_has:Observation:patient:code", "nothing"),
+    )
+    answers = {**AUDITED_OBSERVATION, "Group": [GROUP_102]}
+    asked = []
+
+    def answer(resolver):
+        try:
+            query = next(resolver)
+            while True:
+                (resource_type,) = resource_types(query)
+                asked.append(resource_type)
+                # the third _has (second Observation query) matches nothing
+                resources = answers.get(resource_type, [])
+                if resource_type == "Observation" and asked.count("Observation") > 1:
+                    resources = []
+                query = resolver.send(make_result(*resources))
+        except StopIteration as stop:
+            return stop.value
+
+    assert answer(search.reverse_chains()) == {}
+    assert asked == ["Observation", "Group", "Observation"]
+
+
+def test_reverse_chain_empty_value_is_ignored(offline_engine):
+    search = has_search(
+        offline_engine, "Patient", ("_has:Observation:patient:code", "")
+    )
+    assert "_has" not in search.result_params
+
+
+def test_reverse_chain_with_several_resource_types(offline_engine):
+    # Group.member refers to Patients and Practitioners
+    group = dict(
+        GROUP_102,
+        member=GROUP_102["member"] + [{"entity": {"reference": "Practitioner/d1"}}],
+    )
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_type", "Practitioner"),
+        ("_has:Group:member:_id", "102"),
+    )
+    results, asked = drive(search.reverse_chains(), {"Group": [group]})
+    assert asked == ["Group", "Group"]
+    assert results == {"Patient": {"p1", "p2"}, "Practitioner": {"d1"}}
+
+    # a resource matches the ids of its own type
+    search.reverse_chaining_results = results
+    terms = list(search.build()._query.get_where())
+    ors = [t for t in terms if getattr(t, "terms", None) and len(t.terms) == 2]
+    assert [str(t.path) for t in ors[0].terms] == ["Patient.id", "Practitioner.id"]
+
+
+def test_reverse_chain_errors(offline_engine):
+    def resolve(resource_type, name):
+        search = has_search(offline_engine, resource_type, (name, "x"))
+        return drive(search.reverse_chains(), {})
+
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "bad _has param '_has:Observation:patient', "
+            "should be _has:Resource:ref_search_param:value_search_param=value"
+        ),
+    ):
+        resolve("Patient", "_has:Observation:patient")
+
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "search parameter Observation.category must be "
+            "of type 'reference', got token"
+        ),
+    ):
+        resolve("Patient", "_has:Observation:category:code")
+
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "No search definition is available for search "
+            "parameter ``unknown`` on Resource ``Observation``."
+        ),
+    ):
+        resolve("Patient", "_has:Observation:unknown:code")
+
+    with raises(
+        ValidationError,
+        match=re.escape(
+            "invalid reference Observation.encounter (Encounter,EpisodeOfCare) "
+            "in the current search context (Patient)"
+        ),
+    ):
+        resolve("Patient", "_has:Observation:encounter:identifier")
+
+
+def test_search_with_nested_reverse_chain(offline_engine, monkeypatch):
+    executed = []
+
+    def fetchall(query_result):
+        (resource_type,) = resource_types(query_result)
+        executed.append(resource_type)
+        if resource_type == "Patient":
+            return make_result({"resourceType": "Patient", "id": "p1"})
+        return make_result(*AUDITED_OBSERVATION[resource_type])
+
+    monkeypatch.setattr(QueryResult, "fetchall", fetchall)
+
+    search = has_search(
+        offline_engine,
+        "Patient",
+        ("_has:Observation:patient:_has:AuditEvent:entity:agent", "Practitioner/me"),
+    )
+    bundle = search()
+    assert executed == ["AuditEvent", "Observation", "Patient"]
+    assert search.reverse_chaining_results == {"Patient": {"p1"}}
+    assert bundle.total == 1
+
+
+@pytest.mark.asyncio
+async def test_async_search_with_unsatisfied_reverse_chain_is_empty(
+    offline_engine, monkeypatch
+):
+    async def fetchall(query_result):
+        return make_result()
+
+    monkeypatch.setattr(QueryResult, "fetchall", fetchall)
+
+    search = AsyncSearch(
+        SearchContext(offline_engine, "Patient"),
+        params=(("_has:Observation:patient:_has:AuditEvent:entity:agent", "x"),),
+    )
+    bundle = await search()
+    assert bundle.total == 0
+
+
+def test_reverse_chain_needs_a_resource_type(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, None),
+        params=(("_has:Observation:patient:code", "1234-5"),),
+    )
+    with raises(ValidationError, match="needs a resource type"):
+        drive(search.reverse_chains(), {})
