@@ -57,6 +57,8 @@ class ElasticsearchEngineBase(Engine):
             if res["_type"] != doc_type:
                 continue
             row = EngineResultRow()
+            # relevance (``_score``); None when the hits are sorted
+            row.score = res.get("_score")
             if len(source_filters) > 0:
                 for fullpath in source_filters:
                     source = res["_source"]

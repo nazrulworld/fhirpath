@@ -644,6 +644,9 @@ class BundleWrapper:
 
         _max_count = int(url.query.get("_count", 100))
         _total_results = self.data["total"]
+        if url.query.get("_maxresults"):
+            # matches beyond _maxresults are not paged to
+            _total_results = min(_total_results, int(url.query["_maxresults"]))
         _current_page = max(int(url.query.get("page", 1)), 1)
 
         container.append(self.make_link("self", url))

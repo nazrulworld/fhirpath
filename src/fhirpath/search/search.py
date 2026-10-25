@@ -24,7 +24,14 @@ from zope.interface import implementer
 from fhirpath.core import ast as fhirpath_ast
 from fhirpath.core.parser import FHIRPathSyntaxError
 from fhirpath.core.parser import parse as fhirpath_parse
-from fhirpath.search.engine import EngineResult, EngineResultBody, EngineResultHeader
+from fhirpath.core import compile as fhirpath_compile
+from fhirpath.search.engine import (
+    EngineResult,
+    EngineResultBody,
+    EngineResultHeader,
+    EngineResultRow,
+)
+from fhirpath.search.engine.base import resolve_literal_reference
 from fhirpath.enums import (
     FHIR_VERSION,
     GroupType,
@@ -72,6 +79,7 @@ from fhirpath.search.ranges import (
 from fhirpath.search.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.search.query import Q_, QueryResult
 from fhirpath.search.storage import SEARCH_PARAMETERS_STORAGE
+from fhirpath.search.graph import resolve_graph
 from fhirpath.search.terminology import get_terminology
 from fhirpath.search.utils import PathInfoContext, lookup_fhir_class
 
@@ -90,6 +98,14 @@ DEFAULT_RESULT_COUNT = 100
 INCLUDE_MAX_ITERATIONS = 10
 # levels followed by ``reference:below`` / ``reference:above``
 HIERARCHY_MAX_DEPTH = 32
+TOTAL_VALUES = ("none", "estimate", "accurate")
+SUMMARY_VALUES = ("true", "text", "data", "count", "false")
+# meta.tag of a resource returned with only some of its elements
+SUBSETTED_TAG = {
+    "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+    "code": "SUBSETTED",
+    "display": "Resource encoded in summary mode",
+}
 # how unknown search parameters are treated (``Prefer: handling=…``)
 HANDLING_LENIENT = "lenient"
 HANDLING_STRICT = "strict"
@@ -875,6 +891,120 @@ class SearchContext(object):
         return AnyOf(result)
 
 
+_PROFILES: Dict[str, Dict[str, Any]] = {}
+_SUBSETTING: Dict[Tuple[str, str], Dict[str, Any]] = {}
+# elements every resource may carry that change its meaning
+BASE_MODIFIER_ELEMENTS = ("implicitRules", "modifierExtension")
+
+
+def _resource_profiles(release: FHIR_VERSION) -> Dict[str, Any]:
+    """StructureDefinitions of the resources of a release, by type."""
+    release = FHIR_VERSION.normalize(release)
+    if release.name not in _PROFILES:
+        import json
+
+        from fhirpath.search.fhirspec import SPEC_JSON_DIR, ensure_spec_jsons
+
+        ensure_spec_jsons(release)
+        path = (
+            SPEC_JSON_DIR / release.name / release.value / "profiles-resources.min.json"
+        )
+        with open(str(path), encoding="utf-8") as fp:
+            bundle = json.load(fp)
+        _PROFILES[release.name] = {
+            entry["resource"]["type"]: entry["resource"]
+            for entry in bundle.get("entry", [])
+            if entry["resource"].get("kind") == "resource"
+            and entry["resource"].get("derivation", "specialization") == "specialization"
+        }
+    return _PROFILES[release.name]
+
+
+def subsetting_elements(resource_type: str, release: FHIR_VERSION) -> Dict[str, Any]:
+    """``mandatory`` and ``modifier`` top-level elements of a resource type
+    (which ``_elements`` SHOULD always return) and ``names``: the JSON names of
+    each element (a choice element has one per type)."""
+    release = FHIR_VERSION.normalize(release)
+    key = (release.name, resource_type)
+    if key in _SUBSETTING:
+        return _SUBSETTING[key]
+    mandatory: List[str] = []
+    modifier: List[str] = list(BASE_MODIFIER_ELEMENTS)
+    profile = _resource_profiles(release).get(resource_type, {})
+    elements = profile.get("snapshot", profile.get("differential", {})).get(
+        "element", []
+    )
+    for element in elements:
+        parts = element.get("path", "").split(".")
+        if len(parts) != 2:
+            continue
+        name = parts[1].replace("[x]", "")
+        if element.get("min", 0) > 0 and name not in mandatory:
+            mandatory.append(name)
+        if element.get("isModifier") and name not in modifier:
+            modifier.append(name)
+    names: Dict[str, List[str]] = {}
+    try:
+        model_class = lookup_fhir_class(resource_type, release)
+    except LookupError:
+        model_class = None
+    for field in (model_class.model_fields.values() if model_class else []):
+        extra = field.json_schema_extra or {}
+        if not extra.get("element_property"):
+            continue
+        names.setdefault(field.alias, []).append(field.alias)
+        if extra.get("one_of_many"):
+            names.setdefault(extra["one_of_many"], []).append(field.alias)
+    _SUBSETTING[key] = {"mandatory": mandatory, "modifier": modifier, "names": names}
+    return _SUBSETTING[key]
+
+
+def subset_resource(resource: Dict[str, Any], names: List[str]) -> Dict[str, Any]:
+    """A copy of a resource with only ``names`` (and ``resourceType``)."""
+    return {
+        key: value
+        for key, value in resource.items()
+        if key == "resourceType" or key in names
+    }
+
+
+def tag_subsetted(resource):
+    """Add the ``SUBSETTED`` tag to a resource (dict)."""
+    if not isinstance(resource, dict):
+        return
+    meta = resource.setdefault("meta", {})
+    tags = meta.setdefault("tag", [])
+    if not any(
+        t.get("code") == SUBSETTED_TAG["code"] and t.get("system") == SUBSETTED_TAG["system"]
+        for t in tags
+    ):
+        tags.append(dict(SUBSETTED_TAG))
+
+
+# primitive elements a complex element is sorted on (``:text``: its text)
+SORT_LEAVES: Dict[str, Tuple[str, ...]] = {
+    "HumanName": ("family", "given"),
+    "Address": ("text", "city", "country"),
+    "CodeableConcept": ("coding.code",),
+    "Coding": ("code",),
+    "Identifier": ("value",),
+    "Reference": ("reference",),
+    "ContactPoint": ("value",),
+    "Period": ("start",),
+    "Range": ("low.value",),
+    "Timing": ("event",),
+    "Attachment": ("title",),
+    "Money": ("value",),
+    **{name: ("value",) for name in QUANTITY_TYPES},
+}
+SORT_TEXT_LEAVES: Dict[str, Tuple[str, ...]] = {
+    "CodeableConcept": ("text", "coding.display"),
+    "Coding": ("display",),
+    "Reference": ("display",),
+    "Identifier": ("type.text",),
+}
+
+
 class IncludeSpec(NamedTuple):
     """One ``_include`` / ``_revinclude``: follow ``ref_param`` of
     ``source_type`` (``*``: every reference parameter)."""
@@ -988,6 +1118,7 @@ class Search(object):
 
         if self.handling == HANDLING_LENIENT:
             self.drop_unknown_params()
+        self.check_contained()
 
     def drop_unknown_params(self):
         """Unknown search parameters SHOULD be ignored unless strict handling is
@@ -1012,6 +1143,28 @@ class Search(object):
             (k, v)
             for k, v in self.applied_params.items()
             if k not in self.ignored_params
+        )
+
+    def check_contained(self):
+        """Contained resources are not indexed by themselves, so they cannot be
+        searched (``_contained=true|both``): with lenient handling the
+        parameters are ignored (left out of the self link, with a warning)."""
+        contained = self.result_params.get("_contained")
+        if contained not in ("true", "both"):
+            return
+        message = (
+            f"_contained={contained} is not supported: contained resources are "
+            "not searched."
+        )
+        if self.handling == HANDLING_STRICT:
+            raise ValidationError(message)
+        self.warn(message, "not-supported")
+        for name in ("_contained", "_containedType"):
+            self.result_params.pop(name, None)
+        self.applied_params = MultiDict(
+            (k, v)
+            for k, v in self.applied_params.items()
+            if k not in ("_contained", "_containedType")
         )
 
     @staticmethod
@@ -1082,33 +1235,61 @@ class Search(object):
         if len(_sort) > 0:
             self.result_params["_sort"] = ",".join(_sort)
 
-        _count = all_params.popall("_count", [])
+        _count = self._single_param(all_params, "_count")
+        if _count is not None:
+            count = self._whole_number("_count", _count)
+            self.result_params["_count"] = count
+            if count == 0:
+                # _count=0 is _summary=count: the total only
+                all_params.popall("_summary", None)
+                all_params.add("_summary", "count")
 
-        if len(_count) > 0:
-            if len(_count) > 1:
-                raise ValidationError("'_count' cannot be multiple!")
-            self.result_params["_count"] = int(_count[0])
+        page = self._single_param(all_params, "page")
+        if page is not None:
+            self.result_params["page"] = max(self._whole_number("page", page), 1)
 
-        page = all_params.popall("page", [])
-        if len(page) > 0:
-            if len(page) > 1:
-                raise ValidationError("'page' cannot be multiple!")
-            self.result_params["page"] = int(page[0])
+        _maxresults = self._single_param(all_params, "_maxresults")
+        if _maxresults is not None:
+            self.result_params["_maxresults"] = self._whole_number(
+                "_maxresults", _maxresults
+            )
 
-        _total = all_params.popall("_total", [])
+        _total = self._single_param(all_params, "_total")
+        if _total is not None:
+            if _total not in TOTAL_VALUES:
+                raise ValidationError(
+                    f"'_total' must be one of {', '.join(TOTAL_VALUES)}, "
+                    f"got '{_total}'."
+                )
+            self.result_params["_total"] = _total
 
-        if len(_total) > 0:
-            if len(_total) > 1:
-                raise ValidationError("'_total' cannot be multiple!")
-            self.result_params["_total"] = _total[0]
+        _score = self._single_param(all_params, "_score")
+        if _score is not None:
+            if _score not in ("true", "false"):
+                raise ValidationError(f"'_score' must be true or false, got '{_score}'.")
+            self.result_params["_score"] = _score == "true"
 
         _type = all_params.popone("_type", None)
         if _type:
             self.result_params["_type"] = _type.split(",")
 
-        _summary = all_params.popone("_summary", None)
-        if _summary:
+        _summary = self._single_param(all_params, "_summary")
+        if _summary is not None:
+            if _summary not in SUMMARY_VALUES:
+                raise ValidationError(
+                    f"'_summary' must be one of {', '.join(SUMMARY_VALUES)}, "
+                    f"got '{_summary}'."
+                )
             self.result_params["_summary"] = _summary
+
+        _graph = self._single_param(all_params, "_graph")
+        if _graph is not None:
+            self.result_params["_graph"] = _graph
+
+        for name in ("_text", "_content", "_filter", "_query", "_list"):
+            values = [v for v in all_params.popall(name, []) if v]
+            if values:
+                self.result_params[name] = values
 
         # (value, iterate) pairs; STU3 calls :iterate :recurse
         for kind in ("_include", "_revinclude"):
@@ -1127,17 +1308,35 @@ class Search(object):
         [all_params.popall(k, None) for k, _ in _has]
 
 
-        _elements = all_params.popone("_elements", [])
-        if len(_elements) > 0:
-            self.result_params["_elements"] = _elements.split(",")
+        _elements = self._single_param(all_params, "_elements")
+        if _elements:
+            self.result_params["_elements"] = [
+                e.strip() for e in _elements.split(",") if e.strip()
+            ]
 
-        _contained = all_params.popone("_contained", None)
-        if _contained:
+        _contained = self._single_param(all_params, "_contained")
+        if _contained is not None:
+            if _contained not in ("false", "true", "both"):
+                raise ValidationError(
+                    f"'_contained' must be false, true or both, got '{_contained}'."
+                )
             self.result_params["_contained"] = _contained
 
-        _containedType = all_params.popone("_containedType", None)
-        if _containedType:
+        _containedType = self._single_param(all_params, "_containedType")
+        if _containedType is not None:
+            if _containedType not in ("container", "contained"):
+                raise ValidationError(
+                    "'_containedType' must be container or contained, "
+                    f"got '{_containedType}'."
+                )
             self.result_params["_containedType"] = _containedType
+
+        if self.result_params.get("_summary") == "text" and (
+            self.result_params.get("_include") or self.result_params.get("_revinclude")
+        ):
+            raise ValidationError(
+                "_include and _revinclude cannot be combined with _summary=text."
+            )
 
         # chained parameters: every remaining name containing a "." -
         # empty values are ignored, like for any other search parameter
@@ -1146,6 +1345,25 @@ class Search(object):
         [all_params.popall(k, None) for k, _ in chained]
 
         self.search_params = MultiDictProxy(all_params)
+
+    @staticmethod
+    def _single_param(all_params, name) -> Optional[str]:
+        """The value of a result parameter that may appear once (empty values
+        are ignored)."""
+        values = [v for v in all_params.popall(name, []) if v]
+        if len(values) > 1:
+            raise ValidationError(f"'{name}' cannot be multiple!")
+        return values[0] if values else None
+
+    @staticmethod
+    def _whole_number(name, value) -> int:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            number = -1
+        if number < 0:
+            raise ValidationError(f"'{name}' must be a whole number, got '{value}'.")
+        return number
 
     def build(self) -> QueryResult:
         """Create QueryBuilder from search query string"""
@@ -1156,31 +1374,11 @@ class Search(object):
         builder = self.attach_sort_terms(builder)
         builder = self.attach_summary_terms(builder)
         builder = self.attach_limit_terms(builder)
+        if self.result_params.get("_total") == "accurate":
+            builder = builder.option(track_total_hits=True)
 
-        # handle _has predicates
-        if self.reverse_chaining_results:
-            # filter results on IDs; with several resource types a resource matches
-            # the ids of its own type
-            terms: List = []
-            for resource_type, ids in self.reverse_chaining_results.items():
-                search_context = SearchContext(self.context.engine, resource_type)
-                for normalized_data in search_context.normalize_param(
-                    "_id", [",".join(sorted(ids))]
-                ):
-                    self.add_term(normalized_data, terms)
-            if len(terms) > 1:
-                terms = [G_(*terms, path=terms[0].path, type_=GroupType.DECOUPLED)]
-
-            builder = builder.where(*terms)
-
-        # chained parameters: the reference must point to one of the resolved targets
-        for ref_name, references in self.chained_references:
-            terms = []
-            for normalized_data in self.context.normalize_param(
-                ref_name, [",".join(references)]
-            ):
-                self.add_term(normalized_data, terms)
-            builder = builder.where(*terms)
+        # _has and chained parameters: restrictions resolved beforehand
+        builder = self.apply_resolved_terms(builder)
 
         result: QueryResult = builder(unrestricted=self.context.unrestricted)
 
@@ -1624,10 +1822,17 @@ class Search(object):
         ``INCLUDE_MAX_ITERATIONS`` rounds. Entries are unique and a match is
         never included again."""
         specs = self.include_specs()
-        if not specs:
-            return []
         seen = {row_key(row) for row in main_result.body}
         results: List[EngineResult] = []
+        if self.result_params.get("_graph"):
+            rows = yield from resolve_graph(self, list(main_result.body), seen)
+            if rows:
+                body = EngineResultBody()
+                for row in rows:
+                    body.append(row)
+                results.append(EngineResult(EngineResultHeader(total=len(rows)), body))
+        if not specs:
+            return results
         frontier = list(main_result.body)
         rounds = 0
         while frontier and rounds <= INCLUDE_MAX_ITERATIONS:
@@ -3107,51 +3312,144 @@ class Search(object):
 
         return builder.where(*terms_container)
 
+    def sort_fields(self) -> List[Tuple[str, Optional[str], SortOrderType]]:
+        """``_sort`` as ``(parameter, modifier, order)``: ``-date`` is
+        descending, ``code:text`` sorts on the text of the code."""
+        fields = []
+        for sort_field in self.result_params.get("_sort", "").split(","):
+            sort_field = sort_field.strip()
+            if not sort_field:
+                continue
+            order = SortOrderType.ASC
+            if sort_field.startswith("-"):
+                order = SortOrderType.DESC
+                sort_field = sort_field[1:]
+            if "." in sort_field:
+                # chained: ``subject:Patient.name`` (``:Patient`` is a type)
+                fields.append((sort_field, None, order))
+                continue
+            name, _, modifier = sort_field.partition(":")
+            if modifier and modifier != "text":
+                raise ValidationError(
+                    f"``_sort={sort_field}``: only the ``:text`` modifier is "
+                    "supported for sorting."
+                )
+            fields.append((name, modifier or None, order))
+        return fields
+
+    def sort_leaves(self, path_, modifier) -> List[ElementPath]:
+        """Primitive elements a parameter's element is sorted on: a HumanName
+        by family then given name, a CodeableConcept by its code (``:text``:
+        by its text), a Period by its start..."""
+        type_class = path_.context.get_real_type_class()
+        if getattr(type_class, "is_primitive", None) is None or type_class.is_primitive():
+            return [path_]
+        type_name = type_class.fhir_type_name()
+        table = SORT_TEXT_LEAVES if modifier == "text" else SORT_LEAVES
+        leaves = table.get(type_name) or SORT_LEAVES.get(type_name)
+        if leaves is None:
+            raise ValidationError(f"Cannot sort on an element of type {type_name}.")
+        result = []
+        for leaf in leaves:
+            leaf_path = path_
+            try:
+                for name in leaf.split("."):
+                    leaf_path = leaf_path / name
+            except Exception:  # not an element of this release
+                continue
+            result.append(leaf_path)
+        return result
+
     def attach_sort_terms(self, builder):
-        """ """
+        """``_sort``: every path of each parameter, in priority order."""
         terms = list()
-        if "_sort" in self.result_params:
-            for sort_field in self.result_params["_sort"].split(","):
-                order_ = SortOrderType.ASC
-                if sort_field.startswith("-"):
-                    order_ = SortOrderType.DESC
-                    sort_field = sort_field[1:]
-                for sort_param_def in self.context._get_search_param_definitions(
-                    sort_field
-                ):
-                    path_ = self.context.resolve_path_context(sort_param_def)
-                    terms.append(sort_(path_, order_))
+        for name, modifier, order in self.sort_fields():
+            if "." in name:
+                # chained sort: done in memory (``sorted_page``)
+                continue
+            for sort_param_def in self.context._get_search_param_definitions(name):
+                if sort_param_def.type == "composite":
+                    raise ValidationError(f"Cannot sort by composite parameter {name}.")
+                for path_ in self.context.resolve_path_contexts(sort_param_def):
+                    for leaf in self.sort_leaves(path_, modifier):
+                        terms.append(sort_(leaf, order))
 
         if len(terms) > 0:
             return builder.sort(*terms)
         return builder
 
+    def page_window(self) -> Tuple[int, int]:
+        """``(limit, offset)`` of the current page; ``_maxresults`` caps the
+        matches over all pages."""
+        count = self.result_params.get("_count", DEFAULT_RESULT_COUNT)
+        offset = 0
+        if "page" in self.result_params and "_count" in self.result_params:
+            offset = (self.result_params["page"] - 1) * count
+        maxresults = self.result_params.get("_maxresults")
+        if maxresults is not None:
+            count = max(0, min(count, maxresults - offset))
+        return count, offset
+
     def attach_limit_terms(self, builder):
         """ """
-        if "_count" not in self.result_params:
-            return builder.limit(DEFAULT_RESULT_COUNT)
+        limit, offset = self.page_window()
+        return builder.limit(limit, offset)
 
-        offset = 0
-        if "page" in self.result_params:
-            current_page = self.result_params["page"]
-            if current_page > 1:
-                offset = (current_page - 1) * self.result_params["_count"]
-        return builder.limit(self.result_params["_count"], offset)
+    def elements_of(self, resource_type: str) -> Optional[List[str]]:
+        """``_elements`` names for a resource type: plain names apply to the
+        matches, ``Type.name`` to the resources of that type (matches and
+        includes). ``None`` when the type is not subsetted."""
+        names = self.result_params.get("_elements")
+        if not names:
+            return None
+        selected = []
+        for name in names:
+            if "." in name:
+                prefix, _, element = name.partition(".")
+                if prefix == resource_type:
+                    selected.append(element)
+            elif resource_type in self.context.resource_types:
+                selected.append(name)
+        return selected or None
+
+    def element_names(self, resource_type: str, names: List[str]) -> List[str]:
+        """JSON names of the elements to return: the requested ones (a choice
+        element stands for all its typed names; unknown names are ignored),
+        plus ``id``, the mandatory and the modifier elements."""
+        known = subsetting_elements(resource_type, self.context.engine.fhir_release)
+        result = ["id"]
+        for name in [*names, *known["mandatory"], *known["modifier"]]:
+            for json_name in known["names"].get(name, []):
+                if json_name not in result:
+                    result.append(json_name)
+        return result
 
     def attach_elements_terms(self, builder):
         """ """
         if "_elements" not in self.result_params:
             return builder
+        if any(
+            self.result_params.get(name)
+            for name in ("_include", "_revinclude", "_graph")
+        ):
+            # the includes need the references: subsetted after (subset_results)
+            return builder
+        selected = {t: self.elements_of(t) for t in self.context.resource_types}
+        if not any(selected.values()):
+            # only other types (includes) are subsetted
+            return builder
 
-        paths = [
-            f"{r}.{el}"
-            for el in self.result_params["_elements"]
-            for r in self.context.resource_types
-        ]
-        mandatories = [
-            f"{r}.{el}" for el in ["id"] for r in self.context.resource_types
-        ]
-        return builder.element(*paths, *mandatories)
+        paths = []
+        for resource_type, names in selected.items():
+            if names is None:
+                # this type is returned whole
+                paths.append(resource_type)
+                continue
+            paths.extend(
+                f"{resource_type}.{name}"
+                for name in self.element_names(resource_type, names)
+            )
+        return builder.element(*paths)
 
     def attach_summary_terms(self, builder):
         """ """
@@ -3223,14 +3521,64 @@ class Search(object):
             return builder.element(*text_elements)
 
     def response(self, result, includes, as_json):
-        """ """
-        return self.context.engine.wrapped_with_bundle(
+        """The searchset Bundle: subsetted resources are tagged ``SUBSETTED``,
+        ``_total=none`` leaves the total out, ``_score=true`` adds the
+        relevance of each match."""
+        self.subset_results(result, includes)
+        bundle = self.context.engine.wrapped_with_bundle(
             result,
             includes=includes,
-            as_json=as_json,
+            as_json=True,
             applied_params=self.applied_params,
             outcome_issues=self.outcome_issues(),
         )
+        if self.result_params.get("_total") == "none":
+            bundle.pop("total", None)
+        if self.result_params.get("_score"):
+            self.attach_scores(bundle, result)
+        if as_json:
+            return bundle
+        model = lookup_fhir_class("Bundle", fhir_release=self.context.engine.fhir_release)
+        return model.model_validate(bundle)
+
+    def subset_results(self, result, includes):
+        """Tag the resources returned with only some of their elements; apply
+        type-prefixed ``_elements`` to included resources."""
+        summary = self.result_params.get("_summary") in ("true", "text", "data")
+        for row in result.body:
+            resource_type = row_key(row)[0]
+            names = self.elements_of(resource_type)
+            if names is not None and isinstance(row[0], dict):
+                row[0] = subset_resource(
+                    row[0], self.element_names(resource_type, names)
+                )
+            if summary or names is not None:
+                tag_subsetted(row[0])
+        if "_elements" not in self.result_params:
+            return
+        for include in includes:
+            for row in include.body:
+                resource_type = row_key(row)[0]
+                names = self.elements_of(resource_type)
+                if names is None or not isinstance(row[0], dict):
+                    continue
+                row[0] = subset_resource(
+                    row[0], self.element_names(resource_type, names)
+                )
+                tag_subsetted(row[0])
+
+    @staticmethod
+    def attach_scores(bundle, result):
+        """``entry.search.score`` (0..1, relative to the best match)."""
+        scores = [getattr(row, "score", None) for row in result.body]
+        if not scores or any(score is None for score in scores):
+            return
+        best = max(scores)
+        matches = [
+            e for e in bundle.get("entry", []) if e["search"]["mode"] == "match"
+        ]
+        for entry, score in zip(matches, scores):
+            entry["search"]["score"] = round(score / best, 4) if best > 0 else 1.0
 
     def outcome_issues(self) -> List[Dict[str, Any]]:
         """Warnings for the Bundle's ``outcome`` entry: the ignored unknown
@@ -3258,46 +3606,268 @@ class Search(object):
         if (code, message) not in self.warnings:
             self.warnings.append((code, message))
 
-    def __call__(self, as_json=False):
-        """ """
-
+    def execute(
+        self,
+    ) -> Generator[Any, EngineResult, Optional[Tuple[EngineResult, List]]]:
+        """Run the search: resolve what the main query depends on (``_has``,
+        hierarchies, chains), run it, then the includes. Yields the queries to
+        run (``Search`` and ``AsyncSearch`` drive it); returns ``(matches,
+        includes)``, or ``None`` when nothing can match."""
         # reverse chaining (_has)
         if self.result_params.get("_has"):
-            self.reverse_chaining_results = run_chain_resolver(self.reverse_chains())
+            self.reverse_chaining_results = yield from self.reverse_chains()
             # no resource satisfies the _has parameters, so nothing can match
             if not self.reverse_chaining_results:
-                return self.empty_response(as_json)
+                return None
 
         # reference hierarchies (:below / :above)
         for name in self.hierarchy_params():
-            self.hierarchy_references[name] = run_chain_resolver(
-                self.resolve_hierarchy(name)
-            )
+            self.hierarchy_references[name] = yield from self.resolve_hierarchy(name)
 
         # chaining
         self.chained_references = []
         for param_name, value in self.chain_params:
-            references = run_chain_resolver(self.chain(param_name, value))
+            references = yield from self.chain(param_name, value)
             # no target satisfies the chain, so nothing can match
             if not references:
-                return self.empty_response(as_json)
+                return None
             self.chained_references.append(
                 (self.chain_reference_name(param_name), references)
             )
 
         # MAIN QUERY
-        self.main_query = self.build()
-
-        # TODO handle count with _includes
         if self.result_params.get("_summary") == "count":
-            main_result = self.main_query.count_raw()
+            self.main_query = self.build()
+            main_result = yield CountQuery(self.main_query)
+        elif any("." in name for name, _, _ in self.sort_fields()):
+            main_result = yield from self.chained_sort_page()
         else:
-            main_result = self.main_query.fetchall()
+            self.main_query = self.build()
+            main_result = yield self.main_query
         assert main_result is not None
 
-        # _include / _revinclude
-        all_includes = run_chain_resolver(self.resolve_includes(main_result))
-        return self.response(main_result, all_includes, as_json)
+        # _include / _revinclude / _graph
+        includes = yield from self.resolve_includes(main_result)
+        return main_result, includes
+
+    def __call__(self, as_json=False):
+        """ """
+        outcome = run_chain_resolver(self.execute())
+        if outcome is None:
+            return self.empty_response(as_json)
+        return self.response(*outcome, as_json)
+
+    # ----------------------------------------------------------- chained sort
+
+    def chained_sort_page(self) -> Generator[Any, EngineResult, EngineResult]:
+        """``_sort`` by a chained parameter (``subject:Patient.name``), which
+        Elasticsearch cannot sort on: every match is fetched and sorted in
+        memory, then the page is cut out."""
+        builder = Q_(self.context.resource_types, self.context.engine)
+        builder = self.attach_where_terms(builder)
+        builder = self.apply_resolved_terms(builder)
+        everything = yield builder(unrestricted=self.context.unrestricted)
+        rows = list(everything.body)
+
+        keys: List[List[Any]] = [[] for _ in rows]
+        for name, modifier, order in self.sort_fields():
+            values = yield from self.sort_values(name, rows)
+            for row_keys, value in zip(keys, values):
+                row_keys.append((value, order))
+
+        def sort_key(item):
+            index, _ = item
+            parts = []
+            for value, order in keys[index]:
+                missing = value is None
+                parts.append(SortKey(value, order == SortOrderType.DESC, missing))
+            return parts
+
+        ordered = [row for _, row in sorted(enumerate(rows), key=sort_key)]
+        limit, offset = self.page_window()
+        page = ordered[offset : offset + limit]
+        body = EngineResultBody()
+        for row in page:
+            body.append(row)
+        return EngineResult(EngineResultHeader(total=len(rows)), body)
+
+    def sort_values(self, name: str, rows) -> Generator[Any, EngineResult, List]:
+        """The value each row sorts on for ``name`` (a parameter, or a chain
+        ``ref[:Type].param``, resolved with sub-queries)."""
+        links = name.split(".")
+        resources = [row[0] for row in rows]
+        context = self.context
+        for link in links[:-1]:
+            ref_name, target_type = self.parse_chain_link(link)
+            targets: List[Optional[Tuple[str, str]]] = []
+            wanted: Dict[str, Set[str]] = {}
+            for resource in resources:
+                reference = None
+                if resource is not None:
+                    params = context._get_search_param_definitions(ref_name)
+                    for sp in params:
+                        if sp.type != "reference":
+                            raise ValidationError(
+                                f"``_sort={name}``: {ref_name} is not a reference"
+                            )
+                        found = single_row_references(resource, sp)
+                        for resource_type, ids in found.items():
+                            if target_type in (None, resource_type) and ids:
+                                reference = (resource_type, ids[0])
+                                break
+                        if reference:
+                            break
+                targets.append(reference)
+                if reference:
+                    wanted.setdefault(reference[0], set()).add(reference[1])
+            fetched: Dict[Tuple[str, str], Any] = {}
+            for resource_type, ids in sorted(wanted.items()):
+                target_context = SearchContext(self.context.engine, resource_type)
+                terms: List = []
+                self.add_term(
+                    target_context.normalize_param("_id", [",".join(sorted(ids))]),
+                    terms,
+                )
+                result = yield Q_(resource_type, self.context.engine).where(*terms)(
+                    unrestricted=self.context.unrestricted
+                )
+                for row in result.body:
+                    fetched[row_key(row)] = row[0]
+            resources = [fetched.get(t) if t else None for t in targets]
+            types = {t[0] for t in targets if t}
+            if len(types) > 1 and target_type is None:
+                raise ValidationError(
+                    f"``_sort={name}``: the chain may point to "
+                    f"{', '.join(sorted(types))}; restrict it with ``:[type]``."
+                )
+            if not types:
+                return [None for _ in rows]
+            context = SearchContext(self.context.engine, types.pop())
+        param = links[-1]
+        values = []
+        for resource in resources:
+            if resource is None:
+                values.append(None)
+                continue
+            sp = context._get_search_param_definitions(param)[0]
+            values.append(sortable_value(resource, sp))
+        return values
+
+    def apply_resolved_terms(self, builder):
+        """The ``_has`` and chain restrictions (see ``build``)."""
+        if self.reverse_chaining_results:
+            terms: List = []
+            for resource_type, ids in self.reverse_chaining_results.items():
+                search_context = SearchContext(self.context.engine, resource_type)
+                for normalized_data in search_context.normalize_param(
+                    "_id", [",".join(sorted(ids))]
+                ):
+                    self.add_term(normalized_data, terms)
+            if len(terms) > 1:
+                terms = [G_(*terms, path=terms[0].path, type_=GroupType.DECOUPLED)]
+            builder = builder.where(*terms)
+        for ref_name, references in self.chained_references:
+            terms = []
+            for normalized_data in self.context.normalize_param(
+                ref_name, [",".join(references)]
+            ):
+                self.add_term(normalized_data, terms)
+            builder = builder.where(*terms)
+        return builder
+
+
+class CountQuery:
+    """A query run as a count (``_summary=count``)."""
+
+    def __init__(self, query):
+        self.query = query
+
+    def fetchall(self):
+        return self.query.count_raw()
+
+
+class SortKey:
+    """Orders values (strings case-insensitively); missing values last."""
+
+    __slots__ = ("value", "reverse", "missing")
+
+    def __init__(self, value, reverse, missing):
+        if isinstance(value, str):
+            value = value.casefold()
+        self.value = value
+        self.reverse = reverse
+        self.missing = missing
+
+    def __eq__(self, other):
+        return self.missing == other.missing and self.value == other.value
+
+    def __lt__(self, other):
+        if self.missing or other.missing:
+            return not self.missing and other.missing
+        try:
+            less = self.value < other.value
+            greater = self.value > other.value
+        except TypeError:
+            less = str(self.value) < str(other.value)
+            greater = str(self.value) > str(other.value)
+        return greater if self.reverse else less
+
+
+def single_row_references(resource, search_param) -> Dict[str, List[str]]:
+    body = EngineResultBody()
+    row = EngineResultRow()
+    row.append(resource)
+    body.append(row)
+    return EngineResult(EngineResultHeader(total=1), body).extract_references(
+        search_param
+    )
+
+
+# priority of the parts of a complex value when sorting
+SORT_VALUE_KEYS = (
+    "family",
+    "given",
+    "text",
+    "value",
+    "code",
+    "display",
+    "start",
+    "reference",
+    "city",
+)
+
+
+def sortable_value(resource, search_param):
+    """First value of a parameter's expression on a resource, reduced to a
+    primitive (a HumanName to its family name...)."""
+    if not search_param.expression:
+        return None
+    try:
+        values = fhirpath_compile(search_param.expression).evaluate(
+            resource, resolver=resolve_literal_reference
+        )
+    except Exception:  # an expression the core engine can't evaluate here
+        return None
+
+    def reduce(value):
+        while isinstance(value, (list, tuple)):
+            if not value:
+                return None
+            value = value[0]
+        if isinstance(value, dict):
+            for key in SORT_VALUE_KEYS:
+                if key in value:
+                    return reduce(value[key])
+            if "coding" in value:
+                return reduce(value["coding"])
+            return None
+        return value
+
+    for value in values:
+        reduced = reduce(value)
+        if reduced is not None:
+            return str(reduced) if not isinstance(reduced, (int, float)) else reduced
+    return None
 
 
 class AsyncSearch(Search):
@@ -3305,47 +3875,10 @@ class AsyncSearch(Search):
 
     async def __call__(self, as_json=False):
         """ """
-        # reverse chaining (_has)
-        if self.result_params.get("_has"):
-            self.reverse_chaining_results = await run_chain_resolver_async(
-                self.reverse_chains()
-            )
-            # no resource satisfies the _has parameters, so nothing can match
-            if not self.reverse_chaining_results:
-                return self.empty_response(as_json)
-
-        # reference hierarchies (:below / :above)
-        for name in self.hierarchy_params():
-            self.hierarchy_references[name] = await run_chain_resolver_async(
-                self.resolve_hierarchy(name)
-            )
-
-        # chaining
-        self.chained_references = []
-        for param_name, value in self.chain_params:
-            references = await run_chain_resolver_async(self.chain(param_name, value))
-            # no target satisfies the chain, so nothing can match
-            if not references:
-                return self.empty_response(as_json)
-            self.chained_references.append(
-                (self.chain_reference_name(param_name), references)
-            )
-
-        # MAIN QUERY
-        self.main_query = self.build()
-
-        # TODO handle count with _includes
-        if self.result_params.get("_summary") == "count":
-            main_result = await self.main_query.count_raw()
-        else:
-            main_result = await self.main_query.fetchall()
-        assert main_result is not None
-
-        # _include / _revinclude
-        all_includes = await run_chain_resolver_async(
-            self.resolve_includes(main_result)
-        )
-        return self.response(main_result, all_includes, as_json)
+        outcome = await run_chain_resolver_async(self.execute())
+        if outcome is None:
+            return self.empty_response(as_json)
+        return self.response(*outcome, as_json)
 
 
 def fhir_search(

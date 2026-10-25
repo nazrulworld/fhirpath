@@ -70,6 +70,8 @@ class EsConnMixin:
                 params["scroll"] = scroll
         elif query_type == EngineQueryType.COUNT:
             compiled_query.pop("_source", None)
+            compiled_query.pop("track_total_hits", None)
+            compiled_query.pop("sort", None)
 
         params["ignore_unavailable"] = ignore_unavailable
         params["body"] = compiled_query

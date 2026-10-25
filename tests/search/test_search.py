@@ -1599,7 +1599,9 @@ def test_searchparam_elements(es_data, engine):
     assert result.entry[0].resource.identifier is not None
     assert result.entry[0].resource.active is not None
     assert result.entry[0].resource.link is not None
-    assert result.entry[0].resource.meta is None
+    # the resource is tagged as subsetted (meta is not returned otherwise)
+    assert [t.code for t in result.entry[0].resource.meta.tag] == ["SUBSETTED"]
+    assert result.entry[0].resource.meta.lastUpdated is None
     assert result.entry[0].resource.birthDate is None
     assert result.entry[0].resource.maritalStatus is None
 
@@ -1611,8 +1613,9 @@ def test_searchparam_unexisting_elements(es_data, engine):
     assert result.entry[0].resource.id is not None
     assert result.entry[0].resource.identifier is None
     assert result.entry[0].resource.active is not None
-    assert result.entry[0].resource.link is None
-    assert result.entry[0].resource.meta is None
+    # Patient.link is a modifier element: always returned
+    assert result.entry[0].resource.link is not None
+    assert [t.code for t in result.entry[0].resource.meta.tag] == ["SUBSETTED"]
     assert result.entry[0].resource.birthDate is None
     assert result.entry[0].resource.maritalStatus is None
 

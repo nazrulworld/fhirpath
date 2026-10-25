@@ -292,6 +292,9 @@ class ElasticSearchDialect(DialectBase):
 
             if unary_operator == OPERATOR.neg:
                 container = body_structure["query"]["bool"]["must_not"]
+            elif unary_operator == OPERATOR.pos and getattr(term, "scored", False):
+                # relevance matters (full-text search): query context
+                container = body_structure["query"]["bool"]["must"]
             elif unary_operator == OPERATOR.pos:
                 container = body_structure["query"]["bool"]["filter"]
             else:
@@ -331,6 +334,15 @@ class ElasticSearchDialect(DialectBase):
         return body_structure
 
     def compile(self, query, calculate_field_index_name, get_mapping):
+        """ """
+        body = self._compile(query, calculate_field_index_name, get_mapping)
+        options = query.get_options() if hasattr(query, "get_options") else {}
+        if options.get("track_total_hits"):
+            # an exact Bundle.total (``_total=accurate``)
+            body["track_total_hits"] = True
+        return body
+
+    def _compile(self, query, calculate_field_index_name, get_mapping):
         """ """
         query_fragments = []
 
@@ -887,15 +899,40 @@ class ElasticSearchDialect(DialectBase):
                 path_ = ".".join([root_replacer] + list(term.path.path.split(".")[1:]))
             else:
                 path_ = term.path.path
-            item = {
+            options = {
+                "order": term.order == SortOrderType.DESC and "desc" or "asc",
                 # https://www.elastic.co/guide/en/elasticsearch/\
                 # reference/current/search-request-body.html#_ignoring_unmapped_fields
-                path_: {
-                    "order": term.order == SortOrderType.DESC and "desc" or "asc",
-                    "unmapped_type": "long",
-                }
+                "unmapped_type": "long",
             }
-            body_structure["sort"].append(item)
+            nested = ElasticSearchDialect.nested_sort(term.path, root_replacer)
+            if nested:
+                options["nested"] = nested
+            body_structure["sort"].append({path_: options})
+
+    @staticmethod
+    def nested_sort(path, root_replacer=None):
+        """ES ``nested`` sort option for a field inside nested (repeating)
+        elements: ``{"path": outer, "nested": {"path": inner}}``."""
+        context = getattr(path, "context", None)
+        if context is None or getattr(context, "resource_type", None) == "Resource":
+            return None
+        levels = []
+        while True:
+            if context.multiple and not context.type_is_primitive:
+                levels.insert(
+                    0,
+                    ElasticSearchDialect.apply_path_replacement(
+                        str(context._path), root_replacer
+                    ),
+                )
+            if context.is_root():
+                break
+            context = context.parent
+        nested = None
+        for level in reversed(levels):
+            nested = {"path": level, **({"nested": nested} if nested else {})}
+        return nested
 
     @staticmethod
     def apply_from_constraint(query, body_structure, resource_type, root_replacer=None):

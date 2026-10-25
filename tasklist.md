@@ -45,14 +45,15 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 
 ## D. Result parameters
 
-- [ ] `_total` (parsed, unused)
-- [ ] `_contained`, `_containedType` (parsed, unused)
-- [ ] `_elements`: add mandatory + modifier elements, `SUBSETTED` tag
-- [ ] `_summary`: `SUBSETTED` tag
+- [x] `_total` (parsed, unused)
+- [x] `_contained`, `_containedType` (parsed, unused) – validated; `true`/`both` cannot be searched
+      (contained resources are not indexed): ignored with a warning, an error with strict handling
+- [x] `_elements`: add mandatory + modifier elements, `SUBSETTED` tag
+- [x] `_summary`: `SUBSETTED` tag
 - [x] `_include`/`_revinclude`: `*` wildcard, per-page application, remove 100 cap
-- [ ] `_count=0` ≡ `_summary=count`
-- [ ] `_maxresults`, `_score`, `_graph`
-- [ ] `_sort`: all expression paths, chained sort
+- [x] `_count=0` ≡ `_summary=count`
+- [x] `_maxresults`, `_score`, `_graph`
+- [x] `_sort`: all expression paths, chained sort
 
 ## E. Search features not implemented
 

@@ -65,6 +65,8 @@ class Query(ABC):
         self._where: WhereClause = where
         self._sort: SortClause = sort
         self._limit: LimitClause = limit
+        # backend hints (e.g. ``track_total_hits``)
+        self._options: typing.Dict[str, typing.Any] = {}
 
     @classmethod
     def _builder(cls, engine: typing.Optional["Engine"] = None) -> "QueryBuilder":
@@ -87,6 +89,7 @@ class Query(ABC):
             builder._sort,  # type: ignore
             builder._limit,  # type: ignore
         )
+        query._options = dict(builder._options)
         return query
 
     def get_where(self) -> WhereClause:
@@ -113,6 +116,10 @@ class Query(ABC):
         """ """
         return self._limit
 
+    def get_options(self) -> typing.Dict[str, typing.Any]:
+        """Backend hints, e.g. ``{"track_total_hits": True}``."""
+        return getattr(self, "_options", {})
+
     def clone(self) -> "Query":
         """ """
         return self.__copy__()
@@ -129,6 +136,7 @@ class Query(ABC):
         newone._where = copy(self._where)
         newone._sort = copy(self._sort)
         newone._limit = copy(self._limit)
+        newone._options = dict(self.get_options())
 
         return newone
 
@@ -153,6 +161,7 @@ class QueryBuilder(ABC):
         self._where: WhereClause = WhereClause()
         self._sort: SortClause = SortClause()
         self._limit: LimitClause = LimitClause()
+        self._options: typing.Dict[str, typing.Any] = {}
 
     def bind(self, engine: "Engine"):
         """ """
@@ -206,8 +215,15 @@ class QueryBuilder(ABC):
         newone._element = copy(self._element)
         newone._where = copy(self._where)
         newone._sort = copy(self._sort)
+        newone._options = dict(self._options)
 
         return newone
+
+    @builder
+    def option(self, **options):
+        """Backend hints, e.g. ``option(track_total_hits=True)``."""
+        self._pre_check()
+        self._options.update(options)
 
     @builder
     def from_(self, resource_type: typing.Union[str, typing.List[str]]):
