@@ -26,9 +26,9 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] Token matching analyzer-dependent; should be exact/case-sensitive.
 - [x] No implicit precision ranges for number/date `eq` (`100` → [99.5,100.5), `2013-01` → whole month).
 - [x] `ap` prefix only for Period; missing for number/date/quantity.
-- [ ] `:below`/`:above` mapped to string prefix/suffix; spec: subsumption (token), hierarchy (reference),
+- [x] `:below`/`:above` mapped to string prefix/suffix; spec: subsumption (token), hierarchy (reference),
       path segments (uri), version (canonical).
-- [ ] Reference equivalence: absolute URL of local refs ≡ `Type/id`; optionally reject ambiguous plain `id`
+- [x] Reference equivalence: absolute URL of local refs ≡ `Type/id`; optionally reject ambiguous plain `id`
       (plain `id` is now searched as `Type/id` for every target).
 - [x] `:missing=true` should treat extension-only elements as missing.
 - [x] Composite: OR across tuples, same-repetition matching, `combo-*` token params.
@@ -41,7 +41,7 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] `:of-type` (Identifier)
 - [x] `:code-text`, `:text-advanced` (R5)
 - [x] `:[type]` on plain reference params (`subject:Patient=23` → `subject=Patient/23`)
-- [ ] `:iterate` (`:recurse` in STU3) for `_include`/`_revinclude`
+- [x] `:iterate` (`:recurse` in STU3) for `_include`/`_revinclude`
 
 ## D. Result parameters
 
@@ -49,7 +49,7 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [ ] `_contained`, `_containedType` (parsed, unused)
 - [ ] `_elements`: add mandatory + modifier elements, `SUBSETTED` tag
 - [ ] `_summary`: `SUBSETTED` tag
-- [ ] `_include`/`_revinclude`: `*` wildcard, per-page application, remove 100 cap
+- [x] `_include`/`_revinclude`: `*` wildcard, per-page application, remove 100 cap
 - [ ] `_count=0` ≡ `_summary=count`
 - [ ] `_maxresults`, `_score`, `_graph`
 - [ ] `_sort`: all expression paths, chained sort

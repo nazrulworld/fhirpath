@@ -285,7 +285,9 @@ def flatten(term):
         return [leaf for t in term.terms for leaf in flatten(t)]
     value = getattr(term, "value", None)
     raw = value.value if value is not None else None
-    return [(str(term.path), term.comparison_operator.name, str(raw))]
+    operator = term.comparison_operator
+    name = operator.name if hasattr(operator, "name") else operator.__name__
+    return [(str(term.path), name, str(raw))]
 
 
 def leaves(engine, resource_type, *params):

@@ -364,10 +364,27 @@ def test_build_with_chained_references(offline_engine):
         for clause in compiled["query"]["bool"]["filter"]
         if "bool" in clause
     ]
-    assert should == [
+    # each reference also matches its absolute and versioned forms
+    assert [[alt["bool"]["should"] for alt in alts] for alts in should] == [
         [
-            {"term": {"observation_resource.subject.reference": "Patient/p1"}},
-            {"term": {"observation_resource.subject.reference": "Patient/p2"}},
+            [
+                {"term": {"observation_resource.subject.reference": f"Patient/{i}"}},
+                {
+                    "term": {
+                        "observation_resource.subject.reference": (
+                            f"http://nohost/@fhir/Patient/{i}"
+                        )
+                    }
+                },
+                {
+                    "prefix": {
+                        "observation_resource.subject.reference": {
+                            "value": f"Patient/{i}/_history/"
+                        }
+                    }
+                },
+            ]
+            for i in ("p1", "p2")
         ]
     ]
 
@@ -728,3 +745,287 @@ def test_reverse_chain_needs_a_resource_type(offline_engine):
     )
     with raises(ValidationError, match="needs a resource type"):
         drive(search.reverse_chains(), {})
+
+
+# ------------------------------------------------- reference hierarchies
+
+
+LOCATIONS = {
+    # building <- floor <- room
+    "building": None,
+    "floor": "building",
+    "room": "floor",
+    "elsewhere": None,
+}
+
+
+def location(id_):
+    resource = {"resourceType": "Location", "id": id_}
+    if LOCATIONS[id_]:
+        resource["partOf"] = {"reference": f"Location/{LOCATIONS[id_]}"}
+    return resource
+
+
+def walk_terms(terms):
+    for term in terms:
+        if hasattr(term, "terms"):
+            yield from walk_terms(term.terms)
+        else:
+            yield term
+
+
+def searched(query_result):
+    """(paths, values) of the leaf terms of a query."""
+    leaves = list(walk_terms(query_result._query.get_where()))
+    paths = [str(t.path) for t in leaves]
+    values = [
+        str(t.value.raw) for t in leaves if getattr(t, "value", None) is not None
+    ]
+    return paths, values
+
+
+def location_answers(query_result):
+    """Children (``partof=…``) or the locations themselves (``_id=…``)."""
+    paths, values = searched(query_result)
+    if any(p.endswith("partOf.reference") for p in paths):
+        parents = {v.split("/")[-1] for v in values if v.startswith("Location/")}
+        return make_result(
+            *[location(i) for i, parent in LOCATIONS.items() if parent in parents]
+        )
+    return make_result(*[location(i) for i in LOCATIONS if i in values])
+
+
+def answer_all(resolver, answer):
+    """Drive a resolver, answering every sub-query with ``answer(query)``."""
+    try:
+        query = next(resolver)
+        while True:
+            query = resolver.send(answer(query))
+    except StopIteration as stop:
+        return stop.value
+
+
+def test_reference_below_follows_the_hierarchy(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Encounter"),
+        params=(("location:below", "Location/building"),),
+    )
+    references = answer_all(
+        search.resolve_hierarchy("location:below"), location_answers
+    )
+    assert references == ["Location/building", "Location/floor", "Location/room"]
+
+
+def test_reference_above_follows_the_hierarchy(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Encounter"),
+        params=(("location:above", "room"),),
+    )
+    references = answer_all(
+        search.resolve_hierarchy("location:above"), location_answers
+    )
+    assert references == ["Location/room", "Location/floor", "Location/building"]
+
+
+def test_hierarchy_search_is_applied(offline_engine, monkeypatch):
+    def fetchall(query_result):
+        if resource_types(query_result) == ["Location"]:
+            return location_answers(query_result)
+        return make_result()
+
+    monkeypatch.setattr(QueryResult, "fetchall", fetchall)
+    search = Search(
+        SearchContext(offline_engine, "Encounter"),
+        params=(("location:below", "Location/floor"),),
+    )
+    search()
+    assert search.hierarchy_references == {
+        "location:below": ["Location/floor", "Location/room"]
+    }
+
+
+# ------------------------------------------------------------- includes
+
+
+STORE = [
+    {
+        "resourceType": "MedicationDispense",
+        "id": "md1",
+        "authorizingPrescription": [{"reference": "MedicationRequest/mr1"}],
+    },
+    {
+        "resourceType": "MedicationRequest",
+        "id": "mr1",
+        "requester": {"reference": "Practitioner/pr1"},
+        "subject": {"reference": "Patient/p1"},
+    },
+    {"resourceType": "Practitioner", "id": "pr1"},
+    {"resourceType": "Patient", "id": "p1"},
+    {
+        "resourceType": "Observation",
+        "id": "o1",
+        "subject": {"reference": "Patient/p1"},
+        "hasMember": [{"reference": "Observation/o2"}],
+    },
+    {
+        "resourceType": "Observation",
+        "id": "o2",
+        "subject": {"reference": "Patient/p1"},
+        "hasMember": [{"reference": "Observation/o3"}],
+    },
+    {"resourceType": "Observation", "id": "o3", "subject": {"reference": "Patient/p1"}},
+]
+
+
+def _references(resource):
+    for value in resource.values():
+        for item in value if isinstance(value, list) else [value]:
+            if isinstance(item, dict) and "reference" in item:
+                yield item["reference"]
+
+
+def store_answers(query_result):
+    """Answer ``_id`` and reference queries from ``STORE``."""
+    types = resource_types(query_result)
+    paths, values = searched(query_result)
+    found = []
+    for resource in STORE:
+        if resource["resourceType"] not in types:
+            continue
+        if any(p.endswith(".id") for p in paths):
+            if resource["id"] in values:
+                found.append(resource)
+        elif any(reference in values for reference in _references(resource)):
+            found.append(resource)
+    return make_result(*found)
+
+
+def included(search, *matches):
+    results = answer_all(search.resolve_includes(make_result(*matches)), store_answers)
+    return [(row[0]["resourceType"], row[0]["id"]) for r in results for row in r.body]
+
+
+def test_include_iterate(offline_engine):
+    md1 = STORE[0]
+    search = Search(
+        SearchContext(offline_engine, "MedicationDispense"),
+        params=(
+            ("_include", "MedicationDispense:prescription"),
+            ("_include:iterate", "MedicationRequest:requester"),
+        ),
+    )
+    assert included(search, md1) == [
+        ("MedicationRequest", "mr1"),
+        ("Practitioner", "pr1"),
+    ]
+
+    # without :iterate, the include of MedicationRequest does not apply to
+    # included resources
+    search = Search(
+        SearchContext(offline_engine, "MedicationDispense"),
+        params=(
+            ("_include", "MedicationDispense:prescription"),
+            ("_include", "MedicationRequest:requester"),
+        ),
+    )
+    assert included(search, md1) == [("MedicationRequest", "mr1")]
+
+
+def test_include_iterate_on_a_circular_reference(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Observation"),
+        params=(("_include:iterate", "Observation:has-member"),),
+    )
+    assert included(search, STORE[4]) == [("Observation", "o2"), ("Observation", "o3")]
+
+
+def test_stu3_recurse_is_iterate(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Observation"),
+        params=(("_include:recurse", "Observation:has-member"),),
+    )
+    assert search.result_params["_include"] == [("Observation:has-member", True)]
+
+
+def test_include_wildcards(offline_engine):
+    # Source:* follows every reference parameter of the source
+    search = Search(
+        SearchContext(offline_engine, "MedicationRequest"),
+        params=(("_include", "MedicationRequest:*"),),
+    )
+    assert sorted(included(search, STORE[1])) == [
+        ("Patient", "p1"),
+        ("Practitioner", "pr1"),
+    ]
+    # * : everything
+    search = Search(
+        SearchContext(offline_engine, "MedicationRequest"),
+        params=(("_include", "*"),),
+    )
+    assert sorted(included(search, STORE[1])) == [
+        ("Patient", "p1"),
+        ("Practitioner", "pr1"),
+    ]
+
+
+def test_matches_are_not_included_again(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Observation"),
+        params=(("_include", "Observation:has-member"),),
+    )
+    # o2 is a match itself: only o3 is included
+    assert included(search, STORE[4], STORE[5]) == [("Observation", "o3")]
+
+
+def test_revinclude_searches_typed_references(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Patient"),
+        params=(("_revinclude", "MedicationRequest:subject"),),
+    )
+    (query,) = search.include_queries_for(
+        search.include_specs()[0], make_result(STORE[3]).body, set()
+    )
+    values = [
+        str(t.value.raw)
+        for t in walk_terms(query._query.get_where())
+        if getattr(t, "value", None) is not None
+    ]
+    assert "Patient/p1" in values
+
+
+def test_includes_are_not_capped(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "MedicationDispense"),
+        params=(("_include", "MedicationDispense:prescription"),),
+    )
+    (query,) = search.include_queries_for(
+        search.include_specs()[0], make_result(STORE[0]).body, set()
+    )
+    assert query._query.get_limit().empty
+
+
+# --------------------------------------------------- reference equivalence
+
+
+def test_ambiguous_plain_id(offline_engine):
+    search = Search(
+        SearchContext(offline_engine, "Observation"), params=(("subject", "23"),)
+    )
+    search.build()
+    issues = search.outcome_issues()
+    assert any("ambiguous" in issue["diagnostics"] for issue in issues)
+
+    search = Search(
+        SearchContext(offline_engine, "Observation"),
+        params=(("subject", "23"),),
+        handling="strict",
+    )
+    with raises(ValidationError, match="ambiguous"):
+        search.build()
+
+    # restricted by the parameter: not ambiguous
+    search = Search(
+        SearchContext(offline_engine, "Observation"), params=(("patient", "23"),)
+    )
+    search.build()
+    assert search.outcome_issues() == []

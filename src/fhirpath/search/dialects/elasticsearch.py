@@ -764,7 +764,9 @@ class ElasticSearchDialect(DialectBase):
                 term.comparison_operator == OPERATOR.sa
                 or term.match_type == TermMatchType.STARTWITH
             ):
-                qr = {"match_phrase_prefix": {path_: value}}
+                # not analyzed: a prefix of the whole reference (the analyzer
+                # also indexes the bare id, which must not match a prefix)
+                qr = {"prefix": {path_: {"value": value}}}
             else:
                 qr = {"term": {path_: value}}
 

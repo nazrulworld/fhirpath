@@ -7,6 +7,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    NamedTuple,
     Optional,
     Pattern,
     Set,
@@ -85,6 +86,10 @@ parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 DEFAULT_RESULT_COUNT = 100
+# rounds of ``_include:iterate`` / ``_revinclude:iterate``
+INCLUDE_MAX_ITERATIONS = 10
+# levels followed by ``reference:below`` / ``reference:above``
+HIERARCHY_MAX_DEPTH = 32
 # how unknown search parameters are treated (``Prefer: handling=…``)
 HANDLING_LENIENT = "lenient"
 HANDLING_STRICT = "strict"
@@ -168,6 +173,33 @@ def typed_reference_leaf(types: List[str], leaf):
     if len(types) == 1:
         return (operator_, f"{types[0]}/{value}")
     return (None, [(operator_, f"{t}/{value}") for t in types])
+
+
+local_reference = re.compile(
+    r"^(?P<type>[A-Z][A-Za-z]+)/(?P<id>[A-Za-z0-9\-.]{1,64})"
+    r"(?P<history>/_history/[A-Za-z0-9\-.]{1,64})?$"
+)
+
+
+def reference_variants(value: str, base: Optional[str]) -> List[Tuple[str, str]]:
+    """Stored references equivalent to a reference search value, as
+    ``(operator, value)``: ``Patient/123`` matches ``Patient/123``, the absolute
+    url on this server and ``Patient/123/_history/…`` (``sa``: prefix);
+    ``[base]/Patient/123`` matches itself and ``Patient/123``."""
+    match = local_reference.match(value)
+    if match is not None:
+        variants = [("eq", value)]
+        if base:
+            variants.append(("eq", f"{base}/{value}"))
+        if not match.group("history"):
+            variants.append(("sa", f"{value}/_history/"))
+        return variants
+    if base and value.startswith(base + "/"):
+        relative = value[len(base) + 1 :]
+        match = local_reference.match(relative)
+        if match is not None and not match.group("history"):
+            return [("eq", value), ("eq", relative)]
+    return [("eq", value)]
 
 
 def typed_reference_value(resource_type: str, value: str) -> str:
@@ -374,6 +406,8 @@ class SearchContext(object):
         "async_result",
         "definitions",
         "search_params_intersection",
+        "warnings",
+        "strict",
     )
 
     definitions: List[ResourceSearchParameterDefinition]
@@ -383,6 +417,11 @@ class SearchContext(object):
         self.engine = engine
         self.resource_types = [resource_type] if resource_type else []
         self.unrestricted = unrestricted
+        # warnings for the Bundle's outcome entry (e.g. ambiguous plain ids)
+        self.warnings: List[str] = []
+        # strict handling (``Prefer: handling=strict``): ambiguous values are
+        # errors instead of warnings
+        self.strict = False
         self.async_result = self.engine.__class__.is_async()
         if async_result is not None:
             warn(
@@ -624,22 +663,34 @@ class SearchContext(object):
         add(values)
         return entries
 
-    @staticmethod
     def path_param_value(
-        search_param: SearchParameter, path: ElementPath, value, modifier
+        self, search_param: SearchParameter, path: ElementPath, value, modifier
     ):
         """The value as searched on ``path``: for a reference parameter a plain id
         becomes ``Type/id`` for each type the path may point to
-        (``where(resolve() is X)`` restricts it to ``X``)."""
+        (``where(resolve() is X)`` restricts it to ``X``). A plain id that may
+        point to several types is ambiguous: a warning, or an error with strict
+        handling."""
         if search_param.type != "reference" or modifier is not None:
             return value
         if path._where is not None and path._where.type == WhereConstraintType.T2:
             types = [path._where.value]
         else:
             types = [t for t in reference_targets(search_param) if t != "Resource"]
-        return map_normalized_values(
-            value, lambda leaf: typed_reference_leaf(types, leaf)
-        )
+
+        def leaf_value(leaf):
+            if len(types) > 1 and plain_reference_id(leaf[1]):
+                message = (
+                    f"Reference ``{search_param.code}={leaf[1]}`` is ambiguous: "
+                    f"the id may be of a {', '.join(types)}; it is searched as all."
+                )
+                if self.strict:
+                    raise ValidationError(message)
+                if message not in self.warnings:
+                    self.warnings.append(message)
+            return typed_reference_leaf(types, leaf)
+
+        return map_normalized_values(value, leaf_value)
 
     @staticmethod
     def is_type_modifier(search_param: SearchParameter, modifier: str) -> bool:
@@ -824,6 +875,26 @@ class SearchContext(object):
         return AnyOf(result)
 
 
+class IncludeSpec(NamedTuple):
+    """One ``_include`` / ``_revinclude``: follow ``ref_param`` of
+    ``source_type`` (``*``: every reference parameter)."""
+
+    kind: str
+    source_type: str
+    code: str
+    ref_param: Optional[SearchParameter]
+    target_type: Optional[str]
+    iterate: bool
+
+
+def row_key(row) -> Tuple[str, str]:
+    """``(resource type, id)`` of a result row."""
+    resource = row[0]
+    if isinstance(resource, dict):
+        return resource.get("resourceType"), resource.get("id")
+    return resource.get_resource_type(), resource.id
+
+
 class CompositeTuple(list):
     """The components (normalized entries) of one composite value, which must
     match within the same element at ``base_path`` (``None``: the resource)."""
@@ -904,6 +975,11 @@ class Search(object):
         )
         # unknown search parameters left out of the search (lenient handling)
         self.ignored_params: List[str] = []
+        # (issue code, message) warnings for the Bundle's outcome entry
+        self.warnings: List[Tuple[str, str]] = []
+        # resolved ``reference:below`` / ``:above`` parameters
+        self.hierarchy_references: Dict[str, List[str]] = {}
+        self.context.strict = self.handling == HANDLING_STRICT
         self.prepare_params(all_params)
 
         additional_resource_types = self.result_params.get("_type")
@@ -1034,9 +1110,15 @@ class Search(object):
         if _summary:
             self.result_params["_summary"] = _summary
 
-        _include = all_params.popall("_include", None)
-        if _include:
-            self.result_params["_include"] = _include
+        # (value, iterate) pairs; STU3 calls :iterate :recurse
+        for kind in ("_include", "_revinclude"):
+            specs = [(v, False) for v in all_params.popall(kind, []) if v]
+            for modifier in ("iterate", "recurse"):
+                specs.extend(
+                    (v, True) for v in all_params.popall(f"{kind}:{modifier}", []) if v
+                )
+            if specs:
+                self.result_params[kind] = specs
 
         _has = [(k, v) for k, v in all_params.items() if k.startswith("_has:")]
         # empty values are ignored, like for any other search parameter
@@ -1044,9 +1126,6 @@ class Search(object):
             self.result_params["_has"] = [(k, v) for k, v in _has if v]
         [all_params.popall(k, None) for k, _ in _has]
 
-        _revinclude = all_params.popall("_revinclude", None)
-        if _revinclude:
-            self.result_params["_revinclude"] = _revinclude
 
         _elements = all_params.popone("_elements", [])
         if len(_elements) > 0:
@@ -1357,6 +1436,102 @@ class Search(object):
             return False
         return param_name in context.definitions[0]
 
+    # ---------------------------------------------- hierarchies (:above/:below)
+
+    def hierarchy_params(self) -> List[str]:
+        """Reference parameters with ``:below`` / ``:above``: a search over the
+        hierarchy formed by a circular reference (``Location.partOf``)."""
+        names = []
+        for name in set(self.search_params):
+            parts = name.split(":")
+            if len(parts) != 2 or parts[1] not in ("below", "above"):
+                continue
+            definitions = [
+                getattr(d, parts[0], None) for d in self.context.definitions
+            ]
+            if any(d is not None and d.type == "reference" for d in definitions):
+                names.append(name)
+        return sorted(names)
+
+    def hierarchy_param(self, resource_type: str) -> Optional[SearchParameter]:
+        """The reference parameter of ``resource_type`` that points to its
+        parent of the same type (``partof``)."""
+        candidates = [
+            sp
+            for sp in self.reference_params(resource_type)
+            if resource_type in reference_targets(sp)
+            and (
+                sp.code in ("partof", "part-of")
+                or (sp.expression or "").endswith(".partOf")
+            )
+        ]
+        return candidates[0] if candidates else None
+
+    def resolve_hierarchy(self, name: str) -> ChainResolver:
+        """References of the hierarchy below (or above) each value: the value
+        itself and every descendant (ancestor), at any depth."""
+        code, modifier = name.split(":")
+        references: List[str] = []
+        for value in self.search_params.getall(name):
+            validate_escapes(value)
+            for leaf in split_escaped(value, ","):
+                leaf = unescape_value(leaf)
+                for sp in self.context._get_search_param_definitions(code):
+                    targets = [t for t in reference_targets(sp) if t != "Resource"]
+                    match = local_reference.match(leaf)
+                    if match is not None:
+                        roots = [(match.group("type"), match.group("id"))]
+                    elif plain_reference_id(leaf):
+                        roots = [
+                            (t, leaf) for t in targets if self.hierarchy_param(t)
+                        ]
+                    else:
+                        raise ValidationError(
+                            f"``{name}`` expects ``[Type/]id``, got ``{leaf}``."
+                        )
+                    for resource_type, id_ in roots:
+                        ids = yield from self._hierarchy_closure(
+                            resource_type, id_, modifier, name
+                        )
+                        references.extend(
+                            f"{resource_type}/{i}"
+                            for i in ids
+                            if f"{resource_type}/{i}" not in references
+                        )
+        return references
+
+    def _hierarchy_closure(self, resource_type, id_, modifier, name) -> ChainResolver:
+        parent_param = self.hierarchy_param(resource_type)
+        if parent_param is None:
+            raise ValidationError(
+                f"``{name}``: {resource_type} references do not form a hierarchy."
+            )
+        context = SearchContext(
+            self.context.engine, resource_type, unrestricted=self.context.unrestricted
+        )
+        collected = [id_]
+        frontier = [id_]
+        for _ in range(HIERARCHY_MAX_DEPTH):
+            terms: List = []
+            if modifier == "below":
+                refs = ",".join(f"{resource_type}/{i}" for i in frontier)
+                normalized = context.normalize_param(parent_param.code, [refs])
+            else:
+                normalized = context.normalize_param("_id", [",".join(frontier)])
+            self.add_term(normalized, terms)
+            result = yield Q_(resource_type, self.context.engine).where(*terms)(
+                unrestricted=self.context.unrestricted
+            )
+            if modifier == "below":
+                found = result.extract_ids().get(resource_type, [])
+            else:
+                found = result.extract_references(parent_param).get(resource_type, [])
+            frontier = [i for i in dict.fromkeys(found) if i not in collected]
+            if not frontier:
+                break
+            collected.extend(frontier)
+        return collected
+
     def chain_reference_name(self, param_name: str) -> str:
         """``subject:Patient.name`` -> ``subject``"""
         return self.parse_chain_link(param_name.split(".")[0])[0]
@@ -1366,149 +1541,211 @@ class Search(object):
             EngineResult(EngineResultHeader(total=0), EngineResultBody()), [], as_json
         )
 
-    # FIXME: sorting, paginating and large results are not handled yet.
-    def include(self, main_query_result: EngineResult) -> List[QueryResult]:
-        """
-        This function handles the _include keyword.
-        """
-        include_queries: List[QueryResult] = []
-        for inc in self.result_params.get("_include", []):
-            # Parse the _include input parameter
-            parts = inc.split(":")
-            if len(parts) < 2 or len(parts) > 3:
-                raise ValidationError(
-                    f"bad _include param '{inc}', "
-                    "should be Resource:search_param[:target_type]"
-                )
+    # ------------------------------------------------- _include / _revinclude
 
-            from_resource_type = parts[0]
-            ref_param_raw: str = parts[1]
-            target_ref_type = parts[2] if len(parts) == 3 else None
+    def include_specs(self) -> List["IncludeSpec"]:
+        """The ``_include`` / ``_revinclude`` parameters (with ``:iterate``, or
+        ``:recurse`` in STU3), validated."""
+        specs: List[IncludeSpec] = []
+        for kind in ("_include", "_revinclude"):
+            for value, iterate in self.result_params.get(kind, []):
+                specs.extend(self.parse_include(kind, value, iterate))
+        return specs
 
-            # Get the search parameter definition
-            # it must be of type reference
-            ref_param: SearchParameter = SearchContext(
-                self.context.engine, from_resource_type
-            )._get_search_param_definitions(ref_param_raw)[0]
-            if not ref_param:
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
-                )
-            if ref_param.type != "reference":
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} "
-                    f"must be of type 'reference', got {ref_param.type}"
-                )
-            assert isinstance(ref_param.target, list)
-            if target_ref_type and target_ref_type not in ref_param.target:
-                raise ValidationError(
-                    f"the search param {from_resource_type}.{ref_param_raw} may refer"
-                    f" to {', '.join(ref_param.target)}, not to {target_ref_type}"
-                )
-
-            # Compute the resources which may be included in the join query
-            included_resources = (
-                [target_ref_type] if target_ref_type else ref_param.target
+    def parse_include(self, kind: str, value: str, iterate: bool):
+        """``*``, ``Source:*``, ``Source:param`` or ``Source:param:Target``."""
+        if value == "*":
+            return [IncludeSpec(kind, "*", "*", None, None, iterate)]
+        parts = value.split(":")
+        if len(parts) < 2 or len(parts) > 3 or not all(parts):
+            raise ValidationError(
+                f"bad {kind} param '{value}', "
+                "should be Resource:search_param[:target_type]"
             )
+        source_type, param_code = parts[0], parts[1]
+        target_type = parts[2] if len(parts) == 3 else None
+        source_context = SearchContext(self.context.engine, source_type)
+        if param_code == "*":
+            return [
+                IncludeSpec(kind, source_type, sp.code, sp, target_type, iterate)
+                for sp in self.reference_params(source_type)
+                if target_type is None or target_type in reference_targets(sp)
+            ]
 
-            # Extract reference IDs from the main query result
-            ids = main_query_result.extract_references(ref_param)
+        ref_param: SearchParameter = source_context._get_search_param_definitions(
+            param_code
+        )[0]
+        if ref_param.type != "reference":
+            raise ValidationError(
+                f"search parameter {source_type}.{param_code} "
+                f"must be of type 'reference', got {ref_param.type}"
+            )
+        if target_type and target_type not in (ref_param.target or []):
+            if kind == "_include":
+                raise ValidationError(
+                    f"the search param {source_type}.{param_code} may refer"
+                    f" to {', '.join(ref_param.target)}, not to {target_type}"
+                )
+            raise ValidationError(
+                f"invalid reference {source_type}.{param_code} "
+                f"({','.join(ref_param.target)}) in the current search context "
+                f"({','.join(self.context.resource_types)})"
+            )
+        return [
+            IncludeSpec(kind, source_type, param_code, ref_param, target_type, iterate)
+        ]
 
-            # filter included resources for which we have references to
-            included_resources = [r for r in included_resources if ids.get(r)]
+    def reference_params(self, resource_type: str) -> List[SearchParameter]:
+        """The reference search parameters of a resource type."""
+        try:
+            definition = SearchContext(self.context.engine, resource_type).definitions[
+                0
+            ]
+        except Exception:  # unknown resource type
+            return []
+        params = []
+        for code in definition:
+            sp = getattr(definition, code)
+            if sp.type == "reference" and sp.expression:
+                params.append(sp)
+        return params
 
-            # if no references were extracted from the main_query_result, skip.
-            if not included_resources:
-                continue
+    def all_resource_types(self) -> List[str]:
+        storage = SEARCH_PARAMETERS_STORAGE.get(
+            FHIR_VERSION.normalize(self.context.engine.fhir_release).name
+        )
+        return [t for t in storage if t not in ("Resource", "DomainResource")]
 
-            # Build a Q_ (query) object to join the resource based on reference ids.
-            builder = Q_(included_resources, self.context.engine)
+    def resolve_includes(
+        self, main_result: EngineResult
+    ) -> Generator[QueryResult, EngineResult, List[EngineResult]]:
+        """Resources to include for the matches of this page. ``:iterate``
+        specs are applied again to what was included, up to
+        ``INCLUDE_MAX_ITERATIONS`` rounds. Entries are unique and a match is
+        never included again."""
+        specs = self.include_specs()
+        if not specs:
+            return []
+        seen = {row_key(row) for row in main_result.body}
+        results: List[EngineResult] = []
+        frontier = list(main_result.body)
+        rounds = 0
+        while frontier and rounds <= INCLUDE_MAX_ITERATIONS:
+            active = [spec for spec in specs if rounds == 0 or spec.iterate]
+            if not active:
+                break
+            added: List = []
+            for spec in active:
+                for query in self.include_queries_for(spec, frontier, seen):
+                    result = yield query
+                    rows = [r for r in result.body if row_key(r) not in seen]
+                    if not rows:
+                        continue
+                    seen.update(row_key(r) for r in rows)
+                    body = EngineResultBody()
+                    for row in rows:
+                        body.append(row)
+                    results.append(
+                        EngineResult(EngineResultHeader(total=len(rows)), body)
+                    )
+                    added.extend(rows)
+            frontier = added
+            rounds += 1
+        return results
+
+    def include_queries_for(self, spec: "IncludeSpec", rows, seen) -> List[QueryResult]:
+        """Queries fetching what ``spec`` includes for ``rows``."""
+        if spec.kind == "_include":
+            if spec.source_type == "*":
+                specs = [
+                    IncludeSpec(spec.kind, t, sp.code, sp, None, spec.iterate)
+                    for t in sorted({row_key(r)[0] for r in rows})
+                    for sp in self.reference_params(t)
+                ]
+            else:
+                specs = [spec]
+            references: Dict[str, Set[str]] = {}
+            for sub_spec in specs:
+                source_rows = [r for r in rows if row_key(r)[0] == sub_spec.source_type]
+                if not source_rows:
+                    continue
+                body = EngineResultBody()
+                for row in source_rows:
+                    body.append(row)
+                found = EngineResult(
+                    EngineResultHeader(total=len(source_rows)), body
+                ).extract_references(sub_spec.ref_param)
+                allowed = (
+                    [sub_spec.target_type]
+                    if sub_spec.target_type
+                    else list(sub_spec.ref_param.target or [])
+                )
+                for resource_type, ids in found.items():
+                    if resource_type not in allowed and "Resource" not in allowed:
+                        continue
+                    references.setdefault(resource_type, set()).update(
+                        i for i in ids if (resource_type, i) not in seen
+                    )
+            references = {t: ids for t, ids in references.items() if ids}
+            if not references:
+                return []
             terms: List = []
-            for resource_type in included_resources:
-                search_context = SearchContext(self.context.engine, resource_type)
-                # for each resource, create a term to filter IDs
-                normalized_data = search_context.normalize_param(
-                    "_id", ",".join(ids[resource_type])
-                )
-                self.add_term(normalized_data, terms)
+            for resource_type, ids in sorted(references.items()):
+                try:
+                    search_context = SearchContext(self.context.engine, resource_type)
+                    normalized = search_context.normalize_param(
+                        "_id", [",".join(sorted(ids))]
+                    )
+                except (KeyError, AttributeError, ValidationError):
+                    continue  # not a resource type of this release
+                self.add_term(normalized, terms)
+            # one term per type: the dialect applies each to its own type
+            types = sorted(references)
+            builder = Q_(types, self.context.engine).where(*terms)
+            return [builder(unrestricted=self.context.unrestricted)]
 
-            builder = builder.where(*terms)
-            self.attach_limit_terms(builder)
-
-            # FIXME: find a better way to handle the limit
-            builder = builder.limit(DEFAULT_RESULT_COUNT)
-
-            result: QueryResult = builder(unrestricted=self.context.unrestricted)
-            include_queries.append(result)
-
-        return include_queries
-
-    # FIXME: sorting, paginating and large results are not handled yet.
-    def rev_include(self, main_query_result: EngineResult) -> List[QueryResult]:
-        """
-        This function handles the _revinclude keyword.
-        """
-        include_queries: List[QueryResult] = []
-        for inc in self.result_params.get("_revinclude", []):
-            # Parse the _revinclude input parameter
-            parts = inc.split(":")
-            if len(parts) < 2 or len(parts) > 3:
-                raise ValidationError(
-                    f"bad _revinclude param '{inc}', "
-                    "should be Resource:search_param[:target_type]"
-                )
-
-            from_resource_type = parts[0]
-            ref_param_raw: str = parts[1]
-            target_ref_type = parts[2] if len(parts) == 3 else None
-
-            # Get the search parameter definition
-            # it must be of type reference
-            ref_param: SearchParameter = SearchContext(
-                self.context.engine, from_resource_type
-            )._get_search_param_definitions(ref_param_raw)[0]
-            if not ref_param:
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} is unknown"
-                )
-            if ref_param.type != "reference":
-                raise ValidationError(
-                    f"search parameter {from_resource_type}.{ref_param_raw} "
-                    f"must be of type 'reference', got {ref_param.type}"
-                )
-            assert isinstance(ref_param.target, list)
-            if target_ref_type and target_ref_type not in ref_param.target:
-                raise ValidationError(
-                    f"invalid reference {from_resource_type}.{ref_param_raw} "
-                    f"({','.join(ref_param.target)}) in the current search context "
-                    f"({','.join(self.context.resource_types)})"
-                )
-
-            # Extract IDs from the main query result
-            ids = main_query_result.extract_ids()
-
-            # if no IDs were extracted from the main_query_result, skip.
-            if not ids:
-                continue
-
-            # Build a Q_ (query) object to join the resource based on reference ids.
-            builder = Q_([from_resource_type], self.context.engine)
+        # _revinclude: resources of the source type pointing at the rows
+        if spec.source_type == "*":
+            row_types = {row_key(r)[0] for r in rows}
+            pairs = [
+                (t, sp)
+                for t in self.all_resource_types()
+                for sp in self.reference_params(t)
+                if row_types & set(reference_targets(sp) or [])
+            ]
+        else:
+            pairs = [(spec.source_type, spec.ref_param)]
+        queries: List[QueryResult] = []
+        by_source: Dict[str, List] = {}
+        for source_type, ref_param in pairs:
+            targets = (
+                [spec.target_type]
+                if spec.target_type
+                else list(reference_targets(ref_param) or ref_param.target or [])
+            )
+            refs = sorted(
+                f"{t}/{i}"
+                for t, i in {row_key(r) for r in rows}
+                if t in targets or "Resource" in targets
+            )
+            if refs:
+                by_source.setdefault(source_type, []).append((ref_param, refs))
+        for source_type, items in sorted(by_source.items()):
+            context = SearchContext(self.context.engine, source_type)
             terms: List = []
-            for _, resource_ids in ids.items():
-                search_context = SearchContext(self.context.engine, from_resource_type)
-                # for each resource, create a term to filter reference ids
-                normalized_data = search_context.normalize_param(
-                    ref_param_raw, ",".join(resource_ids)
-                )
-                self.add_term(normalized_data, terms)
-
-            builder = builder.where(*terms)
-            self.attach_limit_terms(builder)
-
-            result: QueryResult = builder(unrestricted=self.context.unrestricted)
-            include_queries.append(result)
-
-        return include_queries
+            for ref_param, refs in items:
+                try:
+                    normalized = context.normalize_param(ref_param.code, [",".join(refs)])
+                    self.add_term(normalized, terms)
+                except NotImplementedError:
+                    continue
+            if not terms:
+                continue
+            if len(terms) > 1:
+                terms = [G_(*terms, path=None, type_=GroupType.DECOUPLED).match_any()]
+            builder = Q_([source_type], self.context.engine).where(*terms)
+            queries.append(builder(unrestricted=self.context.unrestricted))
+        return queries
 
     def add_term(self, normalized_data, terms_container):
         """ """
@@ -1607,8 +1844,7 @@ class Search(object):
                     path_ = path_ / "display"
                     term_factory = self.create_term
                 else:
-                    path_ = path_ / "reference"
-                    term_factory = self.create_term
+                    term_factory = self.create_reference_term
             elif klass_name == "Identifier":
                 term_factory = self.create_identifier_term
             elif klass_name in QUANTITY_TYPES:
@@ -2221,8 +2457,35 @@ class Search(object):
             # (``SearchContext.path_param_value``)
 
         new_path = path_ / "reference"
+        variants = reference_variants(
+            unescape_value(original_value), self.server_base()
+        )
+        if len(variants) == 1 and variants[0][0] == "eq":
+            return self.create_term(new_path, value, modifier)
+        sub_modifier = None if modifier == "not" else modifier
+        terms = [
+            (
+                self.create_term(new_path, ("eq", escape_value(v)), sub_modifier)
+                if op == "eq"
+                else sa_(T_(new_path), V_(v))
+            )
+            for op, v in variants
+        ]
+        group = G_(*terms, path=new_path, type_=GroupType.DECOUPLED)
+        return group.match_no_one() if modifier == "not" else group.match_any()
 
-        return self.create_term(new_path, value, modifier)
+    def server_base(self) -> Optional[str]:
+        """Base url of the server (``http://example.org/fhir``), when the engine
+        knows the current url."""
+        try:
+            url = self.context.engine.current_url()
+        except Exception:  # the engine does not know the request
+            return None
+        if url is None:
+            return None
+        from fhirpath.search.utils import BundleWrapper
+
+        return str(BundleWrapper.calculate_fhir_base_url(url)).rstrip("/")
 
     def create_exists_term(self, path_, param_value, modifier):
         """``:missing`` (and the non-standard ``:exists``). An element that only
@@ -2824,6 +3087,20 @@ class Search(object):
         # we make sure that there are no duplicate keys!
         for param_name in set(self.search_params):
             raw_value = list(self.search_params.getall(param_name, []))
+            if param_name in self.hierarchy_references:
+                # resolved hierarchy: any of its references
+                normalized_params = self.context.normalize_param(
+                    param_name.split(":")[0],
+                    [",".join(self.hierarchy_references[param_name])],
+                )
+                for np in normalized_params:
+                    self.add_term(np, terms_container)
+                continue
+            if param_name in self.hierarchy_params():
+                raise ValidationError(
+                    f"``{param_name}`` is a hierarchy search: it is resolved when "
+                    "the search is run."
+                )
             normalized_params = self.context.normalize_param(param_name, raw_value)
             for np in normalized_params:
                 self.add_term(np, terms_container)
@@ -2957,8 +3234,8 @@ class Search(object):
 
     def outcome_issues(self) -> List[Dict[str, Any]]:
         """Warnings for the Bundle's ``outcome`` entry: the ignored unknown
-        search parameters."""
-        return [
+        search parameters and the warnings of the search."""
+        issues = [
             {
                 "severity": "warning",
                 "code": "not-supported",
@@ -2966,6 +3243,20 @@ class Search(object):
             }
             for name in self.ignored_params
         ]
+        issues.extend(
+            {"severity": "warning", "code": code, "diagnostics": message}
+            for code, message in self.warnings
+        )
+        issues.extend(
+            {"severity": "warning", "code": "processing", "diagnostics": message}
+            for message in self.context.warnings
+        )
+        return issues
+
+    def warn(self, message: str, code: str = "processing"):
+        """Add a warning to the Bundle's outcome entry."""
+        if (code, message) not in self.warnings:
+            self.warnings.append((code, message))
 
     def __call__(self, as_json=False):
         """ """
@@ -2976,6 +3267,12 @@ class Search(object):
             # no resource satisfies the _has parameters, so nothing can match
             if not self.reverse_chaining_results:
                 return self.empty_response(as_json)
+
+        # reference hierarchies (:below / :above)
+        for name in self.hierarchy_params():
+            self.hierarchy_references[name] = run_chain_resolver(
+                self.resolve_hierarchy(name)
+            )
 
         # chaining
         self.chained_references = []
@@ -2998,19 +3295,8 @@ class Search(object):
             main_result = self.main_query.fetchall()
         assert main_result is not None
 
-        # _include
-        self.include_queries = self.include(main_result)
-        include_results: List[EngineResult] = [
-            q.fetchall() for q in self.include_queries
-        ]
-
-        # _revinclude
-        self.rev_include_queries = self.rev_include(main_result)
-        rev_include_results: List[EngineResult] = [
-            q.fetchall() for q in self.rev_include_queries
-        ]
-
-        all_includes = [*include_results, *rev_include_results]
+        # _include / _revinclude
+        all_includes = run_chain_resolver(self.resolve_includes(main_result))
         return self.response(main_result, all_includes, as_json)
 
 
@@ -3027,6 +3313,12 @@ class AsyncSearch(Search):
             # no resource satisfies the _has parameters, so nothing can match
             if not self.reverse_chaining_results:
                 return self.empty_response(as_json)
+
+        # reference hierarchies (:below / :above)
+        for name in self.hierarchy_params():
+            self.hierarchy_references[name] = await run_chain_resolver_async(
+                self.resolve_hierarchy(name)
+            )
 
         # chaining
         self.chained_references = []
@@ -3049,19 +3341,10 @@ class AsyncSearch(Search):
             main_result = await self.main_query.fetchall()
         assert main_result is not None
 
-        # _include
-        self.include_queries = self.include(main_result)
-        include_results: List[EngineResult] = [
-            await q.fetchall() for q in self.include_queries
-        ]
-
-        # _revinclude
-        self.rev_include_queries = self.rev_include(main_result)
-        rev_include_results: List[EngineResult] = [
-            await q.fetchall() for q in self.rev_include_queries
-        ]
-
-        all_includes = [*include_results, *rev_include_results]
+        # _include / _revinclude
+        all_includes = await run_chain_resolver_async(
+            self.resolve_includes(main_result)
+        )
         return self.response(main_result, all_includes, as_json)
 
 

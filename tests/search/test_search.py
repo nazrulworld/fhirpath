@@ -1339,17 +1339,21 @@ def test_search_fhirpath_reference_analyzer(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 0
 
-    # search by resource_type as prefix
-    params = (("subject:below", "Patient"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
+    # the absolute url of a local reference is the same reference
+    params = (
+        ("subject", "http://nohost/@fhir/Patient/19c5245f-89a8-49f8-b244-666b32adb92e"),
+    )
+    bundle = Search(search_context, params=params)()
     assert bundle.total == 1
 
-    # search by ID as suffix
-    params = (("subject:above", "19c5245f-89a8-49f8-b244-666b32adb92e"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
+    # :below / :above search hierarchies (Location.partOf...), which patients
+    # do not form
+    params = (("subject:below", "Patient/19c5245f-89a8-49f8-b244-666b32adb92e"),)
+    with raises(ValidationError, match="do not form a hierarchy"):
+        Search(search_context, params=params)()
+    params = (("subject:below", "Location/nowhere"),)
+    bundle = Search(search_context, params=params)()
+    assert bundle.total == 0
 
 
 def test_searchparam_type_date_period_eq(es_data, engine):
