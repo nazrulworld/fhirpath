@@ -69,6 +69,15 @@ RELEASES = ("STU3", "R4", "R4B", "R5")
             "(Patient.deceased.exists() and Patient.deceased != false) | Patient.name",
             ["Patient.name"],
         ),
+        # extension values: the url and the value are matched in one extension
+        (
+            "Location.extension('http://example.org/geojson').value",
+            ["Location.extension.where(url='http://example.org/geojson').value"],
+        ),
+        (
+            "Patient.extension.where(url = 'http://a.org/b').value.ofType(Coding)",
+            ["Patient.extension.where(url='http://a.org/b').valueCoding"],
+        ),
     ],
 )
 def test_element_paths(expression, paths):
@@ -80,7 +89,6 @@ def test_element_paths(expression, paths):
     [
         "Patient.deceased.exists() and (Patient.deceased != false)",
         "ActivityDefinition.relatedArtifact.where(type = 'composed-of').resource",
-        "Location.extension('http://example.org/geojson').value",
     ],
 )
 def test_element_paths_unsupported(expression):

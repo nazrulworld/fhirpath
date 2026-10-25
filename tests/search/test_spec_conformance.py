@@ -91,11 +91,10 @@ class _Builder:
 @pytest.mark.parametrize(
     "param",
     [
-        "code:in",
-        "code:not-in",
-        "identifier:of-type",
-        "code:code-text",
+        "code:contains",
+        "code:exact",
         "code:unknown",
+        "subject:in",
         "value-quantity:exact",
         "date:contains",
         "status:identifier",
@@ -235,7 +234,7 @@ def test_param_unknown_for_one_of_the_types_is_an_error(offline_engine):
 
 def test_unsupported_modifier_is_rejected_even_when_lenient(offline_engine):
     context = SearchContext(offline_engine, "Observation")
-    search = Search(context, query_string="code:in=http://x.org/vs")
+    search = Search(context, query_string="code:contains=x")
     with raises(ValidationError, match="is not supported"):
         search.build()
 

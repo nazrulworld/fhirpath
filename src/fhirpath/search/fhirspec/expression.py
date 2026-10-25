@@ -259,13 +259,19 @@ def _paths(node: ast.Node) -> List[str]:
         right = node.right
         if isinstance(right, ast.Member):
             for path in lefts:
-                if ".where(" in path:
+                if ".where(" in path and not _is_extension_filter(path):
                     raise UnsupportedExpression(
                         "unsupported navigation after a filter: %s"
                         % to_expression(node)
                     )
             return ["%s.%s" % (path, right.name) for path in lefts]
         if isinstance(right, ast.Function):
+            url = _extension_url(right)
+            if url is not None:
+                # ``extension('url')`` = ``extension.where(url = 'url')``
+                return [
+                    "%s.extension.where(url=%s)" % (path, _quote(url)) for path in lefts
+                ]
             cast = _cast_type(right)
             if cast is not None:
                 return [_cast(path, cast) for path in lefts]
@@ -279,14 +285,80 @@ def _paths(node: ast.Node) -> List[str]:
     raise UnsupportedExpression("unsupported %s" % to_expression(node))
 
 
+def _extension_url(function: ast.Function) -> Optional[str]:
+    if (
+        function.name == "extension"
+        and len(function.args) == 1
+        and isinstance(function.args[0], ast.Literal)
+        and isinstance(function.args[0].value, str)
+    ):
+        return function.args[0].value
+    return None
+
+
+def _is_extension_filter(path: str) -> bool:
+    """``….extension.where(url='…')``, optionally followed by ``.value``: the
+    FQL layer searches the extension's value within the matching extension."""
+    head, _, tail = path.rpartition(".where(")
+    if not head.endswith("extension") or not tail.startswith("url="):
+        return False
+    rest = tail.rpartition(")")[2]
+    return rest == "" or rest.count(".") == 1
+
+
 def _cast(path: str, type_name: str) -> str:
     """Select a choice type: ``Observation.value`` + ``Quantity`` ->
     ``Observation.valueQuantity``."""
+    if ".where(" in path and _is_extension_filter(path) and path.endswith(".value"):
+        return path[: -len("value")] + _typed_name("value", type_name)
     if ".where(" in path or path.endswith("]"):
         raise UnsupportedExpression("unsupported type cast on %s" % path)
     head, _, name = path.rpartition(".")
     typed = _typed_name(name, type_name)
     return "%s.%s" % (head, typed) if head else typed
+
+
+def computed_presence_path(expression: str) -> Optional[str]:
+    """The element of a computed boolean parameter: ``X.exists() and X !=
+    false`` (Patient ``deceased``; STU3 writes ``X.exists()``) -> ``X``."""
+    try:
+        tree = parse(expression)
+    except Exception:
+        return None
+
+    def exists_of(node) -> Optional[str]:
+        if (
+            isinstance(node, ast.Invocation)
+            and isinstance(node.right, ast.Function)
+            and node.right.name == "exists"
+            and not node.right.args
+        ):
+            try:
+                paths = _paths(node.left)
+            except UnsupportedExpression:
+                return None
+            return paths[0] if len(paths) == 1 else None
+        return None
+
+    path = exists_of(tree)
+    if path is not None:
+        return path
+    if isinstance(tree, ast.Binary) and tree.op == "and":
+        path = exists_of(tree.left)
+        right = tree.right
+        if (
+            path is not None
+            and isinstance(right, ast.Binary)
+            and right.op == "!="
+            and isinstance(right.right, ast.Literal)
+            and right.right.value is False
+        ):
+            try:
+                if _paths(right.left) == [path]:
+                    return path
+            except UnsupportedExpression:
+                return None
+    return None
 
 
 def element_paths(expression: str) -> List[str]:

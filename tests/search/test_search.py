@@ -8,6 +8,7 @@ from fhirpath.enums import FHIR_VERSION
 from fhirpath.enums import OPERATOR
 from fhirpath.enums import MatchType
 from fhirpath.enums import SortOrderType
+from fhirpath.enums import TermMatchType
 from fhirpath.search.interfaces.fql import IGroupTerm
 from fhirpath.search.search import Search
 from fhirpath.search.search import AsyncSearch
@@ -146,18 +147,22 @@ def test_parameter_normalization(engine):
 def test_composite_parameter_normalization(engine):
     """ """
     context = SearchContext(engine, "ChargeItemDefinition")
-    normalize_value = context.normalize_param("context-type-quantity", ["HL7$99"])
-    assert len(normalize_value) == 2
-    assert normalize_value[0][0].path.endswith(".code")
+    (composite,) = context.normalize_param("context-type-quantity", ["HL7$99"])
+    # the components match within the same useContext
+    assert composite.base_path.path == "ChargeItemDefinition.useContext"
+    assert len(composite) == 2
+    assert composite[0][0].path.endswith(".code")
     # value.as(Quantity) | value.as(Range)
-    assert len(normalize_value[1]) == 2
-    assert normalize_value[1][1][0].path.endswith(".valueRange") is True
+    assert len(composite[1]) == 2
+    assert composite[1][1][0].path.endswith(".valueRange") is True
 
     context = SearchContext(engine, "Observation")
-    normalize_value = context.normalize_param(
+    (composite,) = context.normalize_param(
         "code-value-quantity", ["http://loinc.org|11557-6$6.2"]
     )
-    assert isinstance(normalize_value[1], tuple)
+    # the base is the resource itself
+    assert composite.base_path is None
+    assert isinstance(composite[1], tuple)
 
 
 def test_parameter_normalization_with_space_as(engine):
@@ -351,7 +356,6 @@ def test_create_quantity_term(engine):
         ("quantity", "5.4|http://unitsofmeasure.org|mg"),
         ("quantity", "lt5.1||mg"),
         ("quantity", "5.40e-3"),
-        ("quantity:not", "ap5.4|http://unitsofmeasure.org|mg"),
     )
     fhir_search = Search(context, params=params)
     path_, value_pack, modifier = context.normalize_param(
@@ -367,21 +371,23 @@ def test_create_quantity_term(engine):
     assert quantity_group.terms[2].path.path == "ChargeItem.quantity.code"
 
     assert terms[1].terms[1].path.path == "ChargeItem.quantity.unit"
-    assert float(terms[2].value.value) == float("5.40e-3")
+    # 5.40e-3 has 3 significant figures: [5.395e-3, 5.405e-3)
+    assert terms[2].bounds == ("0.005395", "0.005405", False)
 
 
 def test_sa_term(engine):
     """ """
     context = SearchContext(engine, "Organization")
-    params = (("_id:below", "fo"),)
+    params = (("name", "fo"),)
 
     fhir_search = Search(context, params=params)
 
-    path_, value_pack, modifier = context.normalize_param("_id:below", ["fo"])[0]
+    path_, value_pack, modifier = context.normalize_param("name", ["fo"])[0][0]
     term = fhir_search.create_term(path_, value_pack, modifier)
     term.finalize(fhir_search.context.engine)
 
-    assert term.comparison_operator == OPERATOR.sa
+    # string search default: starts with
+    assert term.match_type == TermMatchType.STARTWITH
 
 
 def test_sort_attachment(engine):
@@ -428,7 +434,7 @@ def test_build_query_from_search_params(engine):
         ("quantity", "5.4|http://unitsofmeasure.org|mg"),
         ("quantity", "lt5.9||mg"),
         ("quantity", "5.40e-3"),
-        ("quantity:not", "gt5.4|http://unitsofmeasure.org|mg"),
+        ("quantity", "gt5.4|http://unitsofmeasure.org|mg"),
     )
     fhir_search = Search(context, params=params)
     builder = Q_(fhir_search.context.resource_types, fhir_search.context.engine)
@@ -561,44 +567,42 @@ def test_codeableconcept_with_not_modifier(es_data, engine):
     assert bundle.total == 0
 
 
-def test_search_result_with_below_modifier(es_data, engine):
-    """ """
+def test_search_result_string_default_is_starts_with(es_data, engine):
+    """String search default: case-insensitive "equals or starts with"."""
     search_context = SearchContext(engine, "Organization")
-    params = (("name:below", "Burge"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-    # little bit complex
+    for value, total in (
+        ("Burge", 1),
+        ("burgers university", 1),
+        ("BURGERS", 1),
+        ("Medical", 0),
+    ):
+        bundle = Search(search_context, params=(("name", value),))()
+        assert bundle.total == total, value
+
     search_context = SearchContext(engine, "Patient")
-    params = (("identifier:below", "|2403"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
+    bundle = Search(search_context, params=(("given", "Ele,Eve"),))()
     assert bundle.total == 1
-
-    params = (("given:below", "Ele,Eve"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
-    params = (("gender:below", "ma,naz"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
+    bundle = Search(search_context, params=(("given", "lector"),))()
+    assert bundle.total == 0
 
 
-def test_search_result_with_above_modifier(es_data, engine):
-    """ """
-    # little bit complex
-    search_context = SearchContext(engine, "Patient")
-    params = (("identifier:above", "|0002"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
+def test_string_params_do_not_take_below_or_above(engine):
     search_context = SearchContext(engine, "Organization")
-    params = (("name:above", "Medical Center"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
+    for param in ("name:below", "name:above"):
+        with pytest.raises(ValidationError, match="is not supported"):
+            Search(search_context, params=((param, "Burge"),)).build()
+
+
+def test_search_token_is_exact(es_data, engine):
+    search_context = SearchContext(engine, "Patient")
+    for value, total in (("male", 1), ("Male", 0), ("ma", 0)):
+        bundle = Search(search_context, params=(("gender", value),))()
+        assert bundle.total == total, value
+    # code elements have an implicit system
+    bundle = Search(
+        search_context,
+        params=(("gender", "http://hl7.org/fhir/administrative-gender|male"),),
+    )()
     assert bundle.total == 1
 
 
@@ -606,11 +610,6 @@ def test_search_result_with_contains_modifier(es_data, engine):
     """ """
     # little bit complex
     search_context = SearchContext(engine, "Patient")
-    params = (("identifier:contains", "|365"),)
-    fhir_search = Search(search_context, params=params)
-    bundle = fhir_search()
-    assert bundle.total == 1
-
     params = (("given:contains", "ect"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
@@ -622,17 +621,17 @@ def test_search_result_with_contains_modifier(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
+    # case-insensitive
+    params = (("name:contains", "medical"),)
+    bundle = Search(search_context, params=params)()
+    assert bundle.total == 1
+
 
 @pytest.mark.asyncio
 async def test_async_search_result_with_contains_modifier(es_data, async_engine):
     """ """
     # little bit complex
     search_context = SearchContext(async_engine, "Patient")
-    params = (("identifier:contains", "|365"),)
-    fhir_search = AsyncSearch(search_context, params=params)
-    bundle = await fhir_search()
-    assert bundle.total == 1
-
     params = (("given:contains", "ect"),)
     fhir_search = AsyncSearch(search_context, params=params)
     bundle = await fhir_search()
@@ -697,13 +696,12 @@ def test_search_identifier_modifier(es_data, engine):
     bundle = Search(search_context, params=params)()
     assert bundle.total == 0
 
-    # TODO: not working yet, when omitting the system, the search is applied only
-    # on the value (it should also filter by empty system)
     # [param-ref]:identifier=|[code]: the value of [code] matches a
     # reference.identifier.value, and the Identifier has no system property
+    # (the identifier of the subject has the system CPR)
     params = (("subject:identifier", "|240365-0002"),)
     bundle = Search(search_context, params=params)()
-    assert bundle.total == 1
+    assert bundle.total == 0
 
     params = (("subject:identifier", "|123456789"),)
     bundle = Search(search_context, params=params)()
@@ -1516,7 +1514,8 @@ def test_searchparam_type_date_period_ap(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
-    params = (("date", "ap2015-01-16T16:00:00"),)
+    # ap: 10 % of the gap between now and the date
+    params = (("date", "ap2010-01-16T16:00:00"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 0
@@ -1532,7 +1531,7 @@ def test_searchparam_type_date_period_ap(es_data, engine):
     bundle = fhir_search()
     assert bundle.total == 1
 
-    params = (("date", "ap2017-06-01T19:00:00"),)
+    params = (("date", "ap2012-06-01T19:00:00"),)
     fhir_search = Search(search_context, params=params)
     bundle = fhir_search()
     assert bundle.total == 0
@@ -1546,7 +1545,7 @@ async def test_async_searchparam_type_date_period_ap(es_data, async_engine):
     bundle = await fhir_search()
     assert bundle.total == 1
 
-    params = (("date", "ap2015-01-16T16:00:00"),)
+    params = (("date", "ap2010-01-16T16:00:00"),)
     fhir_search = AsyncSearch(search_context, params=params)
     bundle = await fhir_search()
     assert bundle.total == 0
@@ -1562,7 +1561,7 @@ async def test_async_searchparam_type_date_period_ap(es_data, async_engine):
     bundle = await fhir_search()
     assert bundle.total == 1
 
-    params = (("date", "ap2017-06-01T19:00:00"),)
+    params = (("date", "ap2012-06-01T19:00:00"),)
     fhir_search = AsyncSearch(search_context, params=params)
     bundle = await fhir_search()
     assert bundle.total == 0

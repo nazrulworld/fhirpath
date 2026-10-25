@@ -16,7 +16,6 @@ ignored_datatype = [
     "ElementDefinition",
     "ProductShelfLife",
     "Resource",
-    "Extension",
     "SubstanceAmount",
 ]
 
@@ -195,7 +194,13 @@ def fhir_types_mapping(
         }
     }
 
-    Reference = {"properties": {"reference": ReferenceToken, "identifier": Identifier}}
+    Reference = {
+        "properties": {
+            "reference": ReferenceToken,
+            "identifier": Identifier,
+            "display": Text,
+        }
+    }
 
     Quantity = {
         "properties": {"value": Float, "code": Token, "system": Token, "unit": Token}
@@ -357,6 +362,37 @@ def fhir_types_mapping(
     Count = Quantity
     Distance = Quantity
 
+    # extension search parameters: the url and the usual value[x] types
+    Extension = {
+        "properties": {
+            "url": Token,
+            "valueString": Text,
+            "valueMarkdown": Text,
+            "valueCode": Token,
+            "valueId": Token,
+            "valueUri": Token,
+            "valueUrl": Token,
+            "valueCanonical": Token,
+            "valueBoolean": Boolean,
+            "valueInteger": Integer,
+            "valuePositiveInt": Integer,
+            "valueUnsignedInt": Integer,
+            "valueDecimal": Float,
+            "valueDate": Date,
+            "valueDateTime": Date,
+            "valueInstant": Date,
+            "valueCoding": Coding,
+            "valueCodeableConcept": CodeableConcept,
+            "valueIdentifier": Identifier,
+            "valueReference": Reference,
+            "valueQuantity": Quantity,
+            "valueAge": Quantity,
+            "valueDuration": Quantity,
+            "valuePeriod": Period,
+            "valueRange": Range,
+        }
+    }
+
     return {
         "boolean": Boolean,
         "base64Binary": Token,
@@ -413,4 +449,5 @@ def fhir_types_mapping(
         "Population": Population,
         "Narrative": Narrative,
         "Expression": Expression,
+        "Extension": Extension,
     }

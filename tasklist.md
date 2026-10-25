@@ -21,25 +21,25 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 
 ## B. Matching semantics vs spec
 
-- [ ] String default = ES `match` with `fuzziness: AUTO`; spec: case/accent-insensitive starts-with.
-- [ ] Token `|code` matches any system; spec: code with **no** system.
-- [ ] Token matching analyzer-dependent; should be exact/case-sensitive.
-- [ ] No implicit precision ranges for number/date `eq` (`100` → [99.5,100.5), `2013-01` → whole month).
-- [ ] `ap` prefix only for Period; missing for number/date/quantity.
+- [x] String default = ES `match` with `fuzziness: AUTO`; spec: case/accent-insensitive starts-with.
+- [x] Token `|code` matches any system; spec: code with **no** system.
+- [x] Token matching analyzer-dependent; should be exact/case-sensitive.
+- [x] No implicit precision ranges for number/date `eq` (`100` → [99.5,100.5), `2013-01` → whole month).
+- [x] `ap` prefix only for Period; missing for number/date/quantity.
 - [ ] `:below`/`:above` mapped to string prefix/suffix; spec: subsumption (token), hierarchy (reference),
       path segments (uri), version (canonical).
 - [ ] Reference equivalence: absolute URL of local refs ≡ `Type/id`; optionally reject ambiguous plain `id`
       (plain `id` is now searched as `Type/id` for every target).
-- [ ] `:missing=true` should treat extension-only elements as missing.
-- [ ] Composite: OR across tuples, same-repetition matching, `combo-*` token params.
-- [ ] Unsupported target types: Range, Timing, SampledData, Attachment, Narrative; non-path expression
+- [x] `:missing=true` should treat extension-only elements as missing.
+- [x] Composite: OR across tuples, same-repetition matching, `combo-*` token params.
+- [x] Unsupported target types: Range, Timing, SampledData, Attachment, Narrative; non-path expression
       branches (`extension(url)`, computed `deceased`).
 
 ## C. Modifiers not implemented
 
-- [ ] `:in` / `:not-in` (ValueSet expansion)
-- [ ] `:of-type` (Identifier)
-- [ ] `:code-text`, `:text-advanced` (R5)
+- [x] `:in` / `:not-in` (ValueSet expansion)
+- [x] `:of-type` (Identifier)
+- [x] `:code-text`, `:text-advanced` (R5)
 - [x] `:[type]` on plain reference params (`subject:Patient=23` → `subject=Patient/23`)
 - [ ] `:iterate` (`:recurse` in STU3) for `_include`/`_revinclude`
 

@@ -55,7 +55,10 @@ __author__ = "Md Nazrul Islam<email2nazrul@gmail.com>"
 has_dot_as = re.compile(r"\.as\((?P<type_name>[a-z]+)\)$", re.I | re.U)
 has_space_as = re.compile(r"^[a-z.0-9]+ +as +[a-z0-9]+$", re.I | re.U)
 has_dot_is = re.compile(r"\.is\([a-z]+\)$", re.I | re.U)
-has_dot_where = re.compile(r"\.where\([a-z=\'\"()\s\-]+\)", re.I | re.U)
+# ``.where(...)`` with a quoted literal that may hold any character (urls)
+has_dot_where = re.compile(
+    r"\.where\((?:[a-z=()\s\-]|'[^']*'|\"[^\"]*\")+\)", re.I | re.U
+)
 
 contains_index = re.compile(r"\[[0-9]+\]", re.U)
 # first()last()Tail()count()Skip(1).Take(3)
@@ -940,6 +943,9 @@ class ElementPath(object):
         self._is = None
         self._raw = dotted_path
         self._non_fhir = non_fhir
+        # type of the search parameter searching on this path (``string``,
+        # ``token``...), passed on to sub paths: it decides the match semantics
+        self.search_param_type = None
 
         self.parse()
 
@@ -1086,6 +1092,7 @@ class ElementPath(object):
         required_finalized(self)
 
         obj = ElementPath.from_el_path("{0!s}.{1}".format(self, other))
+        obj.search_param_type = self.search_param_type
         if self.is_finalized():
             # unwrap
             obj.finalize(unwrap_proxy(self.context))
@@ -1119,10 +1126,10 @@ class PathWhereConstraint(object):
             resource_type = expression.split("is")[-1].strip()[:-1]
             return cls(WhereConstraintType.T2, value=resource_type)
         else:
-            parts = list(map(lambda x: x.strip(), expression.split("=")))
+            parts = list(map(lambda x: x.strip(), expression.split("=", 1)))
             name = parts[0][6:]
             if ")." in parts[1]:
-                parts_ = list(parts[1].split(")."))
+                parts_ = list(parts[1].rsplit(").", 1))
                 value = ast.literal_eval(parts_[0].strip())
                 subpath = parts_[1].strip()
                 if name == "type":

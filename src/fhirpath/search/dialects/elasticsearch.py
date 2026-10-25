@@ -39,16 +39,13 @@ def escape_star(v):
     return v
 
 
+# characters with a meaning in ES regular expressions
+REGEXP_RESERVED = frozenset('.?+*|{}[]()"\\#@&<>~:')
+
+
 def escape_all(v):
-    """ """
-    v = escape_star(v)
-    v = (
-        v.replace(".", "\\.")
-        .replace("?", "\\?")
-        .replace(":", "\\:")
-        .replace("[", "\\[")
-    )
-    return v
+    """Escape ``v`` for a literal match inside an ES ``regexp``."""
+    return "".join("\\" + c if c in REGEXP_RESERVED else c for c in v)
 
 
 class ElasticSearchDialect(DialectBase):
@@ -77,8 +74,10 @@ class ElasticSearchDialect(DialectBase):
         return path_
 
     @staticmethod
-    def attach_nested_on_demand(context, query_, root_replacer):
-        """ """
+    def attach_nested_on_demand(context, query_, root_replacer, scope=None):
+        """Wrap ``query_`` in a ``nested`` query for every repeating element on
+        the path of ``context``. ``scope`` is the path of an enclosing (nested)
+        group: the levels at or above it are already nested."""
         path_context = context
         qr = query_
 
@@ -89,6 +88,11 @@ class ElasticSearchDialect(DialectBase):
             return qr
 
         while True:
+            current = str(path_context._path)
+            if scope is not None and (
+                current == scope or scope.startswith(current + ".")
+            ):
+                break
             if path_context.multiple and not path_context.type_is_primitive:
                 path_ = ElasticSearchDialect.apply_path_replacement(
                     str(path_context._path), root_replacer
@@ -123,20 +127,25 @@ class ElasticSearchDialect(DialectBase):
         return q
 
     @staticmethod
-    def create_sa_term(path, value):
+    def create_sa_term(path, value, case_insensitive=False):
         """Create ES Prefix Query"""
+
+        def prefix(val):
+            query = {"value": val}
+            if case_insensitive:
+                query["case_insensitive"] = True
+            return {"prefix": {path: query}}
+
         if isinstance(value, (list, tuple)):
             if len(value) == 1:
                 value = value[0]
             else:
                 q = {"bool": {"should": [], "minimum_should_match": 1}}
                 for val in value:
-                    q["bool"]["should"].append({"prefix": {path: {"value": val}}})
+                    q["bool"]["should"].append(prefix(val))
                 return q
 
-        q = {"prefix": {path: {"value": value}}}
-
-        return q
+        return prefix(value)
 
     @staticmethod
     def create_contains_term(path, value):
@@ -149,11 +158,25 @@ class ElasticSearchDialect(DialectBase):
                 q = {"bool": {"should": [], "minimum_should_match": 1}}
                 for val in value:
                     q["bool"]["should"].append(
-                        {"prefix": {path: {"value": ".*{0}.*".format(escape_all(val))}}}
+                        {
+                            "regexp": {
+                                path: {
+                                    "value": ".*{0}.*".format(escape_all(val)),
+                                    "case_insensitive": True,
+                                }
+                            }
+                        }
                     )
                 return q
 
-        q = {"regexp": {path: {"value": ".*{0}.*".format(escape_all(value))}}}
+        q = {
+            "regexp": {
+                path: {
+                    "value": ".*{0}.*".format(escape_all(value)),
+                    "case_insensitive": True,
+                }
+            }
+        }
 
         return q
 
@@ -232,6 +255,20 @@ class ElasticSearchDialect(DialectBase):
             else:
                 return info_
 
+    @staticmethod
+    def term_resource_type(term):
+        """Resource type a term searches on (a group without a path, e.g. a
+        composite on the resource itself, takes it from its terms)."""
+        if getattr(term, "path", None) is not None:
+            if INonFhirTerm.providedBy(term):
+                return None
+            return term.path.context.resource_type
+        for sub_term in getattr(term, "terms", []):
+            resource_type = ElasticSearchDialect.term_resource_type(sub_term)
+            if resource_type is not None:
+                return resource_type
+        return None
+
     def compile_for_single_resource_type(
         self, query, resource_type, mapping=None, root_replacer=None
     ):
@@ -247,11 +284,8 @@ class ElasticSearchDialect(DialectBase):
         conditional_terms = [
             w
             for w in query.get_where()
-            if (
-                not INonFhirTerm.providedBy(w)
-                and w.path.context.resource_type == resource_type
-            )
-            or INonFhirTerm.providedBy(w)
+            if INonFhirTerm.providedBy(w)
+            or ElasticSearchDialect.term_resource_type(w) == resource_type
         ]
         for term in conditional_terms:
             q, unary_operator = self.resolve_term(term, mapping, root_replacer)
@@ -335,10 +369,12 @@ class ElasticSearchDialect(DialectBase):
         else:
             return query_fragments[0]
 
-    def resolve_term(self, term, mapping, root_replacer):
-        """ """
+    def resolve_term(self, term, mapping, root_replacer, scope=None):
+        """ES query of ``term``; ``scope`` is the path of the enclosing nested
+        group (``None`` at the top level)."""
         if IGroupTerm.providedBy(term):
             unary_operator = OPERATOR.pos
+            child_scope = scope
             if term.type == GroupType.DECOUPLED:
 
                 if term.match_operator == MatchType.ANY:
@@ -354,33 +390,36 @@ class ElasticSearchDialect(DialectBase):
                     qr = {"bool": {"must_not": list()}}
                     container = qr["bool"]["must_not"]
 
+                # every alternative is nested on its own
                 alsoProvides(term, IIgnoreNestedCheck)
 
             elif term.type == GroupType.COUPLED:
-                if term.match_operator == MatchType.NONE:
-                    qr = {"bool": {"must_not": list()}}
-                    container = qr["bool"]["must_not"]
-                else:
-                    qr = {"bool": {"filter": list()}}
-                    container = qr["bool"]["filter"]
+                # NONE: no repetition matches all the terms (negated below,
+                # around the nested query)
+                qr = {"bool": {"filter": list()}}
+                container = qr["bool"]["filter"]
+                # the terms of a coupled group must match within the same
+                # repetition of the group's element: they are nested below it
+                if term.path is not None:
+                    child_scope = term.path.path
             else:
                 raise NotImplementedError
 
             for t_ in term.terms:
-                # single term resolver should not look at this
-                if term.type == GroupType.COUPLED:
-                    alsoProvides(t_, IIgnoreNestedCheck)
-
-                resolved, operator = self.resolve_term(t_, mapping, root_replacer)
+                resolved, operator = self.resolve_term(
+                    t_, mapping, root_replacer, child_scope
+                )
                 if operator == OPERATOR.neg:
                     container.append({"bool": {"must_not": [resolved]}})
                 else:
                     container.append(resolved)
 
-            if not IIgnoreNestedCheck.providedBy(term):
+            if term.path is not None and not IIgnoreNestedCheck.providedBy(term):
                 qr = ElasticSearchDialect.attach_nested_on_demand(
-                    term.path.context, qr, root_replacer
+                    term.path.context, qr, root_replacer, scope
                 )
+            if term.type == GroupType.COUPLED and term.match_operator == MatchType.NONE:
+                qr = {"bool": {"must_not": [qr]}}
 
             return qr, unary_operator
 
@@ -391,7 +430,7 @@ class ElasticSearchDialect(DialectBase):
             container = qr["bool"]["should"]
 
             for t_ in term:
-                resolved = self.resolve_term(t_, mapping, root_replacer)
+                resolved = self.resolve_term(t_, mapping, root_replacer, scope)
                 container.append(resolved[0])
             if len(container) > 0:
                 qr["bool"]["minimum_should_match"] = 1
@@ -399,7 +438,7 @@ class ElasticSearchDialect(DialectBase):
 
         elif IExistsTerm.providedBy(term):
             return ElasticSearchDialect.resolve_exists_term(
-                term, root_replacer=root_replacer
+                term, root_replacer=root_replacer, scope=scope
             )
 
         elif ITerm.providedBy(term):
@@ -417,6 +456,7 @@ class ElasticSearchDialect(DialectBase):
                     "id",
                     "uuid",
                     "boolean",
+                    "markdown",
                 ):
                     # xxx: may do something special?
                     multiple = term.path.context.multiple
@@ -438,26 +478,17 @@ class ElasticSearchDialect(DialectBase):
                         )
 
                     else:
-                        if term.comparison_operator == OPERATOR.sa:
-                            q = ElasticSearchDialect.create_sa_term(dotted_path, value)
-                        elif term.comparison_operator == OPERATOR.eb:
-                            q = ElasticSearchDialect.create_eb_term(dotted_path, value)
-                        elif term.comparison_operator == OPERATOR.contains:
-                            q = ElasticSearchDialect.create_contains_term(
-                                dotted_path, value
-                            )
-                        else:
-                            # FIXME find a cleaner way to do that
-                            # If root_replacer is "*", we're searching on all resources
-                            all_resources = root_replacer == "*"
-                            q = ElasticSearchDialect.create_term(
+                        resolved = (
+                            ElasticSearchDialect.resolve_keyword_term(
+                                term,
                                 dotted_path,
                                 value,
-                                multiple=multiple,
-                                match_type=term.match_type,
-                                all_resources=all_resources,
-                            )
-                        resolved = q, term.unary_operator
+                                multiple,
+                                map_info,
+                                all_resources=root_replacer == "*",
+                            ),
+                            term.unary_operator,
+                        )
 
                 elif term.path.context.type_name in (
                     "dateTime",
@@ -473,6 +504,7 @@ class ElasticSearchDialect(DialectBase):
                     "decimal",
                     "unsignedInt",
                     "positiveInt",
+                    "integer64",
                 ):
 
                     resolved = ElasticSearchDialect.resolve_numeric_term(
@@ -487,7 +519,7 @@ class ElasticSearchDialect(DialectBase):
                 # check for nested
                 qr, unary_operator = resolved
                 qr = ElasticSearchDialect.attach_nested_on_demand(
-                    term.path.context, qr, root_replacer
+                    term.path.context, qr, root_replacer, scope
                 )
                 return qr, unary_operator
             else:
@@ -497,13 +529,106 @@ class ElasticSearchDialect(DialectBase):
             assert IFhirPrimitiveType.providedBy(term.value)
             return self.resolve_nonfhir_term(term)
 
-    def resolve_datetime_term(self, term, root_replacer=None):
-        """ """
-        qr = dict()
+    @staticmethod
+    def resolve_keyword_term(
+        term, dotted_path, value, multiple, map_info, all_resources=False
+    ):
+        """Query on a ``keyword`` field (strings, codes, uris...).
 
-        value = term.get_real_value()
-        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
+        * ``STARTWITH`` (string search default, ``:text``, ``:code-text``):
+          case-insensitive prefix;
+        * ``EXACT``: the un-normalized ``.raw`` field, optionally ignoring case;
+        * ``FULLTEXT`` (``:text`` on strings, ``:text-advanced``): every word of
+          the value, on the analyzed ``.tokenized`` field when there is one;
+        * ``sa`` / ``eb`` / ``contains`` operators: prefix, suffix and
+          (case-insensitive) infix matching.
+        """
+        fields = (map_info or {}).get("fields", {})
+        case_insensitive = getattr(term, "case_insensitive", False)
+        if term.comparison_operator == OPERATOR.sa:
+            return ElasticSearchDialect.create_sa_term(dotted_path, value)
+        if term.comparison_operator == OPERATOR.eb:
+            return ElasticSearchDialect.create_eb_term(dotted_path, value)
+        if term.comparison_operator == OPERATOR.contains:
+            return ElasticSearchDialect.create_contains_term(dotted_path, value)
+        if term.match_type == TermMatchType.STARTWITH:
+            return ElasticSearchDialect.create_sa_term(
+                dotted_path, value, case_insensitive=True
+            )
+        if term.match_type == TermMatchType.FULLTEXT:
+            return ElasticSearchDialect.create_fulltext_term(
+                dotted_path, value, "tokenized" in fields
+            )
+        if term.match_type == TermMatchType.EXACT and (
+            not map_info or "raw" in fields
+        ):
+            if isinstance(value, (list, tuple)) or multiple:
+                values = value if isinstance(value, (list, tuple)) else [value]
+                if case_insensitive:
+                    return {
+                        "bool": {
+                            "should": [
+                                {
+                                    "term": {
+                                        f"{dotted_path}.raw": {
+                                            "value": v,
+                                            "case_insensitive": True,
+                                        }
+                                    }
+                                }
+                                for v in values
+                            ],
+                            "minimum_should_match": 1,
+                        }
+                    }
+                return {"terms": {f"{dotted_path}.raw": values}}
+            if case_insensitive:
+                return {
+                    "term": {
+                        f"{dotted_path}.raw": {"value": value, "case_insensitive": True}
+                    }
+                }
+            return {"term": {f"{dotted_path}.raw": value}}
+        if case_insensitive and not isinstance(value, (list, tuple)):
+            return {"term": {dotted_path: {"value": value, "case_insensitive": True}}}
+        match_type = term.match_type
+        if match_type == TermMatchType.EXACT:
+            # no un-normalized sub field (booleans...): the field itself is exact
+            match_type = None
+        return ElasticSearchDialect.create_term(
+            dotted_path,
+            value,
+            multiple=multiple,
+            match_type=match_type,
+            all_resources=all_resources,
+        )
 
+    @staticmethod
+    def create_fulltext_term(path, value, tokenized):
+        """All words of ``value``, on the analyzed ``.tokenized`` sub field or
+        as case-insensitive infixes of the keyword."""
+        if tokenized:
+            return {"match": {f"{path}.tokenized": {"query": value, "operator": "and"}}}
+        words = [w for w in str(value).split() if w] or [str(value)]
+        return {
+            "bool": {
+                "filter": [
+                    {
+                        "wildcard": {
+                            path: {
+                                "value": "*{0}*".format(escape_star(w)),
+                                "case_insensitive": True,
+                            }
+                        }
+                    }
+                    for w in words
+                ]
+            }
+        }
+
+    @staticmethod
+    def format_date_value(value):
+        """``(text, time zone)`` of a date, dateTime or time value."""
         if hasattr(value, "day") and hasattr(value, "hour"):
             value_formatter = (
                 isodate.DATE_EXT_COMPLETE + "T" + isodate.TIME_EXT_COMPLETE
@@ -514,16 +639,64 @@ class ElasticSearchDialect(DialectBase):
             value_formatter = isodate.TIME_EXT_COMPLETE
         else:
             raise ValueError("Could not understand date query value.")
+        timezone = None
+        if hasattr(value, "tzinfo") and value.tzinfo:
+            timezone = isodate.tz_isoformat(value)
+            if timezone in ("", "Z"):
+                timezone = None
+        return isodate.strftime(value, value_formatter), timezone
+
+    @staticmethod
+    def range_bounds_query(term, path_, formatter=None):
+        """``range`` query of a term carrying explicit ``bounds``: the implicit
+        range of a search value (``100`` -> [99.5, 100.5), ``2013-01`` -> the
+        whole month) or of an ``ap`` search; ``(low, high, high_inclusive)``."""
+        low, high, high_inclusive = term.bounds
+        range_ = {}
+        timezone = None
+        for key, bound in (("gte", low), ("lte" if high_inclusive else "lt", high)):
+            if bound is None:
+                continue
+            bound = term.path.context.validate_value(bound)
+            if formatter is not None:
+                bound, tz = formatter(bound)
+                timezone = timezone or tz
+            range_[key] = bound
+        if timezone:
+            range_["time_zone"] = timezone
+        return {"range": {path_: range_}}
+
+    @staticmethod
+    def _unary_operator(term):
+        if (
+            term.comparison_operator != OPERATOR.ne
+            and term.unary_operator == OPERATOR.neg
+        ) or (
+            term.comparison_operator == OPERATOR.ne
+            and term.unary_operator != OPERATOR.neg
+        ):
+            return OPERATOR.neg
+        return OPERATOR.pos
+
+    def resolve_datetime_term(self, term, root_replacer=None):
+        """ """
+        path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
+        if getattr(term, "bounds", None) is not None:
+            qr = ElasticSearchDialect.range_bounds_query(
+                term, path_, ElasticSearchDialect.format_date_value
+            )
+            return qr, ElasticSearchDialect._unary_operator(term)
+
+        qr = dict()
+        value, timezone = ElasticSearchDialect.format_date_value(
+            term.get_real_value()
+        )
 
         if term.comparison_operator in (OPERATOR.eq, OPERATOR.ne):
             qr["range"] = {
                 path_: {
-                    ES_PY_OPERATOR_MAP[OPERATOR.ge]: isodate.strftime(
-                        value, value_formatter
-                    ),
-                    ES_PY_OPERATOR_MAP[OPERATOR.le]: isodate.strftime(
-                        value, value_formatter
-                    ),
+                    ES_PY_OPERATOR_MAP[OPERATOR.ge]: value,
+                    ES_PY_OPERATOR_MAP[OPERATOR.le]: value,
                 }
             }
 
@@ -533,37 +706,22 @@ class ElasticSearchDialect(DialectBase):
             OPERATOR.ge,
             OPERATOR.gt,
         ):
-            qr["range"] = {
-                path_: {
-                    ES_PY_OPERATOR_MAP[term.comparison_operator]: isodate.strftime(
-                        value, value_formatter
-                    )
-                }
-            }
+            qr["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
 
-        if hasattr(value, "tzinfo") and value.tzinfo:
-            timezone = isodate.tz_isoformat(value)
-            if timezone not in ("", "Z"):
-                qr["range"][path_]["time_zone"] = timezone
+        if timezone:
+            qr["range"][path_]["time_zone"] = timezone
 
-        if (
-            term.comparison_operator != OPERATOR.ne
-            and term.unary_operator == OPERATOR.neg
-        ) or (
-            term.comparison_operator == OPERATOR.ne
-            and term.unary_operator != OPERATOR.neg
-        ):
-            unary_operator = OPERATOR.neg
-        else:
-            unary_operator = OPERATOR.pos
-
-        return qr, unary_operator
+        return qr, ElasticSearchDialect._unary_operator(term)
 
     @staticmethod
     def resolve_numeric_term(term, root_replacer=None):
         """ """
         qr = dict()
         path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
+        if getattr(term, "bounds", None) is not None:
+            qr = ElasticSearchDialect.range_bounds_query(term, path_)
+            return qr, ElasticSearchDialect._unary_operator(term)
+
         value = term.get_real_value()
 
         if term.comparison_operator in (OPERATOR.eq, OPERATOR.ne):
@@ -582,18 +740,7 @@ class ElasticSearchDialect(DialectBase):
         ):
             qr["range"] = {path_: {ES_PY_OPERATOR_MAP[term.comparison_operator]: value}}
 
-        if (
-            term.comparison_operator != OPERATOR.ne
-            and term.unary_operator == OPERATOR.neg
-        ) or (
-            term.comparison_operator == OPERATOR.ne
-            and term.unary_operator != OPERATOR.neg
-        ):
-            unary_operator = OPERATOR.neg
-        else:
-            unary_operator = OPERATOR.pos
-
-        return qr, unary_operator
+        return qr, ElasticSearchDialect._unary_operator(term)
 
     @staticmethod
     def resolve_string_term(term, map_info, root_replacer=None):
@@ -613,7 +760,10 @@ class ElasticSearchDialect(DialectBase):
         ):
             if custom_analyzer is None:
                 logger.warning(f"No custom analyzer found for reference {path_}")
-            if term.comparison_operator == OPERATOR.sa:
+            if (
+                term.comparison_operator == OPERATOR.sa
+                or term.match_type == TermMatchType.STARTWITH
+            ):
                 qr = {"match_phrase_prefix": {path_: value}}
             else:
                 qr = {"term": {path_: value}}
@@ -623,7 +773,10 @@ class ElasticSearchDialect(DialectBase):
 
             if term.match_type == TermMatchType.EXACT:
                 qr = {"match_phrase": {path_: value}}
-            elif term.comparison_operator == OPERATOR.sa:
+            elif (
+                term.comparison_operator == OPERATOR.sa
+                or term.match_type == TermMatchType.STARTWITH
+            ):
                 qr = {"match_phrase_prefix": {path_: value}}
             elif term.comparison_operator == OPERATOR.eb:
                 qr = {
@@ -639,6 +792,8 @@ class ElasticSearchDialect(DialectBase):
                         "query": "*{0}*".format(escape_star(value)),
                     }
                 }
+            elif term.match_type == TermMatchType.FULLTEXT:
+                qr = {"match": {path_: {"query": value, "operator": "and"}}}
             else:
                 qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
 
@@ -651,14 +806,14 @@ class ElasticSearchDialect(DialectBase):
         return qr, term.unary_operator
 
     @staticmethod
-    def resolve_exists_term(term, root_replacer=None):
+    def resolve_exists_term(term, root_replacer=None, scope=None):
         """ """
         path_ = ElasticSearchDialect.create_dotted_path(term, root_replacer)
 
         qr = {"exists": {"field": path_}}
         if not INonFhirTerm.providedBy(term):
             qr = ElasticSearchDialect.attach_nested_on_demand(
-                term.path.context, qr, root_replacer
+                term.path.context, qr, root_replacer, scope
             )
 
         return qr, term.unary_operator

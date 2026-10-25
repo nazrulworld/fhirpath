@@ -29,12 +29,14 @@ from fhirpath.enums import (
     GroupType,
     MatchType,
     SortOrderType,
+    TermMatchType,
     WhereConstraintType,
 )
 from fhirpath.search.exceptions import ValidationError
 from fhirpath.search.fhirspec.expression import (
     UnsupportedExpression,
     component_paths,
+    computed_presence_path,
 )
 from fhirpath.search.fhirspec import (
     FHIRSearchSpecFactory,
@@ -57,9 +59,19 @@ from fhirpath.search.fql import (
     sort_,
 )
 from fhirpath.search.fql.types import ElementPath
+from fhirpath.search.ranges import (
+    DATE_PREFIX_BOUNDS,
+    DATE_TYPES,
+    NUMBER_TYPES,
+    approximate_date_range,
+    date_bound,
+    date_bounds,
+    number_bounds,
+)
 from fhirpath.search.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.search.query import Q_, QueryResult
 from fhirpath.search.storage import SEARCH_PARAMETERS_STORAGE
+from fhirpath.search.terminology import get_terminology
 from fhirpath.search.utils import PathInfoContext, lookup_fhir_class
 
 __author__ = "Md Nazrul Islam <email2nazrul@gmail.com>"
@@ -86,28 +98,49 @@ QUANTITY_TYPES = (
     "MoneyQuantity",
     "SimpleQuantity",
 )
-# modifiers this implementation handles, per parameter type ("exists" is
-# non-standard: the inverse of "missing"); any other modifier is rejected
-_STRING_LIKE_MODIFIERS = {
-    "missing",
-    "exists",
-    "not",
-    "exact",
-    "contains",
-    "text",
-    "below",
-    "above",
-}
+# modifiers per parameter type (FHIR R5 search §3.2.1.5.5); non-standard:
+# "exists" (the inverse of "missing") and "not" on string, uri and reference
+# parameters. Any other modifier is rejected
 SUPPORTED_MODIFIERS: Dict[str, Set[str]] = {
-    "string": _STRING_LIKE_MODIFIERS,
-    "token": _STRING_LIKE_MODIFIERS,
-    "uri": _STRING_LIKE_MODIFIERS,
-    "reference": _STRING_LIKE_MODIFIERS | {"identifier"},
-    "number": {"missing", "exists", "not"},
-    "date": {"missing", "exists", "not"},
-    "quantity": {"missing", "exists", "not"},
+    "string": {"missing", "exists", "not", "exact", "contains", "text"},
+    "token": {
+        "missing",
+        "exists",
+        "not",
+        "text",
+        "in",
+        "not-in",
+        "below",
+        "above",
+        "of-type",
+        "code-text",
+        "text-advanced",
+    },
+    "uri": {"missing", "exists", "not", "below", "above", "contains"},
+    "reference": {
+        "missing",
+        "exists",
+        "not",
+        "identifier",
+        "below",
+        "above",
+        "text",
+        "code-text",
+        "text-advanced",
+    },
+    "number": {"missing", "exists"},
+    "date": {"missing", "exists"},
+    "quantity": {"missing", "exists"},
     "special": {"missing", "exists"},
 }
+# modifiers introduced after STU3, with the first release that has them
+MODIFIER_SINCE: Dict[str, FHIR_VERSION] = {
+    "of-type": FHIR_VERSION.R4,
+    "identifier": FHIR_VERSION.R4,
+    "code-text": FHIR_VERSION.R5,
+    "text-advanced": FHIR_VERSION.R5,
+}
+RELEASE_ORDER = (FHIR_VERSION.STU3, FHIR_VERSION.R4, FHIR_VERSION.R4B, FHIR_VERSION.R5)
 
 
 def map_normalized_values(values, func):
@@ -147,6 +180,37 @@ def typed_reference_value(resource_type: str, value: str) -> str:
         )
     return f"{resource_type}/{value}"
 
+
+# string parts of complex types searched by string parameters
+HUMANNAME_STRING_ELEMENTS = ("text", "family", "given", "prefix", "suffix")
+ADDRESS_STRING_ELEMENTS = (
+    "text",
+    "line",
+    "city",
+    "district",
+    "state",
+    "postalCode",
+    "country",
+)
+
+# value[x] types an extension value is searched on, per search parameter type
+EXTENSION_VALUE_TYPES: Dict[str, List[str]] = {
+    "string": ["valueString", "valueMarkdown"],
+    "token": [
+        "valueCode",
+        "valueCoding",
+        "valueCodeableConcept",
+        "valueBoolean",
+        "valueIdentifier",
+        "valueString",
+        "valueId",
+    ],
+    "reference": ["valueReference", "valueCanonical", "valueUri"],
+    "uri": ["valueUri", "valueUrl", "valueCanonical"],
+    "date": ["valueDate", "valueDateTime", "valueInstant", "valuePeriod"],
+    "number": ["valueInteger", "valueDecimal", "valuePositiveInt", "valueUnsignedInt"],
+    "quantity": ["valueQuantity", "valueAge", "valueDuration", "valueRange"],
+}
 
 # characters a backslash may escape in a search value (after URL decoding)
 ESCAPABLE_CHARS = frozenset(",$|\\")
@@ -198,6 +262,11 @@ def handling_from_prefer(prefer: Optional[str]) -> str:
             if value in (HANDLING_LENIENT, HANDLING_STRICT):
                 return value
     return HANDLING_LENIENT
+
+
+def escape_value(value: str) -> str:
+    """Inverse of ``unescape_value``: ``a,b`` -> ``a\\,b``."""
+    return "".join("\\" + c if c in ESCAPABLE_CHARS else c for c in value)
 
 
 def has_unescaped(value: str, separator: str) -> bool:
@@ -372,13 +441,8 @@ class SearchContext(object):
                 f"search parameter ``{search_param.code}`` needs special processing"
             )
 
-        # Some Safeguards
         if search_param.type == "composite":
-            raise NotImplementedError
-
-        if search_param.type in ("token", "composite") and search_param.code.startswith(
-            "combo-"
-        ):
+            # composites are searched by their components
             raise NotImplementedError
 
         try:
@@ -386,7 +450,10 @@ class SearchContext(object):
         except UnsupportedExpression as exc:
             raise NotImplementedError(str(exc))
         paths = self.dotted_paths_to_path_contexts(dotted_paths)
-        return [self._search_param_type_path(path, search_param) for path in paths]
+        paths = [self._search_param_type_path(path, search_param) for path in paths]
+        for path in paths:
+            path.search_param_type = search_param.type
+        return paths
 
     def dotted_paths_to_path_contexts(
         self, dotted_paths: List[str]
@@ -465,21 +532,24 @@ class SearchContext(object):
             if modifier_ is not None:
                 self.validate_modifier(sp, modifier_)
 
-            # Look out for any composite or combo type parameter
             if sp.type == "composite":
                 normalized_params.extend(
                     self._normalize_composite_param(
-                        raw_value, param_def=sp, modifier=modifier_
+                        raw_value if isinstance(raw_value, list) else [raw_value],
+                        param_def=sp,
+                        modifier=modifier_,
                     )
                 )
                 continue
 
-            if len(raw_value) == 0:
-                raw_value = None
-            elif len(raw_value) == 1:
-                raw_value = raw_value[0]
+            sp_raw_value = raw_value
+            if isinstance(sp_raw_value, list):
+                if len(sp_raw_value) == 0:
+                    sp_raw_value = None
+                elif len(sp_raw_value) == 1:
+                    sp_raw_value = sp_raw_value[0]
 
-            values: List = self.normalize_param_value(raw_value, sp)
+            values: List = self.normalize_param_value(sp_raw_value, sp)
             if modifier_ and self.is_type_modifier(sp, modifier_):
                 # ``subject:Patient=23`` ≡ ``subject=Patient/23``
                 values = map_normalized_values(
@@ -500,6 +570,16 @@ class SearchContext(object):
                 param_value_ = values
 
             Search.validate_normalized_value(param_name_, param_value_, modifier_)
+            presence = (
+                computed_presence_path(sp.expression)
+                if sp.expression and sp.type == "token"
+                else None
+            )
+            if presence is not None:
+                normalized_params.extend(
+                    self._normalize_presence_param(sp, presence, values, modifier_)
+                )
+                continue
             paths = self.resolve_path_contexts(sp)
             entries = [
                 (
@@ -515,6 +595,34 @@ class SearchContext(object):
                 # the parameter matches when any of its paths matches
                 normalized_params.append(AnyOf(entries))
         return normalized_params
+
+    def _normalize_presence_param(self, search_param, dotted_path, values, modifier):
+        """Entries of a computed boolean parameter (``deceased``): one
+        ``ComputedPresence`` per value, OR lists as ``AnyOf``."""
+        paths = self.dotted_paths_to_path_contexts([dotted_path])
+        entries: List = []
+
+        def add(value):
+            if isinstance(value, list):
+                # AND: each value is an entry
+                for item in value:
+                    add(item)
+                return
+            _, raw = value
+            if isinstance(raw, list):
+                entries.append(
+                    AnyOf(
+                        ComputedPresence(search_param.code, paths, leaf, modifier)
+                        for leaf in raw
+                    )
+                )
+            else:
+                entries.append(
+                    ComputedPresence(search_param.code, paths, value, modifier)
+                )
+
+        add(values)
+        return entries
 
     @staticmethod
     def path_param_value(
@@ -563,8 +671,19 @@ class SearchContext(object):
                 f"Modifier ``:{modifier}`` is not supported for search parameter "
                 f"``{code}`` of type ``{search_param.type}``."
             )
+        since = MODIFIER_SINCE.get(modifier)
+        release = FHIR_VERSION.normalize(self.engine.fhir_release)
+        if since is not None and RELEASE_ORDER.index(release) < RELEASE_ORDER.index(
+            since
+        ):
+            raise ValidationError(
+                f"Modifier ``:{modifier}`` is not supported in FHIR {release.name} "
+                f"(search parameter ``{code}``)."
+            )
         # a definition that lists its modifiers allows only those
-        allowed = set(search_param.modifier or [])
+        allowed = {
+            "of-type" if m == "ofType" else m for m in (search_param.modifier or [])
+        }
         if allowed and "missing" in allowed:
             allowed.add("exists")
         if allowed and modifier not in allowed:
@@ -634,38 +753,57 @@ class SearchContext(object):
         path_.finalize(self.engine)
         return path_
 
-    def _normalize_composite_param(
-        self, raw_value, param_def, modifier
-    ) -> List[Tuple[ElementPath, str, Optional[str]]]:
-        """ """
-        if len(raw_value) < 1:
-            raise NotImplementedError(
-                "Currently duplicate composite type params are not allowed or supported"
+    def _normalize_composite_param(self, raw_value, param_def, modifier) -> List:
+        """One entry per value (repeats are ANDed); a value is an OR list of
+        ``$``-separated tuples (``code-value-quantity=a$1,b$2``), each matched
+        within one element of the composite's base path (``CompositeTuple``)."""
+        entries: List = []
+        for raw in raw_value or []:
+            if not raw:
+                # empty values are ignored
+                continue
+            validate_escapes(raw)
+            alternatives = [
+                self._composite_tuple(param_def, raw_tuple)
+                for raw_tuple in split_escaped(raw, ",")
+            ]
+            entries.append(
+                alternatives[0] if len(alternatives) == 1 else AnyOf(alternatives)
             )
-        value_parts = split_escaped(raw_value[0], "$")
-        if len(value_parts) != len(param_def.component):
-            raise ValueError(
-                f"Composite search param {param_def.name} expects {len(param_def.component)} "
-                f"values separated by a '$', got {len(value_parts)}."
-            )
+        return entries
 
-        results: List[Tuple[ElementPath, str, Optional[str]]] = [
-            self.parse_composite_parameter_component(
-                component, value_part, param_def, modifier
+    def _composite_tuple(self, param_def, raw_tuple):
+        value_parts = split_escaped(raw_tuple, "$")
+        if len(value_parts) != len(param_def.component):
+            raise ValidationError(
+                f"Composite search param {param_def.code} expects "
+                f"{len(param_def.component)} values separated by a '$', "
+                f"got {len(value_parts)}."
             )
-            for component, value_part in zip(param_def.component, value_parts)
-        ]
-        return results
+        try:
+            base_paths = param_def.element_paths()
+        except UnsupportedExpression as exc:
+            raise NotImplementedError(str(exc))
+
+        tuples = []
+        for base_path in base_paths:
+            components = [
+                self.parse_composite_parameter_component(
+                    component, value_part, param_def, base_path
+                )
+                for component, value_part in zip(param_def.component, value_parts)
+            ]
+            group_path = None
+            if "." in base_path:
+                group_path = self._dotted_path_to_path_context(base_path)
+            tuples.append(CompositeTuple(components, base_path=group_path))
+        return tuples[0] if len(tuples) == 1 else AnyOf(tuples)
 
     def parse_composite_parameter_component(
-        self, component, raw_value, param_def, modifier
+        self, component, raw_value, param_def, base_path
     ):
         try:
-            dotted_paths = [
-                path
-                for base_path in param_def.element_paths()
-                for path in component_paths(base_path, component["expression"])
-            ]
+            dotted_paths = component_paths(base_path, component["expression"])
         except UnsupportedExpression as exc:
             raise NotImplementedError(str(exc))
 
@@ -677,13 +815,34 @@ class SearchContext(object):
         if len(component_param_value) == 1:
             component_param_value = component_param_value[0]
 
-        result = [
-            (path, component_param_value, modifier)
-            for path in self.dotted_paths_to_path_contexts(dotted_paths)
-        ]
+        paths = self.dotted_paths_to_path_contexts(dotted_paths)
+        for path in paths:
+            path.search_param_type = component_param.type
+        result = [(path, component_param_value, None) for path in paths]
         if len(result) == 1:
             return result[0]
         return AnyOf(result)
+
+
+class CompositeTuple(list):
+    """The components (normalized entries) of one composite value, which must
+    match within the same element at ``base_path`` (``None``: the resource)."""
+
+    def __init__(self, components, base_path=None):
+        super().__init__(components)
+        self.base_path = base_path
+
+
+class ComputedPresence:
+    """Normalized value of a computed boolean parameter such as Patient
+    ``deceased`` (``Patient.deceased.exists() and Patient.deceased != false``):
+    the typed choice ``paths`` of the element."""
+
+    def __init__(self, code, paths, value, modifier):
+        self.code = code
+        self.paths = paths
+        self.value = value
+        self.modifier = modifier
 
 
 class AnyOf(list):
@@ -1353,6 +1512,21 @@ class Search(object):
 
     def add_term(self, normalized_data, terms_container):
         """ """
+        if isinstance(normalized_data, CompositeTuple):
+            terms = []
+            for component in normalized_data:
+                self.add_term(component, terms)
+            group = G_(
+                *terms, path=normalized_data.base_path, type_=GroupType.COUPLED
+            )
+            terms_container.append(group)
+            return group
+
+        if isinstance(normalized_data, ComputedPresence):
+            term = self.create_presence_term(normalized_data)
+            terms_container.append(term)
+            return term
+
         if isinstance(normalized_data, AnyOf):
             # paths of an unsupported type (e.g. Range or Timing next to Quantity
             # or dateTime), or whose type rejects the value (a boolean path for a
@@ -1370,7 +1544,9 @@ class Search(object):
                 terms_container.append(terms[0])
                 return terms[0]
             group_term = G_(
-                *terms, path=normalized_data[0][0], type_=GroupType.DECOUPLED
+                *terms,
+                path=self.entry_path(normalized_data[0]),
+                type_=GroupType.DECOUPLED,
             )
             group_term.skip_invalid = True
             terms_container.append(group_term)
@@ -1396,10 +1572,23 @@ class Search(object):
 
         if path_._where is not None:
             if path_._where.type == WhereConstraintType.T3:
-                # we know what to do
-                raise NotImplementedError
+                if path_._where.name == "url" and path_.path.endswith(".extension"):
+                    term = self.create_extension_term(path_, param_value, modifier)
+                    terms_container.append(term)
+                    return term
+                raise NotImplementedError(
+                    f"Can't perform search on {path_._raw}: unsupported filter"
+                )
         elif path_._is is not None:
             raise NotImplementedError
+
+        param_type = getattr(path_, "search_param_type", None)
+        negate = False
+        if param_type == "token" and modifier in ("in", "not-in", "below", "above"):
+            # terminology: the value stands for a set of codes
+            param_value = self.expand_token_value(param_value, modifier)
+            negate = modifier == "not-in"
+            modifier = None
 
         if modifier in ("missing", "exists"):
             term = self.create_exists_term(path_, param_value, modifier)
@@ -1414,6 +1603,9 @@ class Search(object):
                 if modifier == "identifier":
                     path_ = path_ / "identifier"
                     term_factory = self.create_identifier_term
+                elif modifier in ("text", "text-advanced"):
+                    path_ = path_ / "display"
+                    term_factory = self.create_term
                 else:
                     path_ = path_ / "reference"
                     term_factory = self.create_term
@@ -1435,6 +1627,19 @@ class Search(object):
                 term_factory = self.create_money_term
             elif klass_name == "Period":
                 term_factory = self.create_period_term
+            elif klass_name == "Range":
+                term_factory = self.create_range_element_term
+            elif klass_name == "Timing":
+                term_factory = self.create_timing_term
+            elif klass_name == "Attachment":
+                term_factory = self.create_attachment_term
+            elif klass_name == "Narrative":
+                term_factory = self.create_narrative_term
+            elif klass_name == "SampledData":
+                # a series of measurements, not a value a quantity can match
+                raise NotImplementedError(
+                    "SampledData values are not searchable by quantity"
+                )
             else:
                 raise NotImplementedError(
                     f"Can't perform search on element of type {klass_name}"
@@ -1442,10 +1647,121 @@ class Search(object):
             term = term_factory(path_, param_value, modifier)
         else:
             term = self.create_term(path_, param_value, modifier)
+        if negate:
+            # ``:not-in``: no value of the element is in the value set
+            terms = term if isinstance(term, list) else [term]
+            term = G_(*terms, path=path_, type_=GroupType.DECOUPLED).match_no_one()
         if isinstance(term, list):
             terms_container.extend(term)
         else:
             terms_container.append(term)
+
+    @staticmethod
+    def entry_path(entry):
+        """Element path of a normalized entry (``None``: the resource)."""
+        if isinstance(entry, CompositeTuple):
+            return entry.base_path
+        if isinstance(entry, ComputedPresence):
+            return entry.paths[0]
+        if isinstance(entry, AnyOf):
+            return Search.entry_path(entry[0])
+        return entry[0]
+
+    def expand_token_value(self, param_value, modifier):
+        """Replace each value of a token test by the codes it stands for:
+        the members of a value set (``:in`` / ``:not-in``) or the code with its
+        descendants (``:below``) or ancestors (``:above``)."""
+        terminology = get_terminology(self.context.engine)
+
+        def expand(leaf):
+            operator_, value = leaf
+            if modifier in ("in", "not-in"):
+                codes = terminology.expand(unescape_value(value))
+            else:
+                parts = split_escaped(value, "|")
+                if len(parts) == 1:
+                    system, code = None, unescape_value(parts[0])
+                elif len(parts) == 2 and parts[1]:
+                    system, code = unescape_value(parts[0]) or None, unescape_value(
+                        parts[1]
+                    )
+                else:
+                    raise ValidationError(
+                        f"``:{modifier}`` expects ``[system|]code``, got ``{value}``."
+                    )
+                codes = terminology.subsumption(system, code, modifier)
+            values = [
+                (
+                    "eq",
+                    f"{escape_value(system)}|{escape_value(code)}"
+                    if system
+                    else escape_value(code),
+                )
+                for system, code in codes
+            ]
+            if len(values) == 1:
+                return values[0]
+            return (None, values)
+
+        return map_normalized_values(param_value, expand)
+
+    def create_presence_term(self, presence: "ComputedPresence"):
+        """Computed boolean ``X.exists() and X != false`` (Patient
+        ``deceased``): true when the boolean choice is true or another choice
+        (e.g. a date) is present."""
+        _, value = presence.value
+        if value not in ("true", "false"):
+            raise ValidationError(
+                f"``{presence.code}`` expects ``true`` or ``false``, got ``{value}``."
+            )
+        terms: List = []
+        for path in presence.paths:
+            if path.context.type_name == "boolean":
+                terms.append(T_(path) == V_("true"))
+            else:
+                terms.append(self.value_exists_term(path))
+        group = G_(*terms, path=presence.paths[0], type_=GroupType.DECOUPLED)
+        wanted = value == "true"
+        if presence.modifier == "not":
+            wanted = not wanted
+        elif presence.modifier in ("missing", "exists"):
+            wanted = (value == "true") == (presence.modifier == "exists")
+        return group.match_any() if wanted else group.match_no_one()
+
+    def create_extension_term(self, path_, param_value, modifier):
+        """Search on an extension value: ``Patient.extension('url').value``
+        (``extension.where(url='...')``) - the url and the value must match in the
+        same extension."""
+        url = path_._where.value
+        subpath = path_._where.subpath or "value"
+        extension_path = ElementPath.from_el_path(path_.path)
+        extension_path.finalize(self.context.engine)
+        extension_path.search_param_type = path_.search_param_type
+        url_term = exact_(T_(extension_path / "url") == V_(url))
+        if modifier in ("missing", "exists"):
+            present = (param_value[1] == "true") == (modifier == "exists")
+            group = G_(url_term, path=extension_path, type_=GroupType.COUPLED)
+            return group if present else group.match_no_one()
+
+        value_names = (
+            [subpath]
+            if subpath != "value"
+            else EXTENSION_VALUE_TYPES.get(path_.search_param_type, [])
+        )
+        value_terms = []
+        for name in value_names:
+            try:
+                value_path = extension_path / name
+            except Exception:  # not a value type of this release
+                continue
+            value_terms.append((value_path, param_value, modifier))
+        if not value_terms:
+            raise NotImplementedError(
+                f"no extension value type for ``{path_.search_param_type}`` searches"
+            )
+        terms: List = []
+        self.add_term(AnyOf(value_terms), terms)
+        return G_(url_term, *terms, path=extension_path, type_=GroupType.COUPLED)
 
     def create_identifier_term(self, path_, param_value, modifier):
         """ """
@@ -1474,7 +1790,26 @@ class Search(object):
         has_pipe = has_unescaped(original_value, "|")
         terms = list()
 
-        if modifier == "text" and not has_pipe:
+        if modifier == "of-type":
+            # [system]|[code]|[value]: a type coding and the value, all required
+            parts = split_escaped(original_value, "|")
+            if len(parts) != 3 or not all(parts):
+                raise ValidationError(
+                    "``:of-type`` expects ``[system]|[code]|[value]``, "
+                    f"got ``{original_value}``."
+                )
+            coding = path_ / "type" / "coding"
+            terms.append(
+                G_(
+                    self.create_term(coding / "system", ("eq", parts[0]), None),
+                    self.create_term(coding / "code", ("eq", parts[1]), None),
+                    path=coding,
+                    type_=GroupType.COUPLED,
+                )
+            )
+            terms.append(self.create_term(path_ / "value", ("eq", parts[2]), None))
+
+        elif modifier == "text" and not has_pipe:
             # xxx: should be validation error if value contained pipe
             # make identifier.type.text query
             path_1 = path_ / "type" / "text"
@@ -1484,11 +1819,13 @@ class Search(object):
 
         elif has_pipe:
             if original_value.startswith("|"):
+                # ``|value``: the value, without a system
                 path_1 = path_ / "value"
                 new_value = (operator_, original_value[1:])
 
                 term = self.create_term(path_1, new_value, modifier)
                 terms.append(term)
+                terms.append(not_exists_(path_ / "system"))
 
             elif split_escaped(original_value, "|")[-1] == "":
                 path_1 = path_ / "system"
@@ -1628,9 +1965,7 @@ class Search(object):
         terms = list()
         subpredicate_modifier = None if modifier == "not" else modifier
 
-        if modifier == "text" and not has_pipe:
-            # xxx: should be validation error if value contained pipe
-            # make identifier.type.text query
+        if modifier in ("text", "text-advanced") and not has_pipe:
             path_1 = path_ / "display"
 
             term = self.create_term(path_1, value, modifier)
@@ -1638,11 +1973,13 @@ class Search(object):
 
         elif has_pipe:
             if original_value.startswith("|"):
+                # ``|code``: the code, without a system
                 path_1 = path_ / "code"
                 new_value = (value[0], original_value[1:])
 
                 term = self.create_term(path_1, new_value, subpredicate_modifier)
                 terms.append(term)
+                terms.append(not_exists_(path_ / "system"))
 
             elif split_escaped(original_value, "|")[-1] == "":
                 path_1 = path_ / "system"
@@ -1710,13 +2047,13 @@ class Search(object):
 
         has_pipe = has_unescaped(original_value, "|")
 
-        if modifier == "text" and not has_pipe:
-            # xxx: should be validation error if value contained pipe
-            # make identifier.type.text query
-            terms = list()
-            path_1 = path_ / "text"
-            terms.append(self.create_term(path_1, value, modifier))
-            return G_(*terms, path=path_, type_=GroupType.COUPLED)
+        if modifier in ("text", "text-advanced") and not has_pipe:
+            # the text of the concept or the display of any of its codings
+            terms = [
+                self.create_term(path_ / "text", value, modifier),
+                self.single_valued_coding_term(path_ / "coding", value, modifier),
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED).match_any()
 
         else:
             path_1 = path_ / "coding"
@@ -1745,15 +2082,11 @@ class Search(object):
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
-        if modifier == "text":
-            return self.create_term(path_ / "text", value, None)
-
+        sub_modifier = None if modifier == "not" else modifier
         terms = [
-            self.create_term(path_ / "text", value, None),
-            self.create_term(path_ / "city", value, None),
-            self.create_term(path_ / "country", value, None),
-            self.create_term(path_ / "postalCode", value, None),
-            self.create_term(path_ / "state", value, None),
+            self.create_term(path_ / name, value, sub_modifier)
+            for name in ADDRESS_STRING_ELEMENTS
+            if self.has_element(path_, name)
         ]
         group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
         if modifier == "not":
@@ -1762,6 +2095,15 @@ class Search(object):
             group.match_operator = MatchType.ANY
 
         return group
+
+    @staticmethod
+    def has_element(path_, name) -> bool:
+        """Whether the type of ``path_`` has an element ``name`` in this
+        release."""
+        model_class = getattr(path_.context.type_class, "model_class", None)
+        if model_class is None:
+            return True
+        return any(f.alias == name for f in model_class.model_fields.values())
 
     def create_contactpoint_term(self, path_, param_value, modifier):
         """ """
@@ -1802,11 +2144,8 @@ class Search(object):
             ]
             group = G_(*terms, path=path_, type_=GroupType.COUPLED)  # Term or Group
         else:
-            terms = [
-                self.create_term(path_ / "system", value, None),
-                self.create_term(path_ / "use", value, None),
-                self.create_term(path_ / "value", value, None),
-            ]
+            # a ContactPoint token matches its value
+            terms = [self.create_term(path_ / "value", value, None)]
             group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
         if modifier == "not":
             group.match_operator = MatchType.NONE
@@ -1839,15 +2178,10 @@ class Search(object):
             ]
             return G_(*terms, path=path_, type_=GroupType.DECOUPLED)  # IN Like Group
 
-        if modifier == "text":
-            return self.create_term(path_ / "text", value, None)
-
+        sub_modifier = None if modifier == "not" else modifier
         terms = [
-            self.create_term(path_ / "text", value, None),
-            self.create_term(path_ / "family", value, None),
-            self.create_term(path_ / "given", value, None),
-            self.create_term(path_ / "prefix", value, None),
-            self.create_term(path_ / "suffix", value, None),
+            self.create_term(path_ / name, value, sub_modifier)
+            for name in HUMANNAME_STRING_ELEMENTS
         ]
         group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
         if modifier == "not":
@@ -1891,21 +2225,50 @@ class Search(object):
         return self.create_term(new_path, value, modifier)
 
     def create_exists_term(self, path_, param_value, modifier):
-        """ """
+        """``:missing`` (and the non-standard ``:exists``). An element that only
+        carries extensions (e.g. a data-absent-reason) counts as missing."""
         if isinstance(param_value, tuple):
             operator_, original_value = param_value
             if (original_value == "true" and modifier == "exists") or (
                 original_value == "false" and modifier == "missing"
             ):
-                return exists_(path_)
+                return self.value_exists_term(path_)
             elif (original_value == "true" and modifier == "missing") or (
                 original_value == "false" and modifier == "exists"
             ):
-                return not_exists_(path_)
+                term = self.value_exists_term(path_)
+                if IGroupTerm.providedBy(term):
+                    return term.match_no_one()
+                return not_(term)
 
             raise NotImplementedError
 
         raise NotImplementedError
+
+    # elements that do not make a value present
+    NON_VALUE_ELEMENTS = ("id", "extension", "modifierExtension", "fhir_comments")
+
+    def value_exists_term(self, path_):
+        """The element has a value: a primitive value, or any element of a
+        complex type other than ``id`` and extensions."""
+        model_class = getattr(path_.context.type_class, "model_class", None)
+        if path_.context.type_is_primitive or model_class is None:
+            return exists_(path_)
+        terms = []
+        for field in model_class.model_fields.values():
+            extra = field.json_schema_extra or {}
+            if not extra.get("element_property") or (
+                field.alias in self.NON_VALUE_ELEMENTS
+            ):
+                continue
+            try:
+                terms.append(exists_(path_ / field.alias))
+            except Exception:  # an element the path layer does not know
+                continue
+        if not terms:
+            return exists_(path_)
+        group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+        return group.match_any()
 
     def create_money_term(self, path_, param_value, modifier):
         """ """
@@ -1983,6 +2346,154 @@ class Search(object):
         assert self.context.engine.fhir_release == FHIR_VERSION.STU3
         return self.single_valued_quantity_term(path_, value, modifier)
 
+    def _each_value(self, path_, param_value, modifier, single):
+        """Apply ``single`` to every value: AND list -> list of terms, OR tuple
+        -> DECOUPLED group."""
+        if isinstance(param_value, list):
+            return [self._each_value(path_, v, modifier, single) for v in param_value]
+        operator_, original_value = param_value
+        if isinstance(original_value, list):
+            terms = [
+                self._each_value(path_, v, modifier, single) for v in original_value
+            ]
+            return G_(*terms, path=path_, type_=GroupType.DECOUPLED).match_any()
+        return single(path_, param_value, modifier)
+
+    def create_range_element_term(self, path_, param_value, modifier):
+        """Quantity or number search on a ``Range``: the resource value is the
+        explicit range ``[low, high]`` (a missing bound is open)."""
+        return self._each_value(
+            path_, param_value, modifier, self.single_valued_range_element_term
+        )
+
+    def single_valued_range_element_term(self, path_, value, modifier):
+        operator_, original_value = value
+        parts = split_escaped(original_value, "|")
+        number = unescape_value(parts[0])
+        low, high = path_ / "low", path_ / "high"
+        low_value, high_value = low / "value", high / "value"
+
+        def cmp(path, op, bound):
+            return self.create_term(path, (op, bound), None)
+
+        if operator_ in ("eq", "ne", "ap"):
+            p_low, p_high, high_inclusive = number_bounds(number, operator_, "decimal")
+            inside = G_(
+                cmp(low_value, "ge", p_low),
+                cmp(high_value, "le" if high_inclusive else "lt", p_high),
+                path=path_,
+                type_=GroupType.COUPLED,
+            )
+            if operator_ == "ap":
+                # overlap
+                inside = G_(
+                    cmp(low_value, "le", p_high),
+                    cmp(high_value, "ge", p_low),
+                    path=path_,
+                    type_=GroupType.COUPLED,
+                )
+            terms = [inside]
+            if operator_ == "ne":
+                terms = [inside.match_no_one()]
+        elif operator_ in ("gt", "ge"):
+            terms = [
+                G_(
+                    cmp(high_value, operator_, number),
+                    G_(
+                        exists_(low_value),
+                        not_exists_(high_value),
+                        path=path_,
+                        type_=GroupType.COUPLED,
+                    ),
+                    path=path_,
+                    type_=GroupType.DECOUPLED,
+                ).match_any()
+            ]
+        elif operator_ in ("lt", "le"):
+            terms = [
+                G_(
+                    cmp(low_value, operator_, number),
+                    G_(
+                        exists_(high_value),
+                        not_exists_(low_value),
+                        path=path_,
+                        type_=GroupType.COUPLED,
+                    ),
+                    path=path_,
+                    type_=GroupType.DECOUPLED,
+                ).match_any()
+            ]
+        elif operator_ == "sa":
+            terms = [cmp(low_value, "gt", number)]
+        elif operator_ == "eb":
+            terms = [cmp(high_value, "lt", number)]
+        else:
+            raise NotImplementedError(f"prefix {operator_} not handled for ranges.")
+
+        # units: [number]|[system]|[code] or [number]||[code]
+        if len(parts) == 3 and parts[2]:
+            for bound in (low, high):
+                if parts[1]:
+                    unit_terms = [
+                        self.create_term(bound / "system", ("eq", parts[1]), None),
+                        self.create_term(bound / "code", ("eq", parts[2]), None),
+                    ]
+                    unit = G_(*unit_terms, path=bound, type_=GroupType.COUPLED)
+                else:
+                    unit = G_(
+                        self.create_term(bound / "code", ("eq", parts[2]), None),
+                        self.create_term(bound / "unit", ("eq", parts[2]), None),
+                        path=bound,
+                        type_=GroupType.DECOUPLED,
+                    ).match_any()
+                terms.append(
+                    G_(
+                        unit,
+                        not_exists_(bound / "value"),
+                        path=bound,
+                        type_=GroupType.DECOUPLED,
+                    ).match_any()
+                )
+        return G_(*terms, path=path_, type_=GroupType.COUPLED)
+
+    def create_timing_term(self, path_, param_value, modifier):
+        """Date search on a ``Timing``: its events or the bounds of its
+        repetition."""
+        def single(path, value, modifier_):
+            terms = [self.create_term(path / "event", value, modifier_)]
+            try:
+                bounds = path / "repeat" / "boundsPeriod"
+            except Exception:  # no boundsPeriod in this release
+                bounds = None
+            if bounds is not None:
+                terms.append(self.single_valued_period_term(bounds, value, modifier_))
+            return G_(*terms, path=path, type_=GroupType.DECOUPLED).match_any()
+
+        return self._each_value(path_, param_value, modifier, single)
+
+    # element of an Attachment searched by each parameter type
+    ATTACHMENT_ELEMENTS = {
+        "uri": ("url",),
+        "string": ("title",),
+        "token": ("contentType", "language"),
+        "date": ("creation",),
+    }
+
+    def create_attachment_term(self, path_, param_value, modifier):
+        names = self.ATTACHMENT_ELEMENTS.get(getattr(path_, "search_param_type", None))
+        if not names:
+            raise NotImplementedError(
+                f"Can't perform a {path_.search_param_type} search on an Attachment"
+            )
+        terms = [self.create_term(path_ / name, param_value, modifier) for name in names]
+        if len(terms) == 1:
+            return terms[0]
+        return G_(*terms, path=path_, type_=GroupType.DECOUPLED).match_any()
+
+    def create_narrative_term(self, path_, param_value, modifier):
+        """Full-text search on the narrative (``_text``)."""
+        return self.create_term(path_ / "div", param_value, "text")
+
     def create_period_term(self, path_, param_value, modifier):
         if isinstance(param_value, list):
             terms = [
@@ -2054,12 +2565,14 @@ class Search(object):
             ]
             type_ = GroupType.COUPLED
         elif operator == "ap":
-            start_terms = [
-                self.create_term(path_ / "start", ("le", original_value), modifier)
-            ]
+            # the period overlaps the value's range widened by 10 % of the gap
+            # between now and the date
+            low, high, _ = approximate_date_range(unescape_value(original_value))
+            low, high = low.isoformat(), high.isoformat()
+            start_terms = [self.create_term(path_ / "start", ("le", high), modifier)]
             start_group = G_(*start_terms, path=path_, type_=GroupType.COUPLED)
             end_terms = [
-                self.create_term(path_ / "end", ("ge", original_value), modifier),
+                self.create_term(path_ / "end", ("ge", low), modifier),
                 not_exists_(path_ / "end"),
             ]
             end_group = G_(*end_terms, path=path_, type_=GroupType.DECOUPLED)
@@ -2082,7 +2595,18 @@ class Search(object):
             )
 
     def create_term(self, path_, value, modifier):
-        """ """
+        """Term on a primitive element. The match semantics follow the search
+        parameter type (``path_.search_param_type``):
+
+        * string: case-insensitive starts-with (``:exact`` exact, ``:contains``
+          anywhere, ``:text`` all words);
+        * token: exact, case-sensitive match of the code (case-insensitive on
+          string elements); ``:text`` / ``:code-text`` starts-with,
+          ``:text-advanced`` all words;
+        * uri: exact (``:below`` / ``:above`` by path segments);
+        * number / date / quantity: the implicit range of the value
+          (``100`` -> [99.5, 100.5), ``2013-01`` -> the whole month).
+        """
         assert path_.context.get_real_type_class() is bool or (
             getattr(path_.context.get_real_type_class(), "is_primitive", None)
             and path_.context.get_real_type_class().is_primitive() is True
@@ -2107,6 +2631,38 @@ class Search(object):
                 else:
                     return group.match_any()
 
+            element_type = path_.context.type_name
+            param_type = getattr(path_, "search_param_type", None)
+            if param_type == "token" and has_unescaped(original_value, "|"):
+                # a code element has an implicit system: ``[system]|[code]``
+                # and ``|[code]`` test the code, ``[system]|`` any code
+                parts = split_escaped(original_value, "|")
+                if len(parts) != 2:
+                    raise ValidationError(
+                        f"Invalid token ``{original_value}`` for {path_._raw}."
+                    )
+                if not parts[1]:
+                    return exists_(path_)
+                original_value = parts[1]
+            raw_value = unescape_value(original_value)
+
+            if isinstance(raw_value, str) and param_type not in ("string", "token"):
+                if element_type in NUMBER_TYPES and operator_ in ("eq", "ne", "ap"):
+                    bounds = number_bounds(raw_value, operator_, element_type)
+                    return self.create_range_term(path_, operator_, bounds, modifier)
+                if element_type in DATE_TYPES:
+                    if operator_ in ("eq", "ne", "ap"):
+                        bounds = date_bounds(raw_value, operator_, element_type)
+                        return self.create_range_term(
+                            path_, operator_, bounds, modifier
+                        )
+                    if operator_ in DATE_PREFIX_BOUNDS:
+                        which, operator_ = DATE_PREFIX_BOUNDS[operator_]
+                        raw_value = date_bound(raw_value, element_type, which)
+
+            if param_type == "uri" and modifier in ("below", "above"):
+                return self.create_uri_hierarchy_term(path_, raw_value, modifier)
+
             term = T_(path_)
             if modifier == "not":
                 term = not_(term)
@@ -2116,13 +2672,14 @@ class Search(object):
                 operator_ = "eb"
             elif modifier == "exact":
                 term = exact_(term)
-            val = V_(unescape_value(original_value))
+            val = V_(raw_value)
 
             if operator_ == "eq":
                 if modifier == "contains":
                     term = contains_(term, val)
                 else:
                     term = term == val
+                    self.set_match_type(term, param_type, element_type, modifier)
             elif operator_ == "ne":
                 term = term != val
             elif operator_ == "lt":
@@ -2151,6 +2708,80 @@ class Search(object):
 
             g_term = G_(*terms, path=path_, type_=GroupType.COUPLED)
             return g_term
+
+    @staticmethod
+    def set_match_type(term, param_type, element_type, modifier):
+        """Match semantics of an equality test (see ``create_term``)."""
+        if modifier in ("text", "code-text") or (
+            param_type == "string" and modifier is None
+        ):
+            term.set_match_type(TermMatchType.STARTWITH)
+        elif modifier == "text-advanced" or (
+            param_type == "string" and modifier == "text"
+        ):
+            term.set_match_type(TermMatchType.FULLTEXT)
+        elif param_type in ("token", "uri") and modifier in (None, "not"):
+            term.set_match_type(TermMatchType.EXACT)
+            # a token on a string element is a case-insensitive full match
+            term.case_insensitive = param_type == "token" and element_type in (
+                "string",
+                "markdown",
+            )
+
+    def create_range_term(self, path_, operator_, bounds, modifier):
+        """``eq`` / ``ap``: the element lies in the range; ``ne``: outside it
+        (prefixes never match a missing element)."""
+        low, high, high_inclusive = bounds
+        if operator_ == "ne":
+            below = T_(path_) < V_(low)
+            above = (T_(path_) > V_(high)) if high_inclusive else T_(path_) >= V_(high)
+            group = G_(below, above, path=path_, type_=GroupType.DECOUPLED)
+            return group.match_any()
+        term = T_(path_) == V_(low)
+        term.bounds = bounds
+        if modifier == "not":
+            term = not_(term)
+        return term
+
+    def create_uri_hierarchy_term(self, path_, value, modifier):
+        """``url:below=http://acme.org/fhir`` matches the url and every url
+        below it (by path segment); ``:above`` the url and its ancestors.
+        ``url|version`` (canonical) compares versions instead."""
+        if "|" in value:
+            url, _, version = value.partition("|")
+            if modifier == "below":
+                terms = [
+                    exact_(T_(path_) == V_(value)),
+                    sa_(T_(path_), V_(f"{url}|{version}.")),
+                ]
+            else:
+                parts = version.split(".")
+                values = [url] + [
+                    f"{url}|{'.'.join(parts[:i])}" for i in range(1, len(parts) + 1)
+                ]
+                terms = [exact_(T_(path_) == V_(v)) for v in values]
+        elif modifier == "below":
+            base = value.rstrip("/")
+            terms = [
+                exact_(T_(path_) == V_(base)),
+                sa_(T_(path_), V_(base + "/")),
+            ]
+            if base != value:
+                terms.append(exact_(T_(path_) == V_(value)))
+        else:
+            if not uri_scheme.match(value):
+                # URNs and OIDs have no hierarchy
+                return exact_(T_(path_) == V_(value))
+            scheme, _, rest = value.partition("://")
+            segments = rest.rstrip("/").split("/")
+            values = [
+                f"{scheme}://{'/'.join(segments[:i])}"
+                for i in range(1, len(segments) + 1)
+            ]
+            values += [v + "/" for v in values]
+            terms = [exact_(T_(path_) == V_(v)) for v in values]
+        group = G_(*terms, path=path_, type_=GroupType.DECOUPLED)
+        return group.match_any()
 
     def validate(self):
         """ """
