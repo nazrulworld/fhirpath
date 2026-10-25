@@ -950,7 +950,8 @@ def _resource_profiles(release: FHIR_VERSION) -> Dict[str, Any]:
             entry["resource"]["type"]: entry["resource"]
             for entry in bundle.get("entry", [])
             if entry["resource"].get("kind") == "resource"
-            and entry["resource"].get("derivation", "specialization") == "specialization"
+            and entry["resource"].get("derivation", "specialization")
+            == "specialization"
         }
     return _PROFILES[release.name]
 
@@ -1010,7 +1011,8 @@ def tag_subsetted(resource):
     meta = resource.setdefault("meta", {})
     tags = meta.setdefault("tag", [])
     if not any(
-        t.get("code") == SUBSETTED_TAG["code"] and t.get("system") == SUBSETTED_TAG["system"]
+        t.get("code") == SUBSETTED_TAG["code"]
+        and t.get("system") == SUBSETTED_TAG["system"]
         for t in tags
     ):
         tags.append(dict(SUBSETTED_TAG))
@@ -1238,9 +1240,7 @@ class Search(object):
         """A resource is in the compartment when any of the compartment
         parameters of its type refers to the owner (or it is the owner)."""
         code, id_ = self.compartment
-        params_by_type = compartment_definitions(self.context.engine.fhir_release)[
-            code
-        ]
+        params_by_type = compartment_definitions(self.context.engine.fhir_release)[code]
         terms: List = []
         for resource_type in self.context.resource_types:
             params = list(params_by_type.get(resource_type, []))
@@ -1251,7 +1251,9 @@ class Search(object):
                     f"{resource_type} is not in the {code} compartment."
                 )
             context = SearchContext(
-                self.context.engine, resource_type, unrestricted=self.context.unrestricted
+                self.context.engine,
+                resource_type,
+                unrestricted=self.context.unrestricted,
             )
             alternatives: List = []
             for param in params:
@@ -1424,7 +1426,9 @@ class Search(object):
         _score = self._single_param(all_params, "_score")
         if _score is not None:
             if _score not in ("true", "false"):
-                raise ValidationError(f"'_score' must be true or false, got '{_score}'.")
+                raise ValidationError(
+                    f"'_score' must be true or false, got '{_score}'."
+                )
             self.result_params["_score"] = _score == "true"
 
         _type = all_params.popone("_type", None)
@@ -1468,7 +1472,6 @@ class Search(object):
         if any(v for _, v in _has):
             self.result_params["_has"] = [(k, v) for k, v in _has if v]
         [all_params.popall(k, None) for k, _ in _has]
-
 
         _elements = self._single_param(all_params, "_elements")
         if _elements:
@@ -1709,7 +1712,9 @@ class Search(object):
             if ids:
                 self.add_term(context.normalize_param("_id", [",".join(ids)]), terms)
             if negate:
-                terms = [G_(*terms, path=None, type_=GroupType.DECOUPLED).match_no_one()]
+                terms = [
+                    G_(*terms, path=None, type_=GroupType.DECOUPLED).match_no_one()
+                ]
             return terms
         if first_link.startswith("_has:"):
             references = yield from self._resolve_has_link(context, links, value)
@@ -1969,9 +1974,7 @@ class Search(object):
             parts = name.split(":")
             if len(parts) != 2 or parts[1] not in ("below", "above"):
                 continue
-            definitions = [
-                getattr(d, parts[0], None) for d in self.context.definitions
-            ]
+            definitions = [getattr(d, parts[0], None) for d in self.context.definitions]
             if any(d is not None and d.type == "reference" for d in definitions):
                 names.append(name)
         return sorted(names)
@@ -2005,9 +2008,7 @@ class Search(object):
                     if match is not None:
                         roots = [(match.group("type"), match.group("id"))]
                     elif plain_reference_id(leaf):
-                        roots = [
-                            (t, leaf) for t in targets if self.hierarchy_param(t)
-                        ]
+                        roots = [(t, leaf) for t in targets if self.hierarchy_param(t)]
                     else:
                         raise ValidationError(
                             f"``{name}`` expects ``[Type/]id``, got ``{leaf}``."
@@ -2265,7 +2266,9 @@ class Search(object):
             terms: List = []
             for ref_param, refs in items:
                 try:
-                    normalized = context.normalize_param(ref_param.code, [",".join(refs)])
+                    normalized = context.normalize_param(
+                        ref_param.code, [",".join(refs)]
+                    )
                     self.add_term(normalized, terms)
                 except NotImplementedError:
                     continue
@@ -2283,9 +2286,7 @@ class Search(object):
             terms = []
             for component in normalized_data:
                 self.add_term(component, terms)
-            group = G_(
-                *terms, path=normalized_data.base_path, type_=GroupType.COUPLED
-            )
+            group = G_(*terms, path=normalized_data.base_path, type_=GroupType.COUPLED)
             terms_container.append(group)
             return group
 
@@ -2449,9 +2450,11 @@ class Search(object):
             values = [
                 (
                     "eq",
-                    f"{escape_value(system)}|{escape_value(code)}"
-                    if system
-                    else escape_value(code),
+                    (
+                        f"{escape_value(system)}|{escape_value(code)}"
+                        if system
+                        else escape_value(code)
+                    ),
                 )
                 for system, code in codes
             ]
@@ -3242,6 +3245,7 @@ class Search(object):
     def create_timing_term(self, path_, param_value, modifier):
         """Date search on a ``Timing``: its events or the bounds of its
         repetition."""
+
         def single(path, value, modifier_):
             terms = [self.create_term(path / "event", value, modifier_)]
             try:
@@ -3268,7 +3272,9 @@ class Search(object):
             raise NotImplementedError(
                 f"Can't perform a {path_.search_param_type} search on an Attachment"
             )
-        terms = [self.create_term(path_ / name, param_value, modifier) for name in names]
+        terms = [
+            self.create_term(path_ / name, param_value, modifier) for name in names
+        ]
         if len(terms) == 1:
             return terms[0]
         return G_(*terms, path=path_, type_=GroupType.DECOUPLED).match_any()
@@ -3663,7 +3669,10 @@ class Search(object):
         by family then given name, a CodeableConcept by its code (``:text``:
         by its text), a Period by its start..."""
         type_class = path_.context.get_real_type_class()
-        if getattr(type_class, "is_primitive", None) is None or type_class.is_primitive():
+        if (
+            getattr(type_class, "is_primitive", None) is None
+            or type_class.is_primitive()
+        ):
             return [path_]
         type_name = type_class.fhir_type_name()
         table = SORT_TEXT_LEAVES if modifier == "text" else SORT_LEAVES
@@ -3859,7 +3868,9 @@ class Search(object):
             self.attach_scores(bundle, result)
         if as_json:
             return bundle
-        model = lookup_fhir_class("Bundle", fhir_release=self.context.engine.fhir_release)
+        model = lookup_fhir_class(
+            "Bundle", fhir_release=self.context.engine.fhir_release
+        )
         return model.model_validate(bundle)
 
     def subset_results(self, result, includes):
@@ -3895,9 +3906,7 @@ class Search(object):
         if not scores or any(score is None for score in scores):
             return
         best = max(scores)
-        matches = [
-            e for e in bundle.get("entry", []) if e["search"]["mode"] == "match"
-        ]
+        matches = [e for e in bundle.get("entry", []) if e["search"]["mode"] == "match"]
         for entry, score in zip(matches, scores):
             entry["search"]["score"] = round(score / best, 4) if best > 0 else 1.0
 
@@ -4093,7 +4102,9 @@ class Search(object):
         if len(self.context.resource_types) <= 1:
             return [self.context]
         return [
-            SearchContext(self.context.engine, t, unrestricted=self.context.unrestricted)
+            SearchContext(
+                self.context.engine, t, unrestricted=self.context.unrestricted
+            )
             for t in self.context.resource_types
         ]
 

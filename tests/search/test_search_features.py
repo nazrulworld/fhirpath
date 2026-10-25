@@ -2,6 +2,7 @@
 """Search features (FHIR R5 search §3.2.1.6-3.2.1.7, search_filter.html):
 _filter, _query, _text / _content, _list / _in, compartments, system-level
 search, near and POST _search."""
+
 import json
 
 import pytest
@@ -148,18 +149,29 @@ def test_filter_syntax_errors(text):
         ("Observation", f"subject.id eq {PATIENT_ID}", 1),
         ("Observation", "value-quantity gt 7", 1),
         ("Observation", "value-quantity ap 7.2|ucum|g/dL", 1),
-        ("Observation", "code-value-quantity eq code$loinc|718-7,value-quantity$7.2", 1),
-        ("Observation", "code-value-quantity ne code$loinc|718-7,value-quantity$7.2", 0),
+        (
+            "Observation",
+            "code-value-quantity eq code$loinc|718-7,value-quantity$7.2",
+            1,
+        ),
+        (
+            "Observation",
+            "code-value-quantity ne code$loinc|718-7,value-quantity$7.2",
+            0,
+        ),
     ],
 )
 def test_filter_search(es_data, engine, resource_type, expression, expected):
-    assert total(engine, resource_type, "", params=(("_filter", expression),)) == expected
+    assert (
+        total(engine, resource_type, "", params=(("_filter", expression),)) == expected
+    )
 
 
 def test_filter_errors(offline_engine):
     with raises(ValidationError, match="does not apply"):
         search = Search(
-            SearchContext(offline_engine, "Patient"), params=(("_filter", "gender co x"),)
+            SearchContext(offline_engine, "Patient"),
+            params=(("_filter", "gender co x"),),
         )
         next(search.execute())
     with raises(ValidationError, match="not a reference"):
@@ -391,13 +403,13 @@ def test_bad_compartment(offline_engine):
 
 def test_system_level_search(es_data, engine):
     # only the common parameters: others are ignored
-    search = Search(SearchContext(engine, None), query_string=f"_id={PATIENT_ID}&gender=male")
+    search = Search(
+        SearchContext(engine, None), query_string=f"_id={PATIENT_ID}&gender=male"
+    )
     assert search.ignored_params == ["gender"]
     assert search().total == 1
     # with _type, the parameters of those types
-    assert (
-        total(engine, None, f"_type=Patient,Observation&_id={PATIENT_ID}") == 1
-    )
+    assert total(engine, None, f"_type=Patient,Observation&_id={PATIENT_ID}") == 1
 
 
 def test_types_with_different_parameter_types(offline_engine):
@@ -427,7 +439,9 @@ def test_near(offline_engine):
 
 def test_post_search(es_data, engine):
     context = SearchContext(engine, "Patient")
-    search = Search(context, query_string="_count=5", form_body="gender=male&name=saint")
+    search = Search(
+        context, query_string="_count=5", form_body="gender=male&name=saint"
+    )
     assert dict(search.applied_params) == {
         "_count": "5",
         "gender": "male",
@@ -463,7 +477,9 @@ def test_capability_statement(release):
     class Engine(ElasticsearchEngine):
         def __init__(self):
             super().__init__(
-                FHIR_VERSION[release], lambda x: None, lambda x: ElasticSearchDialect(None)
+                FHIR_VERSION[release],
+                lambda x: None,
+                lambda x: ElasticSearchDialect(None),
             )
 
     statement = capability_statement(Engine(), ["Patient", "Observation"])
@@ -477,8 +493,12 @@ def test_capability_statement(release):
     assert {"name", "birthdate", "gender", "_id"} <= names
     assert "Patient:general-practitioner" in patient["searchInclude"]
     assert "Observation:subject" in patient["searchRevInclude"]
-    assert all(p.get("definition") for p in patient["searchParam"] if p["name"] == "name")
-    assert {"_id", "_lastUpdated", "_filter"} <= {p["name"] for p in rest["searchParam"]}
+    assert all(
+        p.get("definition") for p in patient["searchParam"] if p["name"] == "name"
+    )
+    assert {"_id", "_lastUpdated", "_filter"} <= {
+        p["name"] for p in rest["searchParam"]
+    }
 
 
 def test_named_queries_in_capability_statement(offline_engine):
@@ -501,3 +521,23 @@ def test_named_queries_in_capability_statement(offline_engine):
             "definition": "http://example.org/OperationDefinition/current-high-risk",
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_async_filter_and_compartment(es_data, async_engine):
+    from fhirpath.search.search import AsyncSearch
+
+    search = AsyncSearch(
+        SearchContext(async_engine, "Observation"),
+        params=(("_filter", 'code eq loinc|718-7 and subject.name co "saint"'),),
+    )
+    bundle = await search()
+    assert bundle.total == 1
+
+    search = AsyncSearch(
+        SearchContext(async_engine, "Observation"),
+        params=(("_include:iterate", "Observation:subject"),),
+        compartment=f"Patient/{PATIENT_ID}",
+    )
+    bundle = await search(as_json=True)
+    assert [e["search"]["mode"] for e in bundle["entry"]] == ["match", "include"]

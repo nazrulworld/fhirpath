@@ -35,6 +35,13 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] Unsupported target types: Range, Timing, SampledData, Attachment, Narrative; non-path expression
       branches (`extension(url)`, computed `deceased`).
 
+Done (2026-10-25): `ranges.py` (precision ranges, `ap`), match types per parameter type in
+`Search.create_term`/`set_match_type`, `terminology.py` for token `:below`/`:above`, reference hierarchies
+(`resolve_hierarchy`), uri path segments, `reference_variants`, `value_exists_term`, `CompositeTuple`,
+Range/Timing/Attachment/Narrative/extension/`ComputedPresence` targets. SampledData deliberately never
+matches a quantity; accent-insensitive strings need an `asciifolding` normalizer in the index.
+Tests: `tests/search/test_matching.py`, `test_chaining.py`.
+
 ## C. Modifiers not implemented
 
 - [x] `:in` / `:not-in` (ValueSet expansion)
@@ -42,6 +49,10 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] `:code-text`, `:text-advanced` (R5)
 - [x] `:[type]` on plain reference params (`subject:Patient=23` → `subject=Patient/23`)
 - [x] `:iterate` (`:recurse` in STU3) for `_include`/`_revinclude`
+
+Done (2026-10-25): `InMemoryTerminology` (release value sets + registered resources; `engine.terminology`
+for another service), `:of-type`, `:code-text`/`:text-advanced` (R5 only), modifiers per spec matrix and
+release; `resolve_includes` with `:iterate`.
 
 ## D. Result parameters
 
@@ -55,6 +66,10 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] `_maxresults`, `_score`, `_graph`
 - [x] `_sort`: all expression paths, chained sort
 
+Done (2026-10-25): `Search.prepare_params` validates every result parameter; `page_window`, `response`
+(`_total=none`, `_score`, `subset_results`), `subsetting_elements`, `sort_fields`/`sort_leaves`,
+`chained_sort_page` (in memory), `graph.py`. Tests: `tests/search/test_results.py`.
+
 ## E. Search features not implemented
 
 - [x] `_filter` (grammar + operators)
@@ -65,6 +80,10 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] System-level search: only common params unless `_type` given
 - [x] `near` (special)
 
+Done (2026-10-25): `filter.py`, `register_named_query`, `text_terms`, `membership_ids`, `compartment=` on
+`Search`/`fhir_search` (`compartment_definitions` downloads the CompartmentDefinitions), `near_box` (a box,
+not sorted by distance). Tests: `tests/search/test_search_features.py`.
+
 ## F. Errors / HTTP layer
 
 - [x] Unknown params: ignore by default (drop from self link); raise only with `Prefer: handling=strict`
@@ -73,9 +92,9 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 - [x] `OperationOutcome` entries (`search.mode=outcome`) for warnings – ignored unknown params now;
       more warnings (unknown codes/ids) can be added via `Search.outcome_issues()`
 - [x] CapabilityStatement search capability output
-- [x] `POST _search` (form body)
+- [x] `POST _search` (form body) – `Search(..., form_body=…)` / `fhir_search(..., form_body=…)`
 
 ## G. Housekeeping
 
-- [ ] Keep `.claude/skills/fhir-search/references/project-map.md` deviations table in sync
-- [ ] Spec-example tests in `tests/search/` for each item
+- [x] Keep `.claude/skills/fhir-search/references/project-map.md` deviations table in sync
+- [x] Spec-example tests in `tests/search/` for each item

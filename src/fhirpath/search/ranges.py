@@ -7,6 +7,7 @@ Every search value stands for a range implied by its precision: ``100`` is
 the whole minute. ``ap`` widens the range by 10 % of the value (numbers) or of
 the gap between now and the date (dates).
 """
+
 import calendar
 import datetime
 import math

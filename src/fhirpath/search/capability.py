@@ -3,6 +3,7 @@
 ``rest.resource.searchParam`` / ``searchInclude`` / ``searchRevInclude`` and
 the system-wide ``rest.searchParam``, for the parameters this package can
 search on."""
+
 import datetime
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -39,7 +40,9 @@ def _storage(engine):
 
     # makes sure the definitions are loaded
     SearchContext(engine, None)
-    return SEARCH_PARAMETERS_STORAGE.get(FHIR_VERSION.normalize(engine.fhir_release).name)
+    return SEARCH_PARAMETERS_STORAGE.get(
+        FHIR_VERSION.normalize(engine.fhir_release).name
+    )
 
 
 def is_supported(engine, resource_type: str, search_param) -> bool:
@@ -159,9 +162,7 @@ def search_capabilities(
             system_params.append({"name": code, "definition": url, "type": "special"})
     rest: Dict[str, Any] = {
         "mode": "server",
-        "resource": [
-            resource_search_capabilities(engine, t, reverse) for t in types
-        ],
+        "resource": [resource_search_capabilities(engine, t, reverse) for t in types],
         "interaction": [{"code": "search-system"}],
         "searchParam": system_params,
     }

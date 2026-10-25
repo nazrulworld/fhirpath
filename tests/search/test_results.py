@@ -1,12 +1,10 @@
 # _*_ coding: utf-8 _*_
 """Result parameters (FHIR R5 search §3.2.1.7): _total, _count, _maxresults,
 _score, _summary / _elements (SUBSETTED), _contained, _sort and _graph."""
-import json
 
 import pytest
 from pytest import raises
 
-from fhirpath.enums import SortOrderType
 from fhirpath.search.dialects.elasticsearch import ElasticSearchDialect
 from fhirpath.search.engine import (
     EngineResult,
@@ -294,7 +292,10 @@ def test_graph_links_r4_and_r5():
                     {
                         "type": "Patient",
                         "link": [
-                            {"path": "Patient.link.other", "target": [{"type": "Patient"}]}
+                            {
+                                "path": "Patient.link.other",
+                                "target": [{"type": "Patient"}],
+                            }
                         ],
                     }
                 ],
@@ -312,7 +313,9 @@ def test_graph_links_r4_and_r5():
             {"nodeId": "comp", "type": "Composition"},
             {"nodeId": "pat", "type": "Patient"},
         ],
-        "link": [{"sourceId": "comp", "path": "Composition.subject", "targetId": "pat"}],
+        "link": [
+            {"sourceId": "comp", "path": "Composition.subject", "targetId": "pat"}
+        ],
     }
     (link,) = graph_links(r5)
     assert (link.path, link.target_type) == ("Composition.subject", "Patient")

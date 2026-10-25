@@ -3,6 +3,7 @@
 ranges and prefixes, string / token / uri matching, terminology modifiers,
 composites, computed and extension parameters. The ``es_data`` tests run
 against Elasticsearch (Docker); the others compile queries offline."""
+
 import json
 
 import pytest
@@ -275,7 +276,9 @@ def terminology(engine):
                 "concept": [
                     {
                         "code": "LP-blood",
-                        "concept": [{"code": "LP-hemo", "concept": [{"code": "718-7"}]}],
+                        "concept": [
+                            {"code": "LP-hemo", "concept": [{"code": "718-7"}]}
+                        ],
                     },
                     {"code": "LP-other"},
                 ],
@@ -289,7 +292,11 @@ def terminology(engine):
                         {
                             "system": "http://loinc.org",
                             "filter": [
-                                {"property": "concept", "op": "is-a", "value": "LP-hemo"}
+                                {
+                                    "property": "concept",
+                                    "op": "is-a",
+                                    "value": "LP-hemo",
+                                }
                             ],
                         }
                     ]
@@ -300,7 +307,10 @@ def terminology(engine):
                 "url": "http://example.org/vs/other",
                 "compose": {
                     "include": [
-                        {"system": "http://loinc.org", "concept": [{"code": "LP-other"}]}
+                        {
+                            "system": "http://loinc.org",
+                            "concept": [{"code": "LP-other"}],
+                        }
                     ]
                 },
             },
@@ -328,7 +338,9 @@ def test_terminology_expansion(terminology):
 
 
 def test_terminology_subsumption(terminology):
-    assert [c for _, c in terminology.subsumption("http://loinc.org", "LP-blood", "below")] == [
+    assert [
+        c for _, c in terminology.subsumption("http://loinc.org", "LP-blood", "below")
+    ] == [
         "LP-blood",
         "LP-hemo",
         "718-7",
@@ -355,7 +367,9 @@ def test_search_in_and_not_in(es_data, engine, terminology):
     assert total(engine, "Observation", ("code:in", "http://example.org/vs/hemo")) == 1
     assert total(engine, "Observation", ("code:in", "ValueSet/vs1")) == 1
     assert total(engine, "Observation", ("code:in", "http://example.org/vs/other")) == 0
-    assert total(engine, "Observation", ("code:not-in", "http://example.org/vs/hemo")) == 0
+    assert (
+        total(engine, "Observation", ("code:not-in", "http://example.org/vs/hemo")) == 0
+    )
     assert (
         total(engine, "Observation", ("code:not-in", "http://example.org/vs/other"))
         == 1
@@ -372,8 +386,12 @@ def test_search_in_and_not_in(es_data, engine, terminology):
 
 
 def test_search_below_and_above(es_data, engine, terminology):
-    assert total(engine, "Observation", ("code:below", "http://loinc.org|LP-blood")) == 1
-    assert total(engine, "Observation", ("code:below", "http://loinc.org|LP-other")) == 0
+    assert (
+        total(engine, "Observation", ("code:below", "http://loinc.org|LP-blood")) == 1
+    )
+    assert (
+        total(engine, "Observation", ("code:below", "http://loinc.org|LP-other")) == 0
+    )
     assert total(engine, "Observation", ("code:above", "http://loinc.org|718-7")) == 1
     assert total(engine, "Observation", ("code:above", "http://loinc.org|LP-hemo")) == 0
 
@@ -472,3 +490,30 @@ def test_extension_value(offline_engine):
         "Patient.extension.url",
         "Patient.extension.valueCode",
     ]
+
+
+def test_timing_element(offline_engine):
+    # CarePlan.activity.detail.scheduled[x]: Timing | Period | string
+    query = compiled(offline_engine, "CarePlan", "activity-date=2017-06")
+    text = json.dumps(query)
+    assert "scheduledTiming.event" in text
+    assert "scheduledTiming.repeat.boundsPeriod.start" in text
+    assert "scheduledPeriod.start" in text
+
+
+def test_attachment_element(offline_engine):
+    search = Search(SearchContext(offline_engine, "DocumentReference"))
+    path = search.context._dotted_path_to_path_context(
+        "DocumentReference.content.attachment"
+    )
+    for param_type, element in (
+        ("uri", "url"),
+        ("string", "title"),
+        ("date", "creation"),
+    ):
+        path.search_param_type = param_type
+        terms = []
+        value = "2020" if param_type == "date" else "x"
+        search.add_term((path, ("eq", value), None), terms)
+        (term,) = terms
+        assert term.path.path == f"DocumentReference.content.attachment.{element}"

@@ -9,6 +9,7 @@ references the FHIRPath ``path`` selects; a link with ``params`` searches the
 target type with them, ``{ref}`` standing for the source resource
 (``patient={ref}``).
 """
+
 from typing import Any, Dict, List, NamedTuple, Optional
 
 from fhirpath.core import compile as fhirpath_compile
@@ -173,7 +174,9 @@ def _link_rows(search, link, sources):
         expression = fhirpath_compile(link.path)
         references: Dict[str, List[str]] = {}
         for row in sources:
-            for value in expression.evaluate(row[0], resolver=resolve_literal_reference):
+            for value in expression.evaluate(
+                row[0], resolver=resolve_literal_reference
+            ):
                 parsed = parse_literal_reference(value)
                 if parsed is None:
                     continue

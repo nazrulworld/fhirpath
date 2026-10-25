@@ -778,9 +778,7 @@ def searched(query_result):
     """(paths, values) of the leaf terms of a query."""
     leaves = list(walk_terms(query_result._query.get_where()))
     paths = [str(t.path) for t in leaves]
-    values = [
-        str(t.value.raw) for t in leaves if getattr(t, "value", None) is not None
-    ]
+    values = [str(t.value.raw) for t in leaves if getattr(t, "value", None) is not None]
     return paths, values
 
 

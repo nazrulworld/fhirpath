@@ -8,6 +8,7 @@ application registers. An engine can provide its own service (e.g. one backed
 by a terminology server) as its ``terminology`` attribute; it only needs the two
 methods of :class:`TerminologyService`.
 """
+
 import json
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
@@ -296,9 +297,7 @@ def get_terminology(engine) -> TerminologyService:
         return terminology
     release = FHIR_VERSION.normalize(engine.fhir_release)
     if release.name not in _DEFAULT_TERMINOLOGIES:
-        _DEFAULT_TERMINOLOGIES[release.name] = InMemoryTerminology(
-            fhir_release=release
-        )
+        _DEFAULT_TERMINOLOGIES[release.name] = InMemoryTerminology(fhir_release=release)
     return _DEFAULT_TERMINOLOGIES[release.name]
 
 

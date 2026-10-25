@@ -388,7 +388,10 @@ def test_codeable_reference_r4b(code, value, path):
 def test_near_on_every_release(release_engine):
     # R4+: near=[lat]|[long]|[distance]|[units]; STU3: near=lat:long + near-distance
     if release_engine.fhir_release == FHIR_VERSION.STU3:
-        params = (("near", "42.25:-83.69"), ("near-distance", "10|http://unitsofmeasure.org|km"))
+        params = (
+            ("near", "42.25:-83.69"),
+            ("near-distance", "10|http://unitsofmeasure.org|km"),
+        )
     else:
         params = (("near", "42.25|-83.69|10|km"),)
     found = leaves(release_engine, "Location", *params)

@@ -15,6 +15,7 @@ Comparisons are made of the context's search parameters: ``name co "pet"``,
 chain filtered on the target), ``_has:Observation:patient:code eq 1234-5``
 (reverse chains).
 """
+
 import json
 import re
 from typing import Any, List, NamedTuple, Optional, Union
@@ -235,9 +236,7 @@ def parse_filter(text: str) -> Node:
 def escape_search_value(value: str, keep: str = "") -> str:
     """A filter value as a search value: ``,`` ``$`` ``|`` ``\\`` escaped,
     except the separators in ``keep``."""
-    return "".join(
-        "\\" + c if c in ",$|\\" and c not in keep else c for c in value
-    )
+    return "".join("\\" + c if c in ",$|\\" and c not in keep else c for c in value)
 
 
 def expand_aliases(value: str) -> str:
@@ -269,7 +268,13 @@ def comparison_param(search_param, comparison: Comparison):
         searched = escape_search_value(value)
 
     if type_ == "string":
-        modifiers = {"eq": ":_eq_ci", "ne": ":not", "co": ":contains", "sw": "", "ew": ":_ew"}
+        modifiers = {
+            "eq": ":_eq_ci",
+            "ne": ":not",
+            "co": ":contains",
+            "sw": "",
+            "ew": ":_ew",
+        }
         if operator in modifiers:
             return modifiers[operator], searched
     elif type_ in RANGED_TYPES:
@@ -291,7 +296,14 @@ def comparison_param(search_param, comparison: Comparison):
         if operator in modifiers:
             return modifiers[operator], searched
     elif type_ in ("reference", "uri"):
-        modifiers = {"eq": "", "re": "", "ne": ":not", "sw": ":below", "ss": ":above", "sb": ":below"}
+        modifiers = {
+            "eq": "",
+            "re": "",
+            "ne": ":not",
+            "sw": ":below",
+            "ss": ":above",
+            "sb": ":below",
+        }
         if type_ == "uri":
             modifiers["co"] = ":contains"
         if operator in modifiers:
@@ -373,7 +385,10 @@ def compile_comparison(search, context, path: ParamPath, comparison: Comparison)
         (resource_type,) = context.resource_types
         ref_param = search._has_reference_param(source_context, ref_name, resource_type)
         source_terms = yield from compile_comparison(
-            search, source_context, ParamPath(path.name, path.filter, path.next), comparison
+            search,
+            source_context,
+            ParamPath(path.name, path.filter, path.next),
+            comparison,
         )
         from fhirpath.search.query import Q_
 
@@ -384,7 +399,9 @@ def compile_comparison(search, context, path: ParamPath, comparison: Comparison)
         if not ids:
             return [nothing()]
         terms = []
-        search.add_term(context.normalize_param("_id", [",".join(dict.fromkeys(ids))]), terms)
+        search.add_term(
+            context.normalize_param("_id", [",".join(dict.fromkeys(ids))]), terms
+        )
         return terms
 
     name = path.name
@@ -408,7 +425,9 @@ def compile_comparison(search, context, path: ParamPath, comparison: Comparison)
             # composite ne
             positive = []
             search.add_term(context.normalize_param(name, [value]), positive)
-            terms.append(G_(*positive, path=None, type_=GroupType.DECOUPLED).match_no_one())
+            terms.append(
+                G_(*positive, path=None, type_=GroupType.DECOUPLED).match_no_one()
+            )
         elif suffix == "po":
             # the period overlaps the value's range: ge and le together
             for prefix in ("ge", "le"):
