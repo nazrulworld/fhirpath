@@ -1,5 +1,7 @@
 # _*_ coding: utf-8 _*_
+import datetime
 import logging
+import math
 import re
 from typing import (
     TYPE_CHECKING,
@@ -31,7 +33,10 @@ from fhirpath.search.engine import (
     EngineResultHeader,
     EngineResultRow,
 )
-from fhirpath.search.engine.base import resolve_literal_reference
+from fhirpath.search.engine.base import (
+    parse_literal_reference,
+    resolve_literal_reference,
+)
 from fhirpath.enums import (
     FHIR_VERSION,
     GroupType,
@@ -48,6 +53,7 @@ from fhirpath.search.fhirspec.expression import (
 )
 from fhirpath.search.fhirspec import (
     FHIRSearchSpecFactory,
+    compartment_definitions,
     ResourceSearchParameterDefinition,
     SearchParameter,
     lookup_fhir_resource_spec,
@@ -79,6 +85,7 @@ from fhirpath.search.ranges import (
 from fhirpath.search.interfaces import IGroupTerm, ISearch, ISearchContext
 from fhirpath.search.query import Q_, QueryResult
 from fhirpath.search.storage import SEARCH_PARAMETERS_STORAGE
+from fhirpath.search.filter import compile_filter, parse_filter
 from fhirpath.search.graph import resolve_graph
 from fhirpath.search.terminology import get_terminology
 from fhirpath.search.utils import PathInfoContext, lookup_fhir_class
@@ -94,6 +101,18 @@ parentheses_wrapped: Pattern = re.compile(r"^\(.+\)$")
 logger = logging.getLogger("fhirpath.search")
 
 DEFAULT_RESULT_COUNT = 100
+# containers of ``_in`` (R5)
+MEMBERSHIP_TYPES = ("CareTeam", "Group", "List")
+# near: the default distance, the units understood
+DEFAULT_NEAR_DISTANCE_KM = 10.0
+KM_PER_DEGREE = 111.32
+DISTANCE_UNITS_KM = {
+    "km": 1.0,
+    "m": 0.001,
+    "[mi_us]": 1.609347,
+    "[mi_i]": 1.609344,
+    "mi": 1.609344,
+}
 # rounds of ``_include:iterate`` / ``_revinclude:iterate``
 INCLUDE_MAX_ITERATIONS = 10
 # levels followed by ``reference:below`` / ``reference:above``
@@ -154,6 +173,9 @@ SUPPORTED_MODIFIERS: Dict[str, Set[str]] = {
     "quantity": {"missing", "exists"},
     "special": {"missing", "exists"},
 }
+# string tests of _filter without a modifier of their own: equality ignoring
+# case (``eq``) and ends-with (``ew``)
+INTERNAL_MODIFIERS = ("_eq_ci", "_ew")
 # modifiers introduced after STU3, with the first release that has them
 MODIFIER_SINCE: Dict[str, FHIR_VERSION] = {
     "of-type": FHIR_VERSION.R4,
@@ -727,6 +749,9 @@ class SearchContext(object):
             )
         if self.is_type_modifier(search_param, modifier):
             return
+        if modifier in INTERNAL_MODIFIERS and search_param.type == "string":
+            # set by _filter (eq, ew)
+            return
         if search_param.type == "reference" and modifier[:1].isupper():
             raise ValidationError(
                 f"``{modifier}`` is not a target type of reference search "
@@ -809,6 +834,16 @@ class SearchContext(object):
                     f"``{param_name}`` on Resource ``{definition.resource_type}``."
                 )
             params_def.append(search_param)
+        if len({sp.type for sp in params_def}) > 1:
+            # [base]?_type=A,B&code=x where code means different things
+            raise ValidationError(
+                f"Search parameter ``{param_name}`` has different types on "
+                + ", ".join(
+                    f"{d.resource_type} ({sp.type})"
+                    for d, sp in zip(self.definitions, params_def)
+                )
+                + "."
+            )
         return params_def
 
     def _dotted_path_to_path_context(self, dotted_path):
@@ -1051,6 +1086,38 @@ class AnyOf(list):
     a search parameter with several paths."""
 
 
+def parse_compartment(compartment) -> Optional[Tuple[str, str]]:
+    """``"Patient/123"`` or ``("Patient", "123")`` -> ``("Patient", "123")``."""
+    if compartment is None:
+        return None
+    if isinstance(compartment, str):
+        code, _, id_ = compartment.strip("/").partition("/")
+    else:
+        code, id_ = compartment
+    if not code or not id_ or "/" in id_:
+        raise ValidationError(
+            f"A compartment is ``[Compartment]/[id]``, got ``{compartment}``."
+        )
+    return code, id_
+
+
+# named queries (``_query``): name -> handler(search, search params) returning
+# the search parameters to apply (``register_named_query``)
+NAMED_QUERIES: Dict[str, Any] = {}
+# name -> canonical url of the query's OperationDefinition (CapabilityStatement)
+NAMED_QUERY_DEFINITIONS: Dict[str, str] = {}
+
+
+def register_named_query(name: str, handler, definition: Optional[str] = None):
+    """Make ``_query=name`` available: ``handler(search, params)`` receives the
+    search parameters of the request (a ``MultiDict``, query-specific ones
+    included) and returns the search parameters to apply. ``definition``: the
+    canonical url of its OperationDefinition (``kind = query``)."""
+    NAMED_QUERIES[name] = handler
+    if definition:
+        NAMED_QUERY_DEFINITIONS[name] = definition
+
+
 @implementer(ISearch)
 class Search(object):
     """ """
@@ -1061,10 +1128,21 @@ class Search(object):
         query_string=None,
         params=None,
         handling: str = HANDLING_LENIENT,
+        compartment: Optional[Union[str, Tuple[str, str]]] = None,
+        form_body: Optional[str] = None,
     ):
         """``handling``: ``lenient`` (default) ignores unknown search parameters,
         ``strict`` rejects them (``Prefer: handling=strict``, see
-        ``handling_from_prefer``)."""
+        ``handling_from_prefer``).
+
+        ``compartment``: ``("Patient", "123")`` or ``"Patient/123"`` searches
+        that compartment (``GET [base]/Patient/123/Observation``); a context
+        without resource type searches every type of the compartment
+        (``Patient/123/*``).
+
+        ``form_body``: the ``application/x-www-form-urlencoded`` body of a
+        ``POST [base]/[type]/_search``; its parameters are combined with those of
+        the query string."""
         # validate first
         Search.validate_params(context, query_string, params)
         if handling not in (HANDLING_LENIENT, HANDLING_STRICT):
@@ -1086,6 +1164,9 @@ class Search(object):
             all_params = MultiDict(params.items())
         elif isinstance(params, MultiDictProxy):
             all_params = params.copy()
+        if form_body is not None:
+            all_params = MultiDict(all_params or {})
+            all_params.extend(Search.parse_form_body(form_body))
 
         self.result_params: Dict[str, str] = dict()
         self.search_params = None
@@ -1110,7 +1191,17 @@ class Search(object):
         # resolved ``reference:below`` / ``:above`` parameters
         self.hierarchy_references: Dict[str, List[str]] = {}
         self.context.strict = self.handling == HANDLING_STRICT
+        # ``(code, id)`` of the compartment searched
+        self.compartment = parse_compartment(compartment)
+        # ANDed ``{resource type: ids}`` restrictions (``_list``, ``_in``);
+        # ``negate``: the resources must not be in them
+        self.id_restrictions: List[Tuple[Dict[str, Set[str]], bool]] = []
+        # terms of the ``_filter`` parameters
+        self.filter_terms: List = []
         self.prepare_params(all_params)
+        if self.compartment is not None:
+            self.apply_compartment_types()
+        self.apply_named_query()
 
         additional_resource_types = self.result_params.get("_type")
         if additional_resource_types:
@@ -1119,6 +1210,73 @@ class Search(object):
         if self.handling == HANDLING_LENIENT:
             self.drop_unknown_params()
         self.check_contained()
+
+    @staticmethod
+    def parse_form_body(body: Union[str, bytes]) -> MultiDict:
+        """Parameters of an ``application/x-www-form-urlencoded`` body
+        (``POST [base]/[type]/_search``)."""
+        if isinstance(body, bytes):
+            body = body.decode("utf-8")
+        return Search.parse_query_string(body.strip(), False)
+
+    def apply_compartment_types(self):
+        """A compartment search without a type covers every resource type of
+        the compartment (``Patient/123/*``)."""
+        code, _ = self.compartment
+        definitions = compartment_definitions(self.context.engine.fhir_release)
+        if code not in definitions:
+            raise ValidationError(
+                f"Unknown compartment ``{code}`` "
+                f"(known: {', '.join(sorted(definitions))})."
+            )
+        if not self.context.resource_types:
+            types = sorted(set(definitions[code]) | {code})
+            types = [t for t in types if self._defines_search_param(t, "_id")]
+            self.context.augment_with_types(types)
+
+    def compartment_terms(self) -> List:
+        """A resource is in the compartment when any of the compartment
+        parameters of its type refers to the owner (or it is the owner)."""
+        code, id_ = self.compartment
+        params_by_type = compartment_definitions(self.context.engine.fhir_release)[
+            code
+        ]
+        terms: List = []
+        for resource_type in self.context.resource_types:
+            params = list(params_by_type.get(resource_type, []))
+            if resource_type == code and "{def}" not in params:
+                params.insert(0, "{def}")
+            if not params:
+                raise ValidationError(
+                    f"{resource_type} is not in the {code} compartment."
+                )
+            context = SearchContext(
+                self.context.engine, resource_type, unrestricted=self.context.unrestricted
+            )
+            alternatives: List = []
+            for param in params:
+                if param == "{def}":
+                    normalized = context.normalize_param("_id", [id_])
+                else:
+                    normalized = context.normalize_param(param, [f"{code}/{id_}"])
+                self.add_term(normalized, alternatives)
+            terms.append(
+                G_(*alternatives, path=None, type_=GroupType.DECOUPLED).match_any()
+            )
+        return terms
+
+    def apply_named_query(self):
+        """``_query``: exactly one, and an unknown name SHALL be refused."""
+        names = self.result_params.get("_query")
+        if not names:
+            return
+        if len(names) > 1:
+            raise ValidationError("Only one ``_query`` is allowed.")
+        handler = NAMED_QUERIES.get(names[0])
+        if handler is None:
+            raise ValidationError(f"Unknown named query ``_query={names[0]}``.")
+        params = handler(self, MultiDict(self.search_params))
+        self.search_params = MultiDictProxy(MultiDict(params))
 
     def drop_unknown_params(self):
         """Unknown search parameters SHOULD be ignored unless strict handling is
@@ -1286,7 +1444,11 @@ class Search(object):
         if _graph is not None:
             self.result_params["_graph"] = _graph
 
-        for name in ("_text", "_content", "_filter", "_query", "_list"):
+        names = ["_text", "_content", "_filter", "_query", "_list"]
+        if FHIR_VERSION.normalize(self.context.engine.fhir_release) == FHIR_VERSION.R5:
+            # membership (``_in``) is an R5 parameter
+            names.extend(["_in", "_in:not"])
+        for name in names:
             values = [v for v in all_params.popall(name, []) if v]
             if values:
                 self.result_params[name] = values
@@ -1537,6 +1699,18 @@ class Search(object):
         path ``links`` (a plain parameter, a chain or a reverse chain) with
         ``value``. ``None`` means that no resource can match."""
         first_link = links[0]
+        if first_link.split(":")[0] in ("_in", "_list") and len(links) == 1:
+            members = yield from self.membership_ids(context, first_link, value)
+            ids = sorted(i for ids in members.values() for i in ids)
+            negate = first_link.endswith(":not")
+            if not ids and not negate:
+                return None
+            terms: List = []
+            if ids:
+                self.add_term(context.normalize_param("_id", [",".join(ids)]), terms)
+            if negate:
+                terms = [G_(*terms, path=None, type_=GroupType.DECOUPLED).match_no_one()]
+            return terms
         if first_link.startswith("_has:"):
             references = yield from self._resolve_has_link(context, links, value)
             if not references:
@@ -1633,6 +1807,157 @@ class Search(object):
         except Exception:  # unknown resource type in the definitions storage
             return False
         return param_name in context.definitions[0]
+
+    # ------------------------------------------------- membership (_list, _in)
+
+    def membership_ids(
+        self, context: SearchContext, name: str, value: str
+    ) -> Generator[QueryResult, EngineResult, Dict[str, Set[str]]]:
+        """Ids of the members, per type of ``context``: ``_list=42`` - the
+        items of List 42; ``_in=Group/1`` (R5) - the active members of a Group,
+        List or CareTeam (a plain id may be any of them)."""
+        code = name.split(":")[0]
+        members: Dict[str, Set[str]] = {}
+        for leaf in split_escaped(value, ","):
+            leaf = unescape_value(leaf)
+            if code == "_list":
+                if leaf.startswith("$"):
+                    raise ValidationError(
+                        f"Functional list ``{leaf}`` is not supported (_list)."
+                    )
+                containers = [("List", leaf.split("/")[-1])]
+            else:
+                match = local_reference.match(leaf)
+                if match is not None:
+                    if match.group("type") not in MEMBERSHIP_TYPES:
+                        raise ValidationError(
+                            f"_in refers to a CareTeam, Group or List, got ``{leaf}``."
+                        )
+                    containers = [(match.group("type"), match.group("id"))]
+                else:
+                    containers = [(t, leaf) for t in MEMBERSHIP_TYPES]
+            for container_type, container_id in containers:
+                container_context = SearchContext(self.context.engine, container_type)
+                terms: List = []
+                self.add_term(
+                    container_context.normalize_param("_id", [container_id]), terms
+                )
+                result = yield Q_(container_type, self.context.engine).where(*terms)(
+                    unrestricted=self.context.unrestricted
+                )
+                for row in result.body:
+                    for reference in active_members(row[0]):
+                        parsed = parse_literal_reference(reference)
+                        if parsed and (
+                            not context.resource_types
+                            or parsed[0] in context.resource_types
+                        ):
+                            members.setdefault(parsed[0], set()).add(parsed[1])
+        return members
+
+    def resolve_memberships(self) -> Generator[QueryResult, EngineResult, None]:
+        for name in ("_list", "_in", "_in:not"):
+            for value in self.result_params.get(name, []):
+                members = yield from self.membership_ids(self.context, name, value)
+                self.id_restrictions.append((members, name.endswith(":not")))
+
+    # ------------------------------------------------------ _text, _content
+
+    def text_terms(self) -> List:
+        """``_text`` searches the narrative, ``_content`` the whole resource
+        (full text, relevance scored)."""
+        terms: List = []
+        for name in ("_text", "_content"):
+            for value in self.result_params.get(name, []):
+                if not self.context.resource_types:
+                    raise ValidationError(f"``{name}`` needs a resource type (_type).")
+                for resource_type in self.context.resource_types:
+                    element = "text.div" if name == "_text" else "id"
+                    try:
+                        path = self.context._dotted_path_to_path_context(
+                            f"{resource_type}.{element}"
+                        )
+                    except (ValidationError, KeyError, AttributeError):
+                        continue  # no narrative (Bundle, Binary...)
+                    path.search_param_type = "string"
+                    term = T_(path) == V_(value)
+                    term.set_match_type(TermMatchType.FULLTEXT)
+                    term.scored = True
+                    term.content_search = name == "_content"
+                    terms.append(term)
+        return terms
+
+    # --------------------------------------------------------------- near
+
+    def is_near_search(self) -> bool:
+        return self.context.resource_types == ["Location"]
+
+    def near_terms(self, param_name: str, values: List[str]) -> List:
+        """``near=[lat]|[long]|[distance]|[units]`` (STU3: ``near=lat:long`` and
+        ``near-distance``): the locations within a box around the point (the
+        spec allows a square instead of a circle)."""
+        distance_values = self.search_params.getall("near-distance", [])
+        terms: List = []
+        for value in values:
+            validate_escapes(value)
+            for leaf in split_escaped(value, ","):
+                parts = [unescape_value(p) for p in split_escaped(leaf, "|")]
+                if len(parts) < 2 and ":" in leaf:
+                    parts = leaf.split(":")
+                if len(parts) < 2:
+                    raise ValidationError(
+                        f"``near`` expects [latitude]|[longitude]|[distance]|[units], "
+                        f"got ``{leaf}``."
+                    )
+                distance, units = None, "km"
+                if len(parts) > 2 and parts[2]:
+                    distance = parts[2]
+                if len(parts) > 3 and parts[3]:
+                    units = parts[3]
+                if distance is None and distance_values:
+                    # STU3 near-distance: a quantity [number]|[system]|[code]
+                    dparts = split_escaped(distance_values[0], "|")
+                    distance = dparts[0]
+                    if len(dparts) == 3 and dparts[2]:
+                        units = dparts[2]
+                terms.append(self.near_box(parts[0], parts[1], distance, units))
+        if len(terms) > 1:
+            return [G_(*terms, path=None, type_=GroupType.DECOUPLED).match_any()]
+        return terms
+
+    def near_box(self, latitude, longitude, distance, units):
+        try:
+            lat, lon = float(latitude), float(longitude)
+            km = (
+                DEFAULT_NEAR_DISTANCE_KM
+                if distance is None
+                else float(distance) * DISTANCE_UNITS_KM[units]
+            )
+        except KeyError:
+            raise ValidationError(
+                f"``near``: unknown distance unit ``{units}`` "
+                f"(known: {', '.join(DISTANCE_UNITS_KM)})."
+            )
+        except ValueError:
+            raise ValidationError(
+                f"``near``: bad coordinates or distance "
+                f"``{latitude}|{longitude}|{distance}``."
+            )
+        lat_delta = km / KM_PER_DEGREE
+        lon_delta = km / max(KM_PER_DEGREE * math.cos(math.radians(lat)), 1e-6)
+        position = self.context._dotted_path_to_path_context("Location.position")
+        position.search_param_type = "special"
+        bounds = [
+            ("latitude", "ge", max(lat - lat_delta, -90.0)),
+            ("latitude", "le", min(lat + lat_delta, 90.0)),
+            ("longitude", "ge", lon - lon_delta),
+            ("longitude", "le", lon + lon_delta),
+        ]
+        terms = [
+            self.create_term(position / element, (op, repr(round(bound, 7))), None)
+            for element, op, bound in bounds
+        ]
+        return G_(*terms, path=position, type_=GroupType.COUPLED)
 
     # ---------------------------------------------- hierarchies (:above/:below)
 
@@ -1995,20 +2320,10 @@ class Search(object):
             return group_term
 
         if isinstance(normalized_data, list):
-            if len(normalized_data) > 1:
-                terms = list()
-                for nd in normalized_data:
-                    self.add_term(nd, terms)
-                # I think we'll be there only in the case of composite search params
-                # The Group path is only needed to build nested queries so using
-                # whichever component path should be ok.
-                # This could still use a refacto though...
-                group_term = G_(*terms, path=nd[0], type_=GroupType.COUPLED)
-                terms_container.append(group_term)
-                return group_term
-
-            else:
-                normalized_data = normalized_data[0]
+            # the entries of normalize_param: all must match
+            for nd in normalized_data:
+                self.add_term(nd, terms_container)
+            return
 
         path_, param_value, modifier = normalized_data
 
@@ -3136,10 +3451,12 @@ class Search(object):
                 term = not_(term)
             elif modifier == "below" and operator_ == "eq":
                 operator_ = "sa"
-            elif modifier == "above" and operator_ == "eq":
+            elif (modifier == "above" or modifier == "_ew") and operator_ == "eq":
                 operator_ = "eb"
-            elif modifier == "exact":
+                term.case_insensitive = modifier == "_ew"
+            elif modifier in ("exact", "_eq_ci"):
                 term = exact_(term)
+                term.case_insensitive = modifier == "_eq_ci"
             val = V_(raw_value)
 
             if operator_ == "eq":
@@ -3292,6 +3609,10 @@ class Search(object):
         # we make sure that there are no duplicate keys!
         for param_name in set(self.search_params):
             raw_value = list(self.search_params.getall(param_name, []))
+            if param_name in ("near", "near-distance") and self.is_near_search():
+                if param_name == "near":
+                    terms_container.extend(self.near_terms(param_name, raw_value))
+                continue
             if param_name in self.hierarchy_references:
                 # resolved hierarchy: any of its references
                 normalized_params = self.context.normalize_param(
@@ -3635,6 +3956,19 @@ class Search(object):
                 (self.chain_reference_name(param_name), references)
             )
 
+        # membership (_list, _in)
+        yield from self.resolve_memberships()
+        if any(not members and not negate for members, negate in self.id_restrictions):
+            return None
+
+        # _filter
+        self.filter_terms = []
+        for value in self.result_params.get("_filter", []):
+            node = parse_filter(value)
+            for context in self.single_type_contexts():
+                terms = yield from compile_filter(self, context, node)
+                self.filter_terms.extend(terms)
+
         # MAIN QUERY
         if self.result_params.get("_summary") == "count":
             self.main_query = self.build()
@@ -3753,8 +4087,47 @@ class Search(object):
             values.append(sortable_value(resource, sp))
         return values
 
+    def single_type_contexts(self) -> List[SearchContext]:
+        """One search context per resource type of the search (the context
+        itself for a search on all types)."""
+        if len(self.context.resource_types) <= 1:
+            return [self.context]
+        return [
+            SearchContext(self.context.engine, t, unrestricted=self.context.unrestricted)
+            for t in self.context.resource_types
+        ]
+
     def apply_resolved_terms(self, builder):
-        """The ``_has`` and chain restrictions (see ``build``)."""
+        """The restrictions resolved before the main query (``_has``, chains,
+        ``_list`` / ``_in``) and those of ``_filter``, the compartment,
+        ``_text`` and ``_content`` (see ``build``)."""
+        for members, negate in self.id_restrictions:
+            terms: List = []
+            for resource_type in self.context.resource_types or sorted(members):
+                ids = members.get(resource_type)
+                context = SearchContext(self.context.engine, resource_type)
+                if ids:
+                    group: List = []
+                    self.add_term(
+                        context.normalize_param("_id", [",".join(sorted(ids))]), group
+                    )
+                    term = group[0]
+                elif negate:
+                    continue
+                else:
+                    term = G_(path=None, type_=GroupType.DECOUPLED).match_any()
+                if negate:
+                    term = G_(term, path=None, type_=GroupType.DECOUPLED).match_no_one()
+                terms.append(term)
+            if terms:
+                builder = builder.where(*terms)
+        if self.filter_terms:
+            builder = builder.where(*self.filter_terms)
+        if self.compartment is not None:
+            builder = builder.where(*self.compartment_terms())
+        text_terms = self.text_terms()
+        if text_terms:
+            builder = builder.where(*text_terms)
         if self.reverse_chaining_results:
             terms: List = []
             for resource_type, ids in self.reverse_chaining_results.items():
@@ -3774,6 +4147,31 @@ class Search(object):
                 self.add_term(normalized_data, terms)
             builder = builder.where(*terms)
         return builder
+
+
+def active_members(container) -> List[Any]:
+    """References of the active members of a Group (not ``inactive``), List
+    (not ``deleted``) or CareTeam (participation not ended)."""
+    if not isinstance(container, dict):
+        container = container.model_dump(mode="json", by_alias=True)
+    resource_type = container.get("resourceType")
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    references = []
+    if resource_type == "Group":
+        for member in container.get("member", []):
+            end = (member.get("period") or {}).get("end")
+            if not member.get("inactive") and not (end and end < now):
+                references.append(member.get("entity"))
+    elif resource_type == "List":
+        for entry in container.get("entry", []):
+            if not entry.get("deleted"):
+                references.append(entry.get("item"))
+    elif resource_type == "CareTeam":
+        for participant in container.get("participant", []):
+            end = (participant.get("period") or {}).get("end")
+            if not (end and end < now):
+                references.append(participant.get("member"))
+    return [r for r in references if r]
 
 
 class CountQuery:
@@ -3887,10 +4285,14 @@ def fhir_search(
     params: Union[Dict[str, str], Tuple[Tuple[str, str]]] = None,
     response_as_dict: bool = False,
     handling: str = HANDLING_LENIENT,
+    compartment: Optional[Union[str, Tuple[str, str]]] = None,
+    form_body: Optional[Union[str, bytes]] = None,
 ):
     """``handling``: ``strict`` rejects unknown search parameters, ``lenient``
     (default) ignores them; ``handling_from_prefer`` reads it from the
-    ``Prefer`` header."""
+    ``Prefer`` header. ``compartment``: ``"Patient/123"`` for
+    ``[base]/Patient/123/[type]`` (a context without type: ``Patient/123/*``).
+    ``form_body``: the form body of ``POST [base]/[type]/_search``."""
     if TYPE_CHECKING:
         klass: Union[Type[AsyncSearch], Type[Search]]
     if context.engine.__class__.is_async():
@@ -3898,6 +4300,11 @@ def fhir_search(
     else:
         klass = Search
     factory = klass(
-        context, query_string=query_string, params=params, handling=handling
+        context,
+        query_string=query_string,
+        params=params,
+        handling=handling,
+        compartment=compartment,
+        form_body=form_body,
     )
     return factory(as_json=response_as_dict)

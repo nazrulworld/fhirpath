@@ -138,6 +138,7 @@ class SearchParameterDefinition(object):
 
     __slots__ = (
         "spec",
+        "url",
         "name",
         "code",
         "expression_map",
@@ -157,6 +158,7 @@ class SearchParameterDefinition(object):
         """ """
         self = cls()
         self.spec = spec
+        self.url = dict_value.get("url")
         self.name = dict_value["name"]
         self.code = dict_value["code"]
         self.type = dict_value["type"]
@@ -204,6 +206,7 @@ class SearchParameter(object):
         processing_mode: None
 
     __slots__ = (
+        "url",
         "name",
         "code",
         "expression",
@@ -222,6 +225,7 @@ class SearchParameter(object):
     def from_definition(cls, resource_type, definition):
         """ """
         self = cls()
+        self.url = definition.url
         self.name = definition.name
         self.code = definition.code
         self.type = definition.type
@@ -261,6 +265,7 @@ class SearchParameter(object):
     def __copy__(self):
         """ """
         newone = type(self).__new__(type(self))
+        newone.url = getattr(self, "url", None)
         newone.name = copy(self.name)
         newone.code = copy(self.code)
         newone.type = copy(self.type)

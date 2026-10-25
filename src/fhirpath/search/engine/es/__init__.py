@@ -68,7 +68,12 @@ class ElasticsearchEngineBase(Engine):
                             break
                     row.append(source)
             else:
-                for resource_data in res["_source"].values():
+                values = list(res["_source"].values())
+                # the indexed document may carry other fields than the resource
+                resources = [
+                    v for v in values if isinstance(v, dict) and "resourceType" in v
+                ]
+                for resource_data in resources or values:
                     row.append(resource_data)
             container.add(row)
 

@@ -385,15 +385,17 @@ def test_codeable_reference_r4b(code, value, path):
     assert path in [p for p, _, _ in found]
 
 
-def test_special_processing_is_not_supported():
-    if not spec_available("R5") and not has_internet_connection():
-        pytest.skip("FHIR definitions are downloaded on first use")
-
-    class Engine(ElasticsearchEngine):
-        def __init__(self):
-            super().__init__(
-                FHIR_VERSION.R5, lambda x: None, lambda x: ElasticSearchDialect(None)
-            )
-
-    with raises(NotImplementedError, match="needs special processing"):
-        where_terms(Engine(), "Location", ("near", "42.25|-83.69|10|km"))
+def test_near_on_every_release(release_engine):
+    # R4+: near=[lat]|[long]|[distance]|[units]; STU3: near=lat:long + near-distance
+    if release_engine.fhir_release == FHIR_VERSION.STU3:
+        params = (("near", "42.25:-83.69"), ("near-distance", "10|http://unitsofmeasure.org|km"))
+    else:
+        params = (("near", "42.25|-83.69|10|km"),)
+    found = leaves(release_engine, "Location", *params)
+    paths = {path for path, _, _ in found}
+    assert paths == {"Location.position.latitude", "Location.position.longitude"}
+    latitudes = sorted(
+        float(value) for path, _, value in found if path.endswith("latitude")
+    )
+    # 10 km is about 0.09 degrees of latitude
+    assert latitudes == pytest.approx([42.16017, 42.33983], abs=1e-4)

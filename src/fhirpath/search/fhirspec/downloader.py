@@ -154,6 +154,39 @@ def extract_spec_files(
                 shutil.rmtree(str(work))
 
 
+COMPARTMENTS_FILE = "compartments.min.json"
+COMPARTMENT_URL = "https://hl7.org/fhir/{release}/compartmentdefinition-{code}.json"
+# compartments defined by HL7 (the same five in every release)
+COMPARTMENT_CODES = ("patient", "encounter", "relatedperson", "practitioner", "device")
+
+
+def minify_compartment(definition: Dict[str, Any]) -> Dict[str, Any]:
+    """``{resource type: [search parameter codes]}`` of a CompartmentDefinition
+    (types without parameters are not in the compartment)."""
+    return {
+        item["code"]: list(item.get("param", []))
+        for item in definition.get("resource", [])
+        if item.get("param")
+    }
+
+
+def download_compartments(release: FHIR_VERSION, target: pathlib.Path):
+    """Fetch the CompartmentDefinitions of a release (they are not part of the
+    definitions archive) into ``target/compartments.min.json``:
+    ``{compartment code: {resource type: [param codes]}}``."""
+    import urllib.request
+
+    compartments: Dict[str, Any] = {}
+    for code in COMPARTMENT_CODES:
+        url = COMPARTMENT_URL.format(release=release.name, code=code)
+        logger.info(f"Downloading CompartmentDefinition from {url}")
+        with urllib.request.urlopen(url, timeout=60) as response:  # nosec - hl7.org
+            definition = json.load(response)
+        compartments[definition["code"]] = minify_compartment(definition)
+    target.mkdir(parents=True, exist_ok=True)
+    _write_json(target / COMPARTMENTS_FILE, compartments)
+
+
 def download_and_extract(release: FHIR_VERSION, output_dir: pathlib.Path):
     """ """
     logger.info(

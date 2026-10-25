@@ -57,13 +57,13 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
 
 ## E. Search features not implemented
 
-- [ ] `_filter` (grammar + operators)
-- [ ] `_query` (named queries; unknown → refuse)
-- [ ] `_text`, `_content`
-- [ ] `_list`, `_in` (R5)
-- [ ] Compartment search (`Patient/1/Observation`, `Patient/1/*`)
-- [ ] System-level search: only common params unless `_type` given
-- [ ] `near` (special)
+- [x] `_filter` (grammar + operators)
+- [x] `_query` (named queries; unknown → refuse)
+- [x] `_text`, `_content`
+- [x] `_list`, `_in` (R5)
+- [x] Compartment search (`Patient/1/Observation`, `Patient/1/*`)
+- [x] System-level search: only common params unless `_type` given
+- [x] `near` (special)
 
 ## F. Errors / HTTP layer
 
@@ -72,8 +72,8 @@ ids narrowed to `X/id` by `where(resolve() is X)`. Tests: `tests/search/test_spe
       ignored names in `Search.ignored_params` for a future OperationOutcome)
 - [x] `OperationOutcome` entries (`search.mode=outcome`) for warnings – ignored unknown params now;
       more warnings (unknown codes/ids) can be added via `Search.outcome_issues()`
-- [ ] CapabilityStatement search capability output
-- [ ] `POST _search` (form body)
+- [x] CapabilityStatement search capability output
+- [x] `POST _search` (form body)
 
 ## G. Housekeeping
 

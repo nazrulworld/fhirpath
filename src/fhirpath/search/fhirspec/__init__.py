@@ -39,6 +39,30 @@ def ensure_spec_jsons(release: FHIR_VERSION):
         download_and_extract(release, spec_dir)
 
 
+_COMPARTMENTS: typing.Dict[str, typing.Dict[str, typing.Dict[str, typing.List[str]]]] = {}
+
+
+def compartment_definitions(
+    release: FHIR_VERSION,
+) -> typing.Dict[str, typing.Dict[str, typing.List[str]]]:
+    """``{compartment: {resource type: [search parameter codes]}}`` of a
+    release, e.g. ``["Patient"]["Observation"] == ["subject", "performer"]``;
+    downloaded from hl7.org on first use."""
+    import json
+
+    release = FHIR_VERSION.normalize(release)
+    if release.name not in _COMPARTMENTS:
+        from .downloader import COMPARTMENTS_FILE, download_compartments
+
+        target = SPEC_JSON_DIR / release.name / release.value
+        path = target / COMPARTMENTS_FILE
+        if not path.exists():
+            download_compartments(release, target)
+        with open(str(path), encoding="utf-8") as fp:
+            _COMPARTMENTS[release.name] = json.load(fp)
+    return _COMPARTMENTS[release.name]
+
+
 class FhirSpecFactory:
     """ """
 

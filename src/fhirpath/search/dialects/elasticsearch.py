@@ -181,22 +181,25 @@ class ElasticSearchDialect(DialectBase):
         return q
 
     @staticmethod
-    def create_eb_term(path, value):
-        """Create ES Prefix Query"""
+    def create_eb_term(path, value, case_insensitive=False):
+        """Create ES suffix (wildcard) query"""
+
+        def suffix(val):
+            query = {"value": "*" + escape_star(val)}
+            if case_insensitive:
+                query["case_insensitive"] = True
+            return {"wildcard": {path: query}}
+
         if isinstance(value, (list, tuple)):
             if len(value) == 1:
                 value = value[0]
             else:
                 q = {"bool": {"should": [], "minimum_should_match": 1}}
                 for val in value:
-                    q["bool"]["should"].append(
-                        {"wildcard": {path: {"value": "*" + escape_star(val)}}}
-                    )
+                    q["bool"]["should"].append(suffix(val))
                 return q
 
-        q = {"wildcard": {path: {"value": "*{0}".format(escape_star(value))}}}
-
-        return q
+        return suffix(value)
 
     @staticmethod
     def create_dotted_path(term, root_replacer=None):
@@ -285,7 +288,8 @@ class ElasticSearchDialect(DialectBase):
             w
             for w in query.get_where()
             if INonFhirTerm.providedBy(w)
-            or ElasticSearchDialect.term_resource_type(w) == resource_type
+            # a group without any term (matches nothing) applies to every type
+            or ElasticSearchDialect.term_resource_type(w) in (resource_type, None)
         ]
         for term in conditional_terms:
             q, unary_operator = self.resolve_term(term, mapping, root_replacer)
@@ -370,7 +374,8 @@ class ElasticSearchDialect(DialectBase):
                 root_replacer="*",
             )
         elif len(query_fragments) > 1:
-            return {
+            # one query per type, the paging, sorting and source of all
+            body = {
                 "query": {
                     "bool": {
                         "should": [frag["query"] for frag in query_fragments],
@@ -378,6 +383,24 @@ class ElasticSearchDialect(DialectBase):
                     }
                 }
             }
+            first = query_fragments[0]
+            for key in ("size", "from", "scroll"):
+                if key in first:
+                    body[key] = first[key]
+            sorts = [item for frag in query_fragments for item in frag.get("sort", [])]
+            if sorts:
+                body["sort"] = sorts
+            if any(frag.get("_source") is False for frag in query_fragments):
+                body["_source"] = False
+            else:
+                includes = [
+                    path
+                    for frag in query_fragments
+                    for path in frag.get("_source", {}).get("includes", [])
+                ]
+                if includes:
+                    body["_source"] = {"includes": list(dict.fromkeys(includes))}
+            return body
         else:
             return query_fragments[0]
 
@@ -387,6 +410,15 @@ class ElasticSearchDialect(DialectBase):
         if IGroupTerm.providedBy(term):
             unary_operator = OPERATOR.pos
             child_scope = scope
+            if not term.terms:
+                # an empty alternative matches nothing, an empty conjunction
+                # everything
+                if term.type == GroupType.DECOUPLED and term.match_operator in (
+                    MatchType.ANY,
+                    MatchType.ONE,
+                ):
+                    return {"match_none": {}}, unary_operator
+                return {"match_all": {}}, unary_operator
             if term.type == GroupType.DECOUPLED:
 
                 if term.match_operator == MatchType.ANY:
@@ -451,6 +483,18 @@ class ElasticSearchDialect(DialectBase):
         elif IExistsTerm.providedBy(term):
             return ElasticSearchDialect.resolve_exists_term(
                 term, root_replacer=root_replacer, scope=scope
+            )
+
+        elif ITerm.providedBy(term) and getattr(term, "content_search", False):
+            # _content: the words anywhere in the resource
+            root = root_replacer or term.path.context.resource_type
+            if root == "*":
+                root = "*"
+            return (
+                ElasticSearchDialect.create_fulltext_query(
+                    [f"{root}.*"], term.get_real_value()
+                ),
+                term.unary_operator,
             )
 
         elif ITerm.providedBy(term):
@@ -557,10 +601,20 @@ class ElasticSearchDialect(DialectBase):
         """
         fields = (map_info or {}).get("fields", {})
         case_insensitive = getattr(term, "case_insensitive", False)
+        if all_resources and not isinstance(value, (list, tuple)):
+            # every resource type: the path is a wildcard (``*.id``)
+            query = {"query": value, "fields": [dotted_path]}
+            if term.match_type == TermMatchType.EXACT:
+                query["fields"] = [f"{dotted_path}.raw"]
+            elif term.match_type == TermMatchType.STARTWITH:
+                query["type"] = "phrase_prefix"
+            return {"multi_match": query}
         if term.comparison_operator == OPERATOR.sa:
             return ElasticSearchDialect.create_sa_term(dotted_path, value)
         if term.comparison_operator == OPERATOR.eb:
-            return ElasticSearchDialect.create_eb_term(dotted_path, value)
+            return ElasticSearchDialect.create_eb_term(
+                dotted_path, value, case_insensitive=case_insensitive
+            )
         if term.comparison_operator == OPERATOR.contains:
             return ElasticSearchDialect.create_contains_term(dotted_path, value)
         if term.match_type == TermMatchType.STARTWITH:
@@ -614,6 +668,22 @@ class ElasticSearchDialect(DialectBase):
             match_type=match_type,
             all_resources=all_resources,
         )
+
+    @staticmethod
+    def create_fulltext_query(fields, value):
+        """Full-text query with boolean operators (``(bone OR liver) AND
+        metastases``, ``"exact phrase"``, ``NOT x``); words are ANDed."""
+        text = re.sub(r"\bAND\b", "+", str(value))
+        text = re.sub(r"\bOR\b", "|", text)
+        text = re.sub(r"\bNOT\s+", "-", text)
+        return {
+            "simple_query_string": {
+                "query": text,
+                "fields": fields,
+                "default_operator": "and",
+                "lenient": True,
+            }
+        }
 
     @staticmethod
     def create_fulltext_term(path, value, tokenized):
@@ -807,7 +877,7 @@ class ElasticSearchDialect(DialectBase):
                     }
                 }
             elif term.match_type == TermMatchType.FULLTEXT:
-                qr = {"match": {path_: {"query": value, "operator": "and"}}}
+                qr = ElasticSearchDialect.create_fulltext_query([path_], value)
             else:
                 qr = {"match": {path_: {"query": value, "fuzziness": "AUTO"}}}
 
